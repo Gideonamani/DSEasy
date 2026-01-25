@@ -1,6 +1,4 @@
-import React from 'react';
-import { LayoutDashboard, BarChart3, Settings, Bell, Search, Menu } from 'lucide-react';
-import './Layout.css'; // We will create this specific CSS file for layout specific styles if needed, or stick to inline/global for now. 
+import { LayoutDashboard, BarChart3, Settings, Bell, Search } from 'lucide-react';
 // Actually, let's use inline styles combined with our global classes for simplicity in this file for now to keep it self-contained or use a module if it gets complex. 
 // For now, I'll use the global classes we defined.
 

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { marketData } from './data/marketData'
 import { Layout } from './components/Layout'
 
