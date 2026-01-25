@@ -1,18 +1,45 @@
-import { useState, useMemo } from 'react'
-import { marketData } from './data/marketData'
+import { useState, useMemo, useEffect } from 'react'
 import { Layout } from './components/Layout'
 import { StatCard } from './components/StatCard'
 import { MarketTable } from './components/MarketTable'
 import { PriceChangeChart, TurnoverChart } from './components/StockChart'
-import { Calendar } from 'lucide-react'
+import { Calendar, Loader2 } from 'lucide-react'
+
+// Fallback data structure for initial load
+const initialData = {};
 
 function App() {
-  const availableDates = Object.keys(marketData).sort().reverse(); // Newest first
-  const [selectedDate, setSelectedDate] = useState(availableDates[0]);
+  const [data, setData] = useState(initialData);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec')
+      .then(res => res.json())
+      .then(fetchedData => {
+        setData(fetchedData);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch market data:", err);
+        setError("Failed to load market data.");
+        setLoading(false);
+      });
+  }, []);
+
+  const availableDates = Object.keys(data).sort().reverse(); // Newest first
+  const [selectedDate, setSelectedDate] = useState("");
+
+  // Update selected date when data loads
+  useEffect(() => {
+    if (availableDates.length > 0 && !selectedDate) {
+      setSelectedDate(availableDates[0]);
+    }
+  }, [availableDates, selectedDate]);
   
   const currentData = useMemo(() => {
-    return marketData[selectedDate] || [];
-  }, [selectedDate]);
+    return data[selectedDate] || [];
+  }, [data, selectedDate]);
 
   // Calculate Market Stats
   const topGainer = useMemo(() => {
@@ -32,6 +59,23 @@ function App() {
   const totalTurnover = useMemo(() => {
     return currentData.reduce((acc, curr) => acc + curr.turnover, 0);
   }, [currentData]);
+
+  if (loading) {
+    return (
+      <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', flexDirection: 'column', gap: '16px' }}>
+        <Loader2 size={48} className="animate-spin" color="#6366f1" />
+        <p style={{ fontFamily: 'sans-serif', color: '#94a3b8' }}>Loading Market Data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+        <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#ef4444' }}>
+            <p>{error}</p>
+        </div>
+    )
+  }
 
   return (
     <Layout>
