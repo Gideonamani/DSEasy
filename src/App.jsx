@@ -3,7 +3,7 @@ import { marketData } from './data/marketData'
 import { Layout } from './components/Layout'
 import { StatCard } from './components/StatCard'
 import { MarketTable } from './components/MarketTable'
-import { PriceChart, VolumeChart } from './components/StockChart'
+import { PriceChangeChart, TurnoverChart } from './components/StockChart'
 
 function App() {
   // Calculate Market Stats
@@ -74,8 +74,8 @@ function App() {
           gap: '24px',
           marginBottom: '32px' 
       }}>
-          <PriceChart data={marketData} />
-          <VolumeChart data={marketData} />
+          <PriceChangeChart data={marketData} />
+          <TurnoverChart data={marketData} />
       </div>
 
       <div style={{ marginBottom: '32px' }}>
