@@ -12,12 +12,53 @@ function App() {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  const availableDates = Object.keys(data).sort().reverse(); // Newest first
+  const [selectedDate, setSelectedDate] = useState("");
 
   useEffect(() => {
     fetch('https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec')
       .then(res => res.json())
       .then(fetchedData => {
-        setData(fetchedData);
+        // Cleaning and Merging Data Logic
+        const cleanData = {};
+        Object.keys(fetchedData).forEach(date => {
+            const rowMap = new Map();
+            
+            fetchedData[date].forEach(item => {
+                // Filter invalid symbols
+                if (!item.symbol || item.symbol === "Co." || item.symbol === "---" || item.symbol === "Total") return;
+                
+                if (rowMap.has(item.symbol)) {
+                    const prev = rowMap.get(item.symbol);
+                    // Merge logic: Check if new item has better data (non-zero) or sum up volumes
+                    rowMap.set(item.symbol, {
+                        ...prev,
+                        open: prev.open || item.open,
+                        close: prev.close || item.close,
+                        high: Math.max(prev.high || 0, item.high || 0),
+                        low: (prev.low && item.low) ? Math.min(prev.low, item.low) : (prev.low || item.low),
+                        change: (prev.change !== 0 ? prev.change : item.change), 
+                        volume: (prev.volume || 0) + (item.volume || 0),
+                        turnover: (prev.turnover || 0) + (item.turnover || 0),
+                        mcap: prev.mcap || item.mcap
+                    });
+                } else {
+                    rowMap.set(item.symbol, item);
+                }
+            });
+
+            // Final filter for valid price
+            cleanData[date] = Array.from(rowMap.values()).filter(item => item.close > 0);
+        });
+
+        setData(cleanData);
+        
+        // Automatically select the newest date
+        const dates = Object.keys(cleanData).sort().reverse();
+        if (dates.length > 0) {
+            setSelectedDate(dates[0]);
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -26,16 +67,6 @@ function App() {
         setLoading(false);
       });
   }, []);
-
-  const availableDates = Object.keys(data).sort().reverse(); // Newest first
-  const [selectedDate, setSelectedDate] = useState("");
-
-  // Update selected date when data loads
-  useEffect(() => {
-    if (availableDates.length > 0 && !selectedDate) {
-      setSelectedDate(availableDates[0]);
-    }
-  }, [availableDates, selectedDate]);
   
   const currentData = useMemo(() => {
     return data[selectedDate] || [];
