@@ -93,7 +93,7 @@ function App() {
 
   if (loading) {
     return (
-      <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', flexDirection: 'column', gap: '16px' }}>
+      <div className="loading-container">
         <Loader2 size={48} className="animate-spin" color="#6366f1" />
         <p style={{ fontFamily: 'sans-serif', color: '#94a3b8' }}>Loading Market Data...</p>
       </div>
@@ -102,7 +102,7 @@ function App() {
 
   if (error) {
     return (
-        <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#ef4444' }}>
+        <div className="error-container">
             <p>{error}</p>
         </div>
     )
@@ -110,14 +110,7 @@ function App() {
 
   return (
     <Layout>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-end',
-        marginBottom: '32px',
-        flexWrap: 'wrap',
-        gap: '16px'
-      }}>
+      <div className="dashboard-header">
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Market Overview</h2>
           <p style={{ color: 'var(--text-secondary)' }}>
@@ -125,26 +118,12 @@ function App() {
           </p>
         </div>
 
-        <div className="glass-panel" style={{ 
-          padding: '8px 16px', 
-          borderRadius: '12px', 
-          display: 'flex', 
-          alignItems: 'center',
-          gap: '12px'
-        }}>
+        <div className="glass-panel date-picker-container">
           <Calendar size={18} color="var(--text-secondary)" />
           <select 
             value={selectedDate} 
             onChange={(e) => setSelectedDate(e.target.value)}
-            style={{ 
-              background: 'transparent', 
-              border: 'none', 
-              color: 'var(--text-primary)', 
-              fontSize: '14px', 
-              outline: 'none',
-              cursor: 'pointer',
-              fontFamily: 'inherit'
-            }}
+            className="date-select"
           >
             {availableDates.map(date => (
               <option key={date} value={date} style={{ background: '#1e293b' }}>
@@ -156,12 +135,7 @@ function App() {
       </div>
 
       {/* Stats Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: '24px',
-        marginBottom: '32px'
-      }}>
+      <div className="stats-grid">
         <StatCard 
           title="Top Gainer" 
           value={topGainer.symbol} 
@@ -193,18 +167,13 @@ function App() {
       </div>
 
       {/* Charts Section */}
-      <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
-          gap: '24px',
-          marginBottom: '32px' 
-      }}>
+      <div className="charts-grid">
           <PriceChangeChart data={currentData} />
           <TurnoverChart data={currentData} />
       </div>
 
       <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Detailed Market Data</h3>
+          <h3 className="section-title">Detailed Market Data</h3>
           <MarketTable data={currentData} />
       </div>
 
