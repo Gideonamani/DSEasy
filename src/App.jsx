@@ -197,7 +197,7 @@ function App() {
         />
         <StatCard
           title="Total Volume"
-          value={(totalVolume / 1000000).toFixed(2) + "M"}
+          value={totalVolume > 1000000000 ? (totalVolume / 1000000000).toFixed(2) + 'B' : (totalVolume / 1000000).toFixed(2) + 'M'}
           change={0}
           subtext="Total Shares Traded"
           type="primary"

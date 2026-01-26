@@ -90,7 +90,7 @@ export const Layout = ({ children }) => {
           borderLeft: 'none',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 40,
+          zIndex: 60,
           transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           background: 'var(--bg-card)' // Ensure opacity for overlay
         }}
@@ -116,7 +116,10 @@ export const Layout = ({ children }) => {
               icon={tab === 'Dashboard' ? LayoutDashboard : tab === 'Market Analysis' ? BarChart3 : tab === 'Notifications' ? Bell : Settings} 
               label={tab} 
               active={activeTab === tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                if (isMobile) setIsSidebarOpen(false);
+              }}
             />
           ))}
         </div>
