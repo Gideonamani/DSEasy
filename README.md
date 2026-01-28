@@ -2,6 +2,8 @@
 
 **Making visualisation of DSE listed companies performance easy.**
 
+🚀 **[Live Demo](https://ds-easy.vercel.app/)**
+
 DSEasy is a modern web dashboard designed to simplify the analysis of the Dar es Salaam Stock Exchange (DSE). It transforms raw market data into an interactive, user-friendly interface, allowing investors and analysts to track market performance at a glance.
 
 ## How It Works
