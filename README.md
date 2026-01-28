@@ -28,6 +28,37 @@ Built with **React** and **Vite**, the application provides a responsive and fas
 - **Interactive Visualization**: Uses **Chart.js** to render visual breakdowns of price changes and turnover distributions.
 - **Detailed Analysis**: A comprehensive, sortable table view for granular inspection of all listed companies.
 
+## Data Structure
+
+The Google Sheets backend contains daily market data with the following columns:
+
+| Column | Header                     | API Field           |
+| ------ | -------------------------- | ------------------- |
+| A      | Symbol                     | `symbol`            |
+| B      | Open                       | `open`              |
+| C      | Prev Close                 | `prevClose`         |
+| D      | Close                      | `close`             |
+| E      | High                       | `high`              |
+| F      | Low                        | `low`               |
+| G      | Change                     | _(text, skipped)_   |
+| H      | Turn over                  | `turnover`          |
+| I      | Deals                      | `deals`             |
+| J      | Out Standing Bid           | `outstandingBid`    |
+| K      | Out Standing Offer         | `outstandingOffer`  |
+| L      | Volume                     | `volume`            |
+| M      | MCAP (TZS 'B)              | `mcap`              |
+| N      | Change Value               | `change`            |
+| O      | _(empty)_                  | —                   |
+| P      | Bid/Offer                  | `bidOfferRatio`     |
+| Q      | High/Low Spread            | `highLowSpread`     |
+| R      | Turnover % of Daily Traded | `turnoverPctDaily`  |
+| S      | Turnover / MCAP            | `turnoverMcapRatio` |
+| T      | Vol/Deal                   | `volPerDeal`        |
+| U      | Turnover/Deal              | `turnoverPerDeal`   |
+| V      | Change/Vol                 | `changePerVol`      |
+
+> **Note**: Columns P–V contain derived metrics for advanced analysis (liquidity, volatility, trade patterns).
+
 ## Technologies
 
 - **Frontend**: React, Vite, Chart.js, Lucide React
