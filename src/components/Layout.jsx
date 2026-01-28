@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, BarChart3, Settings, Bell, Search, Menu, X } from 'lucide-react';
+import { LayoutDashboard, BarChart3, TrendingUp, Settings, Bell, Search, Menu, X } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   <div 
@@ -35,8 +35,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   </div>
 );
 
-export const Layout = ({ children }) => {
-  const [activeTab, setActiveTab] = useState('Dashboard');
+export const Layout = ({ children, activeTab, onTabChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -110,14 +109,18 @@ export const Layout = ({ children }) => {
         </div>
 
         <div style={{ flex: 1, padding: '12px 0' }}>
-          {['Dashboard', 'Market Analysis', 'Notifications', 'Settings'].map(tab => (
+          {['Dashboard', 'Derived Analytics', 'Notifications', 'Settings'].map(tab => (
             <SidebarItem 
               key={tab}
-              icon={tab === 'Dashboard' ? LayoutDashboard : tab === 'Market Analysis' ? BarChart3 : tab === 'Notifications' ? Bell : Settings} 
+              icon={
+                tab === 'Dashboard' ? LayoutDashboard : 
+                tab === 'Derived Analytics' ? TrendingUp : 
+                tab === 'Notifications' ? Bell : Settings
+              } 
               label={tab} 
               active={activeTab === tab}
               onClick={() => {
-                setActiveTab(tab);
+                onTabChange(tab);
                 if (isMobile) setIsSidebarOpen(false);
               }}
             />

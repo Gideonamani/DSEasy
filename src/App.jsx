@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import { StatCard } from "./components/StatCard";
 import { MarketTable } from "./components/MarketTable";
 import { PriceChangeChart, TurnoverChart } from "./components/StockChart";
+import { DerivedAnalytics } from "./components/DerivedAnalytics";
 import { Calendar, Loader2 } from "lucide-react";
 
 // API URL
@@ -11,6 +12,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiw
 function App() {
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
+  const [activeTab, setActiveTab] = useState("Dashboard");
   
   // Data for the CURRENTLY selected date
   const [marketData, setMarketData] = useState([]);
@@ -161,127 +163,149 @@ function App() {
   }
 
   return (
-    <Layout>
-      <div className="dashboard-header">
-        <div>
-          <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
-            Market Overview
-          </h2>
-          <p style={{ color: "var(--text-secondary)" }}>
-            Data for{" "}
-            <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
-              {selectedDate ? new Date(selectedDate).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              }) : "..."}
-            </span>
-          </p>
+    <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+      {activeTab === "Dashboard" && (
+        <>
+          <div className="dashboard-header">
+            <div>
+              <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
+                Market Overview
+              </h2>
+              <p style={{ color: "var(--text-secondary)" }}>
+                Data for{" "}
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
+                  {selectedDate ? new Date(selectedDate).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  }) : "..."}
+                </span>
+              </p>
+            </div>
+
+            <div className="glass-panel date-picker-container">
+              <Calendar size={18} color="var(--text-secondary)" />
+              <select
+                value={selectedDate}
+                onChange={(e) => {
+                  setLoadingData(true);
+                  setSelectedDate(e.target.value);
+                }}
+                className="date-select"
+                disabled={loadingData}
+              >
+                {availableDates.map((date) => (
+                  <option key={date} value={date} style={{ background: "#1e293b" }}>
+                    {date}
+                  </option>
+                ))}
+              </select>
+              {loadingData && <Loader2 size={16} className="animate-spin" style={{marginLeft: 8}}/>}
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="stats-grid">
+            <StatCard
+              title="Top Gainer"
+              value={topGainer.symbol}
+              change={topGainer.change}
+              subtext={`Price: ${topGainer.close.toLocaleString()}`}
+              type="success"
+            />
+            <StatCard
+              title="Top Loser"
+              value={topLoser.symbol}
+              change={topLoser.change}
+              subtext={`Price: ${topLoser.close.toLocaleString()}`}
+              type="danger"
+            />
+            <StatCard
+              title="Total Volume"
+              value={totalVolume > 1000000000 ? (totalVolume / 1000000000).toFixed(2) + 'B' : (totalVolume / 1000000).toFixed(2) + 'M'}
+              change={null}
+              subtext="Total Shares Traded"
+              type="primary"
+            />
+            <StatCard
+              title="Total Turnover"
+              value={
+                totalTurnover > 1000000000
+                  ? (totalTurnover / 1000000000).toFixed(2) + "B"
+                  : (totalTurnover / 1000000).toFixed(2) + "M"
+              }
+              change={null}
+              subtext="TZS Turnover"
+              type="neutral"
+            />
+          </div>
+
+          {/* Stats Grid Row 2 */}
+          <div className="stats-grid" style={{ marginTop: "16px" }}>
+            <StatCard
+              title="Total Deals"
+              value={totalDeals.toLocaleString()}
+              change={null}
+              subtext="Trades Executed"
+              type="neutral"
+            />
+            <StatCard
+              title="Total Market Cap"
+              value={
+                totalMcap > 1000000000000
+                  ? (totalMcap / 1000000000000).toFixed(2) + "T"
+                  : (totalMcap / 1000000000).toFixed(2) + "B"
+              }
+              change={null}
+              subtext="TZS Market Cap"
+              type="primary"
+            />
+            <StatCard
+              title="Symbols Listed"
+              value={activeSymbolsCount}
+              change={null}
+              subtext="Total Listed"
+              type="neutral"
+            />
+            <StatCard
+              title="Active Symbols"
+              value={tradedSymbolsCount}
+              change={null}
+              subtext="Volume > 0"
+              type="neutral"
+            />
+          </div>
+
+          {/* Charts Section */}
+          <div className="charts-grid">
+            <PriceChangeChart data={marketData} />
+            <TurnoverChart data={marketData} />
+          </div>
+
+          <div style={{ marginBottom: "32px" }}>
+            <h3 className="section-title">Detailed Market Data</h3>
+            <MarketTable data={marketData} />
+          </div>
+        </>
+      )}
+
+      {activeTab === "Derived Analytics" && (
+        <DerivedAnalytics data={marketData} />
+      )}
+
+      {activeTab === "Notifications" && (
+        <div className="glass-panel" style={{ padding: "48px", textAlign: "center", borderRadius: "16px" }}>
+          <h3 style={{ marginBottom: "12px" }}>Notifications</h3>
+          <p style={{ color: "var(--text-secondary)" }}>No new notifications</p>
         </div>
+      )}
 
-        <div className="glass-panel date-picker-container">
-          <Calendar size={18} color="var(--text-secondary)" />
-          <select
-            value={selectedDate}
-            onChange={(e) => {
-              setLoadingData(true);
-              setSelectedDate(e.target.value);
-            }}
-            className="date-select"
-            disabled={loadingData} // Disable while fetching new day
-          >
-            {availableDates.map((date) => (
-              <option key={date} value={date} style={{ background: "#1e293b" }}>
-                {date}
-              </option>
-            ))}
-          </select>
-          {loadingData && <Loader2 size={16} className="animate-spin" style={{marginLeft: 8}}/>}
+      {activeTab === "Settings" && (
+        <div className="glass-panel" style={{ padding: "48px", textAlign: "center", borderRadius: "16px" }}>
+          <h3 style={{ marginBottom: "12px" }}>Settings</h3>
+          <p style={{ color: "var(--text-secondary)" }}>Settings page coming soon</p>
         </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        <StatCard
-          title="Top Gainer"
-          value={topGainer.symbol}
-          change={topGainer.change}
-          subtext={`Price: ${topGainer.close.toLocaleString()}`}
-          type="success"
-        />
-        <StatCard
-          title="Top Loser"
-          value={topLoser.symbol}
-          change={topLoser.change}
-          subtext={`Price: ${topLoser.close.toLocaleString()}`}
-          type="danger"
-        />
-        <StatCard
-          title="Total Volume"
-          value={totalVolume > 1000000000 ? (totalVolume / 1000000000).toFixed(2) + 'B' : (totalVolume / 1000000).toFixed(2) + 'M'}
-          change={null}
-          subtext="Total Shares Traded"
-          type="primary"
-        />
-        <StatCard
-          title="Total Turnover"
-          value={
-            totalTurnover > 1000000000
-              ? (totalTurnover / 1000000000).toFixed(2) + "B"
-              : (totalTurnover / 1000000).toFixed(2) + "M"
-          }
-          change={null}
-          subtext="TZS Turnover"
-          type="neutral"
-        />
-      </div>
-
-      {/* Stats Grid Row 2 */}
-      <div className="stats-grid" style={{ marginTop: "16px" }}>
-         <StatCard
-          title="Total Deals"
-          value={totalDeals.toLocaleString()}
-          change={null}
-          subtext="Trades Executed"
-          type="neutral"
-        />
-        <StatCard
-          title="Total Market Cap"
-          value={
-            totalMcap > 1000000000000
-              ? (totalMcap / 1000000000000).toFixed(2) + "T"
-              : (totalMcap / 1000000000).toFixed(2) + "B"
-          }
-          change={null}
-          subtext="TZS Market Cap"
-          type="primary"
-        />
-        <StatCard
-          title="Symbols Listed"
-          value={activeSymbolsCount}
-          change={null}
-          subtext="Total Listed"
-          type="neutral"
-        />
-        <StatCard
-          title="Active Symbols"
-          value={tradedSymbolsCount}
-          change={null}
-          subtext="Volume > 0"
-          type="neutral"
-        />
-      </div>
-
-      {/* Charts Section */}
-      <div className="charts-grid">
-        <PriceChangeChart data={marketData} />
-        <TurnoverChart data={marketData} />
-      </div>
-
-      <div style={{ marginBottom: "32px" }}>
-        <h3 className="section-title">Detailed Market Data</h3>
-        <MarketTable data={marketData} />
-      </div>
+      )}
     </Layout>
   );
 }
