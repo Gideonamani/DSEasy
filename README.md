@@ -1,16 +1,45 @@
-# React + Vite
+# DSEasy
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Making visualisation of DSE listed companies performance easy.**
 
-Currently, two official plugins are available:
+DSEasy is a modern web dashboard designed to simplify the analysis of the Dar es Salaam Stock Exchange (DSE). It transforms raw market data into an interactive, user-friendly interface, allowing investors and analysts to track market performance at a glance.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## How It Works
 
-## React Compiler
+DSEasy bridges the gap between static spreadsheet data and dynamic visualization:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Data Architecture
 
-## Expanding the ESLint configuration
+- **Backend**: The project leverages **Google Sheets** as a flexible, cloud-based database to store daily market summaries.
+- **API Layer**: A custom **Google Apps Script** acts as the API, securely fetching and formatting data for the frontend.
+- **Optimization**: Data is organized into daily sheets for historical archives and consolidated symbol sheets for trend analysis.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. Frontend Experience
+
+Built with **React** and **Vite**, the application provides a responsive and fast experience:
+
+- **Lazy Loading**: Efficiently manages bandwidth by fetching the list of available dates first, and loading specific daily data only on demand.
+- **Market Overview**: Instantly calculates and displays critical metrics such as:
+  - Top Gainers and Losers
+  - Total Market Volume and Turnover
+  - Total Market Capitalization
+- **Interactive Visualization**: Uses **Chart.js** to render visual breakdowns of price changes and turnover distributions.
+- **Detailed Analysis**: A comprehensive, sortable table view for granular inspection of all listed companies.
+
+## Technologies
+
+- **Frontend**: React, Vite, Chart.js, Lucide React
+- **Backend**: Google Apps Script
+- **Database**: Google Sheets
+
+## Getting Started
+
+1.  Clone the repository.
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Run the development server:
+    ```bash
+    npm run dev
+    ```
