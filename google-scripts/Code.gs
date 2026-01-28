@@ -62,22 +62,30 @@ function getDayData(dateStr) {
   // Index 0 = A ... Index 13 = N (Change Value)
   const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
   
+// Helper to remove commas and parse number
+  const parseNumber = (val) => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const clean = String(val).replace(/,/g, '');
+    return Number(clean) || 0;
+  };
+
   const formattedData = data.map(row => {
     return {
       symbol: row[0],
-      open: Number(row[1]) || 0,
-      prevClose: Number(row[2]) || 0,
-      close: Number(row[3]) || 0,
-      high: Number(row[4]) || 0,
-      low: Number(row[5]) || 0,
+      open: parseNumber(row[1]),
+      prevClose: parseNumber(row[2]),
+      close: parseNumber(row[3]),
+      high: parseNumber(row[4]),
+      low: parseNumber(row[5]),
       
       // We use Col N (Index 13) for the numeric Change Value to preserve negatives correctly
-      change: Number(row[13]) || 0, 
+      change: parseNumber(row[13]), 
       
-      turnover: Number(row[7]) || 0,
-      deals: Number(row[8]) || 0,
-      volume: Number(row[11]) || 0,
-      mcap: Number(row[12]) || 0
+      turnover: parseNumber(row[7]),
+      deals: parseNumber(row[8]),
+      volume: parseNumber(row[11]),
+      mcap: parseNumber(row[12]) * 1000000000 // Scale: Billions -> Units
     };
   });
   

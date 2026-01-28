@@ -85,6 +85,7 @@ function App() {
               change: prev.change !== 0 ? prev.change : item.change,
               volume: (prev.volume || 0) + (item.volume || 0),
               turnover: (prev.turnover || 0) + (item.turnover || 0),
+              deals: (prev.deals || 0) + (item.deals || 0),
               mcap: prev.mcap || item.mcap,
             });
           } else {
@@ -125,6 +126,20 @@ function App() {
   const totalTurnover = useMemo(() => {
     return marketData.reduce((acc, curr) => acc + curr.turnover, 0);
   }, [marketData]);
+
+  const totalDeals = useMemo(() => {
+    return marketData.reduce((acc, curr) => acc + (curr.deals || 0), 0);
+  }, [marketData]);
+
+  const totalMcap = useMemo(() => {
+    return marketData.reduce((acc, curr) => acc + (curr.mcap || 0), 0);
+  }, [marketData]);
+
+  const tradedSymbolsCount = useMemo(() => {
+    return marketData.filter((item) => item.volume > 0).length;
+  }, [marketData]);
+
+  const activeSymbolsCount = marketData.length;
 
 
   // Loading State (Initial)
@@ -217,6 +232,42 @@ function App() {
           }
           change={null}
           subtext="TZS Turnover"
+          type="neutral"
+        />
+      </div>
+
+      {/* Stats Grid Row 2 */}
+      <div className="stats-grid" style={{ marginTop: "16px" }}>
+         <StatCard
+          title="Total Deals"
+          value={totalDeals.toLocaleString()}
+          change={null}
+          subtext="Trades Executed"
+          type="neutral"
+        />
+        <StatCard
+          title="Total Market Cap"
+          value={
+            totalMcap > 1000000000000
+              ? (totalMcap / 1000000000000).toFixed(2) + "T"
+              : (totalMcap / 1000000000).toFixed(2) + "B"
+          }
+          change={null}
+          subtext="TZS Market Cap"
+          type="primary"
+        />
+        <StatCard
+          title="Symbols Listed"
+          value={activeSymbolsCount}
+          change={null}
+          subtext="Total Listed"
+          type="neutral"
+        />
+        <StatCard
+          title="Active Symbols"
+          value={tradedSymbolsCount}
+          change={null}
+          subtext="Volume > 0"
           type="neutral"
         />
       </div>
