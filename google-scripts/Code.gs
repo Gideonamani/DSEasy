@@ -59,9 +59,9 @@ function getDayData(dateStr) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return jsonResponse([]);
 
-  // Get Columns A to N (14 columns)
-  // Index 0 = A ... Index 13 = N (Change Value)
-  const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
+  // Get Columns A to V (22 columns)
+  // A=0, B=1, ... N=13, O=14, P=15, Q=16, R=17, S=18, T=19, U=20, V=21
+  const data = sheet.getRange(2, 1, lastRow - 1, 22).getValues();
 
   // Helper to remove commas and parse number
   const parseNumber = (val) => {
@@ -73,20 +73,29 @@ function getDayData(dateStr) {
 
   const formattedData = data.map((row) => {
     return {
+      // Core data (A-N)
       symbol: row[0],
       open: parseNumber(row[1]),
       prevClose: parseNumber(row[2]),
       close: parseNumber(row[3]),
       high: parseNumber(row[4]),
       low: parseNumber(row[5]),
-
-      // We use Col N (Index 13) for the numeric Change Value to preserve negatives correctly
-      change: parseNumber(row[13]),
-
+      change: parseNumber(row[13]), // Col N: numeric Change Value
       turnover: parseNumber(row[7]),
       deals: parseNumber(row[8]),
+      outstandingBid: parseNumber(row[9]), // Col J
+      outstandingOffer: parseNumber(row[10]), // Col K
       volume: parseNumber(row[11]),
       mcap: parseNumber(row[12]) * 1000000000, // Scale: Billions -> Units
+
+      // Derived metrics (P-V)
+      bidOfferRatio: parseNumber(row[15]), // Col P: Bid/Offer
+      highLowSpread: parseNumber(row[16]), // Col Q: High/Low Spread
+      turnoverPctDaily: parseNumber(row[17]), // Col R: Turnover % of Daily Traded
+      turnoverMcapRatio: parseNumber(row[18]), // Col S: Turnover / MCAP
+      volPerDeal: parseNumber(row[19]), // Col T: Vol/Deal
+      turnoverPerDeal: parseNumber(row[20]), // Col U: Turnover/Deal
+      changePerVol: parseNumber(row[21]), // Col V: Change/Vol
     };
   });
 
