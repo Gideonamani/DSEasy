@@ -40,17 +40,19 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral' }) =>
             {value}
         </div>
 
-        {change && (
+        {(change || subtext) && (
             <div style={{ display: 'flex', alignItems: 'center', fontSize: '13px' }}>
-                <span style={{ 
-                    color: accentColor, 
-                    fontWeight: 600, 
-                    marginRight: '8px',
-                    display: 'flex', 
-                    alignItems: 'center'
-                }}>
-                    {change > 0 ? '+' : ''}{change}%
-                </span>
+                {!!change && (
+                    <span style={{ 
+                        color: accentColor, 
+                        fontWeight: 600, 
+                        marginRight: '8px',
+                        display: 'flex', 
+                        alignItems: 'center'
+                    }}>
+                        {change > 0 ? '+' : ''}{change}%
+                    </span>
+                )}
                 <span style={{ color: 'var(--text-secondary)' }}>{subtext || 'vs last close'}</span>
             </div>
         )}

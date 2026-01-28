@@ -204,7 +204,7 @@ function App() {
         <StatCard
           title="Total Volume"
           value={totalVolume > 1000000000 ? (totalVolume / 1000000000).toFixed(2) + 'B' : (totalVolume / 1000000).toFixed(2) + 'M'}
-          change={0}
+          change={null}
           subtext="Total Shares Traded"
           type="primary"
         />
@@ -215,7 +215,7 @@ function App() {
               ? (totalTurnover / 1000000000).toFixed(2) + "B"
               : (totalTurnover / 1000000).toFixed(2) + "M"
           }
-          change={0}
+          change={null}
           subtext="TZS Turnover"
           type="neutral"
         />
