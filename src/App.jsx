@@ -4,6 +4,7 @@ import { StatCard } from "./components/StatCard";
 import { MarketTable } from "./components/MarketTable";
 import { PriceChangeChart, TurnoverChart } from "./components/StockChart";
 import { DerivedAnalytics } from "./components/DerivedAnalytics";
+import { TickerTrends } from "./components/TickerTrends";
 import { Calendar, Loader2 } from "lucide-react";
 
 // API URL
@@ -291,6 +292,10 @@ function App() {
 
       {activeTab === "Derived Analytics" && (
         <DerivedAnalytics data={marketData} />
+      )}
+
+      {activeTab === "Ticker Trends" && (
+        <TickerTrends />
       )}
 
       {activeTab === "Notifications" && (

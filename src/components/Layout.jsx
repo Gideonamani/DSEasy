@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, BarChart3, TrendingUp, Settings, Bell, Search, Menu, X } from 'lucide-react';
+import { LayoutDashboard, BarChart3, TrendingUp, LineChart, Settings, Bell, Search, Menu, X } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   <div 
@@ -109,12 +109,13 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
         </div>
 
         <div style={{ flex: 1, padding: '12px 0' }}>
-          {['Dashboard', 'Derived Analytics', 'Notifications', 'Settings'].map(tab => (
+          {['Dashboard', 'Derived Analytics', 'Ticker Trends', 'Notifications', 'Settings'].map(tab => (
             <SidebarItem 
               key={tab}
               icon={
                 tab === 'Dashboard' ? LayoutDashboard : 
-                tab === 'Derived Analytics' ? TrendingUp : 
+                tab === 'Derived Analytics' ? TrendingUp :
+                tab === 'Ticker Trends' ? LineChart : 
                 tab === 'Notifications' ? Bell : Settings
               } 
               label={tab} 
