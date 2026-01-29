@@ -5,10 +5,58 @@
    Instructions:
    1. Paste this into your Google Apps Script project.
    2. Creates a "Trends" database by sending daily data to a second spreadsheet.
+   3. A custom menu "📊 Trends Sync" will appear after refreshing the spreadsheet.
 */
 
+// --- CUSTOM MENU (Runs automatically when spreadsheet opens) ---
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('📊 Trends Sync')
+    .addItem('Sync Latest Day', 'syncDailyToTrends')
+    .addSeparator()
+    .addItem('Backfill All History', 'backfillAllHistory')
+    .addSeparator()
+    .addItem('⚠️ Undo Last Sync', 'undoLastSync')
+    .addToUi();
+}
+
 const DESTINATION_SPREADSHEET_ID = '1cvCaJod4PPsilu3wcAMosMSapfawlJqL2ddtx2xt9rQ'; // <--- REPLACE THIS ID
-const EXCLUDED_SPECIFIC_NAMES = ['Market Summary', 'Equity', 'Bonds', 'template', '_config']; 
+const EXCLUDED_SPECIFIC_NAMES = ['Market Summary', 'Equity', 'Bonds', 'template', '_config'];
+const DATA_COLUMN_COUNT = 22; // Columns A-V (Symbol through last data column)
+
+
+// 0. UNDO LAST SYNC (Deletes last row from each symbol sheet)
+function undoLastSync() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    '⚠️ Undo Last Sync',
+    'This will DELETE the last row from EVERY symbol sheet in the Trends spreadsheet.\n\nAre you sure?',
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) {
+    ui.alert('Cancelled', 'No changes were made.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  const destSs = SpreadsheetApp.openById(DESTINATION_SPREADSHEET_ID);
+  const sheets = destSs.getSheets();
+  let deletedCount = 0;
+  
+  sheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (name.startsWith('_')) return; // Skip system/config sheets
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) { // Keep header row (row 1)
+      sheet.deleteRow(lastRow);
+      deletedCount++;
+    }
+  });
+  
+  ui.alert('✅ Undo Complete', `Deleted the last row from ${deletedCount} symbol sheets.`, ui.ButtonSet.OK);
+  Logger.log(`Undo: Deleted last row from ${deletedCount} sheets`);
+} 
 
 // --- HELPER: Formats "26Jan2026" -> "26 Jan 2026" ---
 function formatDateString(sheetName) {
@@ -81,7 +129,7 @@ function processSheetData(sheet, destSs, dateStr) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
   
-  const range = sheet.getRange(2, 1, lastRow - 1, 14); 
+  const range = sheet.getRange(2, 1, lastRow - 1, DATA_COLUMN_COUNT); 
   const values = range.getValues();
   
   values.forEach(row => {
@@ -96,7 +144,7 @@ function processSheetData(sheet, destSs, dateStr) {
     
     if (!symbolSheet) {
       symbolSheet = destSs.insertSheet(symbol);
-      symbolSheet.appendRow(["Date", "Open", "Prev Close", "Close", "High", "Low", "Change", "Turnover", "Deals", "Bid", "Offer", "Volume", "MCap", "Change Value"]);
+      symbolSheet.appendRow(["Date", "Open", "Prev Close", "Close", "High", "Low", "Change", "Turn Over", "Deals", "Out Standing Bid", "Out Standing Offer", "Volume", "MCAP (TZS 'B)", "Change Value", "", "Bid/Offer", "High/Low Spread", "Turnover % of Daily Traded", "Turnover / MCAP", "Vol/Deal", "Turnover/Deal", "Change/Vol"]);
       symbolSheet.getRange("G:G").setNumberFormat("@");
     }
     
