@@ -324,7 +324,7 @@ export const TickerTrends = () => {
       datasets: [
         {
           label: metricKey.charAt(0).toUpperCase() + metricKey.slice(1),
-          data: timeseriesData.map((d) => d[metricKey]),
+          data: timeseriesData.map((d) => metricKey === 'turnoverPct' ? (d[metricKey] || 0) * 100 : d[metricKey]),
           borderColor: color,
           backgroundColor: `${color}20`,
           fill: true,
