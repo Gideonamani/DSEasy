@@ -525,7 +525,8 @@ export const TickerTrends = () => {
                       data: timeseriesData.map(d => [d.close, d.high]),
                       backgroundColor: 'rgba(16, 185, 129, 0.6)', // Green
                       borderColor: 'rgba(16, 185, 129, 1)',
-                      borderWidth: 1,
+                      borderWidth: { top: 1, right: 1, bottom: 0, left: 1 },
+                      borderSkipped: false,
                       barPercentage: 0.3,
                       yAxisID: 'y',
                       grouped: false, // Prevent lateral offset
@@ -537,7 +538,8 @@ export const TickerTrends = () => {
                       data: timeseriesData.map(d => [d.low, d.close]),
                       backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
                       borderColor: 'rgba(239, 68, 68, 1)',
-                      borderWidth: 1,
+                      borderWidth: { top: 0, right: 1, bottom: 1, left: 1 },
+                      borderSkipped: false,
                       barPercentage: 0.3,
                       yAxisID: 'y',
                       grouped: false, // Prevent lateral offset
