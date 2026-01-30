@@ -37,6 +37,16 @@ const METRICS = [
   { key: "deals", label: "Deals", icon: TrendingUp, color: "#ec4899" },
   { key: "high", label: "High", icon: TrendingUp, color: "#22c55e" },
   { key: "low", label: "Low", icon: TrendingUp, color: "#ef4444" },
+  { key: "mcap", label: "MCAP (B)", icon: DollarSign, color: "#8b5cf6" },
+  { key: "outstandingBid", label: "Outstanding Bid", icon: TrendingUp, color: "#0ea5e9" },
+  { key: "outstandingOffer", label: "Outstanding Offer", icon: TrendingUp, color: "#f43f5e" },
+  { key: "bidOffer", label: "Bid/Offer Ratio", icon: Activity, color: "#d946ef" },
+  { key: "spread", label: "High/Low Spread", icon: Activity, color: "#eab308" },
+  { key: "turnoverPct", label: "Turnover %", icon: Activity, color: "#14b8a6" },
+  { key: "turnoverMcap", label: "Turnover/MCAP", icon: Activity, color: "#6366f1" },
+  { key: "volDeal", label: "Vol/Deal", icon: BarChart3, color: "#10b981" },
+  { key: "turnoverDeal", label: "Turnover/Deal", icon: Activity, color: "#f59e0b" },
+  { key: "changeVol", label: "Change/Vol", icon: TrendingUp, color: "#ec4899" },
 ];
 
 // Reusable card component
@@ -77,11 +87,26 @@ export const TickerTrends = () => {
   const [symbols, setSymbols] = useState([]);
   const [selectedSymbol, setSelectedSymbol] = useState("");
   const [timeseriesData, setTimeseriesData] = useState([]);
-  const [selectedMetric, setSelectedMetric] = useState("close");
+  
+  // Track hidden metrics instead of single selected metric
+  const [hiddenMetrics, setHiddenMetrics] = useState(new Set());
   
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState(null);
+
+  // Toggle metric visibility
+  const toggleMetric = (key) => {
+    setHiddenMetrics(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   // 1. Fetch available symbols on mount
   useEffect(() => {
@@ -154,51 +179,6 @@ export const TickerTrends = () => {
     return () => { ignore = true; };
   }, [selectedSymbol]);
 
-  // Chart data for selected metric
-  const chartData = useMemo(() => {
-    if (!timeseriesData.length) return null;
-
-    const metric = METRICS.find((m) => m.key === selectedMetric);
-    
-    return {
-      labels: timeseriesData.map((d) => d.date),
-      datasets: [
-        {
-          label: metric?.label || selectedMetric,
-          data: timeseriesData.map((d) => d[selectedMetric]),
-          borderColor: metric?.color || "#6366f1",
-          backgroundColor: `${metric?.color || "#6366f1"}20`,
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-        },
-      ],
-    };
-  }, [timeseriesData, selectedMetric]);
-
-  // Volume bar chart data
-  const volumeChartData = useMemo(() => {
-    if (!timeseriesData.length) return null;
-
-    return {
-      labels: timeseriesData.map((d) => d.date),
-      datasets: [
-        {
-          label: "Volume",
-          data: timeseriesData.map((d) => d.volume),
-          backgroundColor: timeseriesData.map((d, i ) => {
-            if (i === 0) return "rgba(99, 102, 241, 0.7)";
-            return d.close >= timeseriesData[i - 1].close
-              ? "rgba(16, 185, 129, 0.7)"
-              : "rgba(239, 68, 68, 0.7)";
-          }),
-          borderRadius: 4,
-        },
-      ],
-    };
-  }, [timeseriesData]);
-
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -243,6 +223,48 @@ export const TickerTrends = () => {
     },
   };
 
+  // Helper to generate chart data for any metric
+  const getMetricData = (metricKey, color) => {
+    if (!timeseriesData.length) return null;
+
+    // Special handling for Volume (Bar Chart with conditional colors)
+    if (metricKey === "volume") {
+      return {
+        labels: timeseriesData.map((d) => d.date),
+        datasets: [
+          {
+            label: "Volume",
+            data: timeseriesData.map((d) => d.volume),
+            backgroundColor: timeseriesData.map((d, i) => {
+              if (i === 0) return "rgba(99, 102, 241, 0.7)";
+              return d.close >= timeseriesData[i - 1].close
+                ? "rgba(16, 185, 129, 0.7)"
+                : "rgba(239, 68, 68, 0.7)";
+            }),
+            borderRadius: 4,
+          },
+        ],
+      };
+    }
+
+    // Default Line chart for others
+    return {
+      labels: timeseriesData.map((d) => d.date),
+      datasets: [
+        {
+          label: metricKey.charAt(0).toUpperCase() + metricKey.slice(1),
+          data: timeseriesData.map((d) => d[metricKey]),
+          borderColor: color,
+          backgroundColor: `${color}20`,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+        },
+      ],
+    };
+  };
+
   // Summary stats
   const stats = useMemo(() => {
     if (!timeseriesData.length) return null;
@@ -277,7 +299,7 @@ export const TickerTrends = () => {
       <div className="glass-panel" style={{ padding: "48px", textAlign: "center", borderRadius: "16px" }}>
         <h3 style={{ marginBottom: "12px", color: "var(--accent-danger)" }}>Error</h3>
         <p style={{ color: "var(--text-secondary)" }}>{error}</p>
-        <p style={{ color: "var(--text-secondary)", fontSize: "12px", marginTop: "16px" }}>
+        <p style={{ color: "var(--text-secondary", fontSize: "12px", marginTop: "16px" }}>
           Make sure to update SYMBOLS_API_URL in TickerTrends.jsx
         </p>
       </div>
@@ -344,58 +366,56 @@ export const TickerTrends = () => {
         </div>
       )}
 
-      {/* Metric Selector Pills */}
+      {/* Metric Visibility Toggles */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
-        {METRICS.map((metric) => (
-          <button
-            key={metric.key}
-            onClick={() => setSelectedMetric(metric.key)}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "20px",
-              border: "1px solid var(--glass-border)",
-              background: selectedMetric === metric.key ? metric.color : "transparent",
-              color: selectedMetric === metric.key ? "#fff" : "var(--text-secondary)",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: 500,
-              transition: "all 0.2s ease",
-            }}
-          >
-            {metric.label}
-          </button>
-        ))}
+        {METRICS.map((metric) => {
+            const isHidden = hiddenMetrics.has(metric.key);
+            return (
+              <button
+                key={metric.key}
+                onClick={() => toggleMetric(metric.key)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  border: isHidden ? "1px dashed var(--text-secondary)" : "1px solid var(--glass-border)",
+                  background: isHidden ? "transparent" : metric.color,
+                  color: isHidden ? "var(--text-secondary)" : "#fff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  transition: "all 0.2s ease",
+                  textDecoration: isHidden ? "line-through" : "none",
+                  opacity: isHidden ? 0.6 : 1
+                }}
+              >
+                {metric.label}
+              </button>
+            )
+        })}
       </div>
 
-      {/* Main Price Chart */}
+      {/* Charts Grid */}
       <div className="charts-grid">
-        <TrendCard title={`${METRICS.find((m) => m.key === selectedMetric)?.label || selectedMetric} Trend`} icon={TrendingUp}>
-          <div style={{ height: "320px" }}>
-            {chartData ? (
-              <Line data={chartData} options={chartOptions} />
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)" }}>
-                {loadingData ? <Loader2 size={32} className="animate-spin" /> : "No data available"}
-              </div>
-            )}
-          </div>
-        </TrendCard>
+        {METRICS.map((metric) => {
+          if (hiddenMetrics.has(metric.key)) return null;
+          
+          const data = getMetricData(metric.key, metric.color);
+          const ChartComponent = metric.key === "volume" ? Bar : Line;
 
-        <TrendCard title="Volume History" icon={BarChart3}>
-          <div style={{ height: "320px" }}>
-            {volumeChartData ? (
-              <Bar data={volumeChartData} options={chartOptions} />
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)" }}>
-                {loadingData ? <Loader2 size={32} className="animate-spin" /> : "No data available"}
-              </div>
-            )}
-          </div>
-          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "12px" }}>
-            <span style={{ color: "var(--accent-success)" }}>Green</span> = Price up |{" "}
-            <span style={{ color: "var(--accent-danger)" }}>Red</span> = Price down
-          </p>
-        </TrendCard>
+          return (
+            <TrendCard key={metric.key} title={`${metric.label} Trend`} icon={metric.icon}>
+               <div style={{ height: "320px" }}>
+                  {data ? (
+                     <ChartComponent data={data} options={chartOptions} />
+                  ) : (
+                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)" }}>
+                      {loadingData ? <Loader2 size={32} className="animate-spin" /> : "No data available"}
+                    </div>
+                  )}
+               </div>
+            </TrendCard>
+          );
+        })}
       </div>
 
       {/* Data Summary */}

@@ -92,8 +92,8 @@ function getSymbolTimeseries(symbol) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return jsonResponse([]);
 
-  // Get all data (Date + columns B to N = 14 columns total)
-  const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
+  // Get all data (Date + columns B to V = 22 columns total)
+  const data = sheet.getRange(2, 1, lastRow - 1, 22).getValues();
 
   return jsonResponse(formatTimeseriesData(data));
 }
@@ -110,7 +110,7 @@ function getSymbolTimeseriesRange(symbol, fromDate, toDate) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return jsonResponse([]);
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
+  const data = sheet.getRange(2, 1, lastRow - 1, 22).getValues();
 
   // Filter by date range if provided
   let filteredData = data;
@@ -159,13 +159,14 @@ function parseDate(dateStr) {
     oct: 9,
     nov: 10,
     dec: 11,
+    "{json": 0 // Special case handle
   };
 
   // Pattern: "26 Jan 2026" or "26Jan2026"
   const match = str.match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
   if (match) {
     const day = parseInt(match[1]);
-    const month = months[match[2].toLowerCase()];
+    const month = months[match[2].toLowerCase()] || 0;
     const year = parseInt(match[3]);
     return new Date(year, month, day);
   }
@@ -214,11 +215,19 @@ function formatTimeseriesData(data) {
       change: String(row[6]).replace(/^'/, ""), // Keep as string (e.g., "-5.00%")
       turnover: parseNumber(row[7]),
       deals: parseNumber(row[8]),
-      bid: parseNumber(row[9]),
-      offer: parseNumber(row[10]),
+      outstandingBid: parseNumber(row[9]), 
+      outstandingOffer: parseNumber(row[10]),
       volume: parseNumber(row[11]),
       mcap: parseNumber(row[12]),
       changeValue: parseNumber(row[13]),
+      // row[14] is empty spacer
+      bidOffer: parseNumber(row[15]),
+      spread: parseNumber(row[16]),
+      turnoverPct: parseNumber(row[17]),
+      turnoverMcap: parseNumber(row[18]),
+      volDeal: parseNumber(row[19]),
+      turnoverDeal: parseNumber(row[20]),
+      changeVol: parseNumber(row[21])
     };
   });
 }
