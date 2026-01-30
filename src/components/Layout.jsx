@@ -1,39 +1,42 @@
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, BarChart3, TrendingUp, LineChart, Settings, Bell, Search, Menu, X } from 'lucide-react';
 
-const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
-  <div 
-    onClick={onClick}
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      padding: '12px 16px',
-      margin: '4px 8px',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      backgroundColor: active ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-      color: active ? '#fff' : 'var(--text-secondary)',
-      transition: 'all 0.2s ease',
-      position: 'relative',
-      overflow: 'hidden'
-    }}
-    className="hover-effect"
-  >
-    {active && (
-      <div style={{
-        position: 'absolute',
-        left: 0,
-        top: '10%',
-        bottom: '10%',
-        width: '3px',
-        backgroundColor: 'var(--accent-primary)',
-        borderRadius: '0 4px 4px 0'
-      }} />
-    )}
-    <Icon size={20} style={{ marginRight: '12px', zIndex: 1 }} />
-    <span style={{ fontSize: '14px', fontWeight: 500, zIndex: 1 }}>{label}</span>
-  </div>
-);
+const SidebarItem = ({ icon, label, active, onClick }) => {
+  const Icon = icon;
+  return (
+    <div 
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '12px 16px',
+        margin: '4px 8px',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        backgroundColor: active ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+        color: active ? '#fff' : 'var(--text-secondary)',
+        transition: 'all 0.2s ease',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+      className="hover-effect"
+    >
+      {active && (
+        <div style={{
+          position: 'absolute',
+          left: 0,
+          top: '10%',
+          bottom: '10%',
+          width: '3px',
+          backgroundColor: 'var(--accent-primary)',
+          borderRadius: '0 4px 4px 0'
+        }} />
+      )}
+      <Icon size={20} style={{ marginRight: '12px', zIndex: 1 }} />
+      <span style={{ fontSize: '14px', fontWeight: 500, zIndex: 1 }}>{label}</span>
+    </div>
+  );
+};
 
 export const Layout = ({ children, activeTab, onTabChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);

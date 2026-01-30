@@ -13,6 +13,7 @@ import {
 } from "chart.js";
 import { Bar, Bubble, Doughnut, Scatter } from "react-chartjs-2";
 import { Activity, TrendingUp, Zap, PieChart, ScatterChart } from "lucide-react";
+import { DatePicker } from "./DatePicker";
 
 ChartJS.register(
   CategoryScale,
@@ -27,42 +28,45 @@ ChartJS.register(
 );
 
 // Reusable section card component
-const AnalyticsCard = ({ title, icon: Icon, children, subtitle }) => (
-  <div
-    className="glass-panel"
-    style={{ padding: "24px", borderRadius: "16px" }}
-  >
+const AnalyticsCard = ({ title, icon, children, subtitle }) => {
+  const Icon = icon;
+  return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        marginBottom: subtitle ? "8px" : "20px",
-        gap: "12px",
-      }}
+      className="glass-panel"
+      style={{ padding: "24px", borderRadius: "16px" }}
     >
       <div
         style={{
-          width: "40px",
-          height: "40px",
-          borderRadius: "10px",
-          background: "rgba(99, 102, 241, 0.2)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          marginBottom: subtitle ? "8px" : "20px",
+          gap: "12px",
         }}
       >
-        <Icon size={20} color="var(--accent-primary)" />
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "10px",
+            background: "rgba(99, 102, 241, 0.2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon size={20} color="var(--accent-primary)" />
+        </div>
+        <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>{title}</h3>
       </div>
-      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>{title}</h3>
+      {subtitle && (
+        <p style={{ color: "var(--text-secondary)", fontSize: "12px", marginBottom: "16px", marginLeft: "52px" }}>
+          {subtitle}
+        </p>
+      )}
+      {children}
     </div>
-    {subtitle && (
-      <p style={{ color: "var(--text-secondary)", fontSize: "12px", marginBottom: "16px", marginLeft: "52px" }}>
-        {subtitle}
-      </p>
-    )}
-    {children}
-  </div>
-);
+  );
+};
 
 // Ranking table component for derived metrics
 const RankingTable = ({
@@ -156,7 +160,14 @@ const RankingTable = ({
   );
 };
 
-export const DerivedAnalytics = ({ data }) => {
+export const DerivedAnalytics = ({ 
+  data, 
+  selectedDate, 
+  formattedDate, 
+  availableDates, 
+  loadingData, 
+  onDateChange 
+}) => {
   // Volatility Chart: High/Low Spread
   const volatilityData = useMemo(() => {
     const sorted = [...data]
@@ -470,9 +481,20 @@ export const DerivedAnalytics = ({ data }) => {
             Derived Analytics
           </h2>
           <p style={{ color: "var(--text-secondary)" }}>
-            Advanced metrics for liquidity, volatility, and trade patterns
+            Data for{" "}
+            <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
+              {formattedDate || "..."}
+            </span>
+            {" "}&bull; Advanced metrics for liquidity, volatility, and trade patterns
           </p>
         </div>
+
+        <DatePicker
+          selectedDate={selectedDate}
+          availableDates={availableDates}
+          loadingData={loadingData}
+          onChange={onDateChange}
+        />
       </div>
 
       {/* Charts Row 1 */}
