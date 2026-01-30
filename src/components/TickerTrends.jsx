@@ -12,7 +12,8 @@ import {
   Filler,
 } from "chart.js";
 import { Line, Bar } from "react-chartjs-2";
-import { TrendingUp, Loader2, BarChart3, Activity, DollarSign } from "lucide-react";
+import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info } from "lucide-react";
+import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 
 ChartJS.register(
   CategoryScale,
@@ -51,37 +52,107 @@ const METRICS = [
 
 // Reusable card component
 // eslint-disable-next-line no-unused-vars
-const TrendCard = ({ title, icon: Icon, children }) => (
-  <div
-    className="glass-panel"
-    style={{ padding: "24px", borderRadius: "16px" }}
-  >
+// Reusable card component
+const TrendCard = ({ title, icon: Icon, children, explanation }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        marginBottom: "20px",
-        gap: "12px",
-      }}
+      className="glass-panel"
+      style={{ padding: "24px", borderRadius: "16px", position: "relative" }}
     >
       <div
         style={{
-          width: "40px",
-          height: "40px",
-          borderRadius: "10px",
-          background: "rgba(99, 102, 241, 0.2)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "space-between",
+          marginBottom: "20px",
         }}
       >
-        <Icon size={20} color="var(--accent-primary)" />
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "10px",
+              background: "rgba(99, 102, 241, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon size={20} color="var(--accent-primary)" />
+          </div>
+          <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>{title}</h3>
+        </div>
+        
+        {explanation && (
+          <div 
+            className="info-tooltip-wrapper"
+            style={{ position: "relative" }}
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            <div
+              style={{
+                cursor: "help",
+                padding: "8px",
+                borderRadius: "50%",
+                color: showTooltip ? "var(--accent-primary)" : "var(--text-secondary)",
+                transition: "color 0.2s",
+                background: showTooltip ? "rgba(99, 102, 241, 0.1)" : "transparent",
+              }}
+            >
+              <Info size={18} />
+            </div>
+
+            {/* Custom Tooltip */}
+            {showTooltip && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "100%",
+                  right: "-10px",
+                  marginBottom: "8px",
+                  width: "260px",
+                  padding: "12px 16px",
+                  background: "rgba(15, 23, 42, 0.95)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: "12px",
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+                  zIndex: 50,
+                  fontSize: "13px",
+                  lineHeight: "1.5",
+                  color: "#94a3b8",
+                  pointerEvents: "none", // Prevent flickering if mouse touches tooltip
+                }}
+              >
+                 {/* Arrow */}
+                 <div 
+                    style={{
+                      position: 'absolute',
+                      bottom: '-6px',
+                      right: '20px',
+                      width: '12px',
+                      height: '12px',
+                      background: 'rgba(15, 23, 42, 0.95)',
+                      transform: 'rotate(45deg)',
+                      borderRight: '1px solid var(--glass-border)',
+                      borderBottom: '1px solid var(--glass-border)',
+                    }}
+                 />
+                 <strong style={{ display: "block", color: "#f8fafc", marginBottom: "4px", fontSize: "12px" }}>Expert Insight</strong>
+                 {explanation}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>{title}</h3>
+      {children}
     </div>
-    {children}
-  </div>
-);
+  );
+};
 
 export const TickerTrends = () => {
   const [symbols, setSymbols] = useState([]);
@@ -403,7 +474,12 @@ export const TickerTrends = () => {
           const ChartComponent = metric.key === "volume" ? Bar : Line;
 
           return (
-            <TrendCard key={metric.key} title={`${metric.label} Trend`} icon={metric.icon}>
+            <TrendCard 
+              key={metric.key} 
+              title={`${metric.label} Trend`} 
+              icon={metric.icon}
+              explanation={METRIC_EXPLANATIONS[metric.key]}
+            >
                <div style={{ height: "320px" }}>
                   {data ? (
                      <ChartComponent data={data} options={chartOptions} />
