@@ -111,9 +111,9 @@ const TrendCard = ({ title, icon: Icon, children, explanation }) => {
               <div
                 style={{
                   position: "absolute",
-                  bottom: "100%",
+                  top: "100%", // Changed from bottom: 100% to top: 100% (appear below)
                   right: "-10px",
-                  marginBottom: "8px",
+                  marginTop: "10px", // Added spacing from icon
                   width: "260px",
                   padding: "12px 16px",
                   background: "rgba(15, 23, 42, 0.95)",
@@ -125,21 +125,21 @@ const TrendCard = ({ title, icon: Icon, children, explanation }) => {
                   fontSize: "13px",
                   lineHeight: "1.5",
                   color: "#94a3b8",
-                  pointerEvents: "none", // Prevent flickering if mouse touches tooltip
+                  pointerEvents: "none",
                 }}
               >
-                 {/* Arrow */}
+                 {/* Arrow pointing UP */}
                  <div 
                     style={{
                       position: 'absolute',
-                      bottom: '-6px',
+                      top: '-6px', // Moved to top
                       right: '20px',
                       width: '12px',
                       height: '12px',
                       background: 'rgba(15, 23, 42, 0.95)',
                       transform: 'rotate(45deg)',
-                      borderRight: '1px solid var(--glass-border)',
-                      borderBottom: '1px solid var(--glass-border)',
+                      borderLeft: '1px solid var(--glass-border)', // Changed borders for upward point
+                      borderTop: '1px solid var(--glass-border)',
                     }}
                  />
                  <strong style={{ display: "block", color: "#f8fafc", marginBottom: "4px", fontSize: "12px" }}>Expert Insight</strong>
