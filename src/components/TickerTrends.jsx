@@ -512,7 +512,7 @@ export const TickerTrends = () => {
                       type: 'line',
                       label: 'Close Price',
                       data: timeseriesData.map(d => d.close),
-                      borderColor: '#6366f1',
+                      borderColor: '#4f46e5', // Indigo-600
                       borderWidth: 2,
                       pointRadius: 0,
                       tension: 0.4,
@@ -521,19 +521,27 @@ export const TickerTrends = () => {
                     },
                     {
                       type: 'bar',
-                      label: 'High/Low Range',
-                      data: timeseriesData.map(d => [d.low, d.high]),
-                      backgroundColor: 'rgba(148, 163, 184, 0.3)', // Slate-400 with opacity
-                      borderColor: 'rgba(148, 163, 184, 0.5)',
-                      borderWidth: {
-                        top: 1,
-                        bottom: 1,
-                        left: 0,
-                        right: 0
-                      },
-                      barPercentage: 0.3, // Make them look like candle wicks
+                      label: 'High Deviation (Green)',
+                      data: timeseriesData.map(d => [d.close, d.high]),
+                      backgroundColor: 'rgba(16, 185, 129, 0.6)', // Green
+                      borderColor: 'rgba(16, 185, 129, 1)',
+                      borderWidth: 1,
+                      barPercentage: 0.3,
                       yAxisID: 'y',
+                      grouped: false, // Prevent lateral offset
                       order: 2
+                    },
+                    {
+                      type: 'bar',
+                      label: 'Low Deviation (Red)',
+                      data: timeseriesData.map(d => [d.low, d.close]),
+                      backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
+                      borderColor: 'rgba(239, 68, 68, 1)',
+                      borderWidth: 1,
+                      barPercentage: 0.3,
+                      yAxisID: 'y',
+                      grouped: false, // Prevent lateral offset
+                      order: 3
                     }
                   ]
                 }}
