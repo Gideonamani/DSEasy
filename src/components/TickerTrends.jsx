@@ -11,7 +11,7 @@ import {
   Legend,
   Filler,
 } from "chart.js";
-import { Line, Bar } from "react-chartjs-2";
+import { Line, Bar, Chart } from "react-chartjs-2";
 import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info } from "lucide-react";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 
@@ -493,6 +493,65 @@ export const TickerTrends = () => {
           );
         })}
       </div>
+
+      {/* High-Low-Close Analysis Chart */}
+      {timeseriesData.length > 0 && (
+        <div style={{ marginTop: "24px" }}>
+          <TrendCard 
+            title="Price Action Analysis (High/Low/Close)" 
+            icon={Activity}
+            explanation="Visualizes the daily volatility range. The gray bars show the High-Low range, while the purple line shows the Close price. Long bars indicate high volatility."
+          >
+            <div style={{ height: "400px" }}>
+              <Chart 
+                type='bar'
+                data={{
+                  labels: timeseriesData.map(d => d.date),
+                  datasets: [
+                    {
+                      type: 'line',
+                      label: 'Close Price',
+                      data: timeseriesData.map(d => d.close),
+                      borderColor: '#6366f1',
+                      borderWidth: 2,
+                      pointRadius: 0,
+                      tension: 0.4,
+                      yAxisID: 'y',
+                      order: 1
+                    },
+                    {
+                      type: 'bar',
+                      label: 'High/Low Range',
+                      data: timeseriesData.map(d => [d.low, d.high]),
+                      backgroundColor: 'rgba(148, 163, 184, 0.3)', // Slate-400 with opacity
+                      borderColor: 'rgba(148, 163, 184, 0.5)',
+                      borderWidth: {
+                        top: 1,
+                        bottom: 1,
+                        left: 0,
+                        right: 0
+                      },
+                      barPercentage: 0.3, // Make them look like candle wicks
+                      yAxisID: 'y',
+                      order: 2
+                    }
+                  ]
+                }}
+                options={{
+                  ...chartOptions,
+                  plugins: {
+                    ...chartOptions.plugins,
+                    tooltip: {
+                      mode: 'index',
+                      intersect: false,
+                    }
+                  }
+                }}
+              />
+            </div>
+          </TrendCard>
+        </div>
+      )}
 
       {/* Data Summary */}
       {stats && (
