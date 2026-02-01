@@ -52,9 +52,8 @@ const METRICS = [
 ];
 
 // Reusable card component
-// eslint-disable-next-line no-unused-vars
 // Reusable card component
-const TrendCard = ({ title, icon: Icon, children, explanation }) => {
+const TrendCard = ({ title, icon: MetricIcon, children, explanation }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
@@ -82,7 +81,7 @@ const TrendCard = ({ title, icon: Icon, children, explanation }) => {
               justifyContent: "center",
             }}
           >
-            <Icon size={20} color="var(--accent-primary)" />
+            <MetricIcon size={20} color="var(--accent-primary)" />
           </div>
           <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>{title}</h3>
         </div>
@@ -160,7 +159,6 @@ export const TickerTrends = () => {
   const navigate = useNavigate();
   
   const [symbols, setSymbols] = useState([]);
-  const [selectedSymbol, setSelectedSymbol] = useState(urlSymbol || "");
   const [timeseriesData, setTimeseriesData] = useState([]);
   
   // Track hidden metrics instead of single selected metric
@@ -170,16 +168,11 @@ export const TickerTrends = () => {
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState(null);
 
-  // Sync state with URL param if it changes (e.g. back button)
-  useEffect(() => {
-    if (urlSymbol) {
-      setSelectedSymbol(urlSymbol);
-    }
-  }, [urlSymbol]);
+  // Derived state: current symbol comes from URL or defaults to first in list
+  const currentSymbol = urlSymbol || (symbols.length > 0 ? symbols[0] : "");
 
-  // Handle symbol change
+  // Handle symbol change - just navigate
   const handleSymbolChange = (newSymbol) => {
-    setSelectedSymbol(newSymbol);
     navigate(`/trends/${newSymbol}`);
   };
 
@@ -210,11 +203,6 @@ export const TickerTrends = () => {
           return;
         }
         setSymbols(data);
-        
-        // If no URL param and no selected symbol, auto-select first
-        if (!urlSymbol && !selectedSymbol && data.length > 0) {
-          handleSymbolChange(data[0]);
-        }
         setLoadingSymbols(false);
       })
       .catch((err) => {
@@ -227,22 +215,23 @@ export const TickerTrends = () => {
     return () => { ignore = true; };
   }, []); // Only run once on mount
 
-  // 2. Fetch timeseries data when symbol changes
+  // 2. Fetch timeseries data when currentSymbol changes
   useEffect(() => {
-    if (!selectedSymbol) return;
+    if (!currentSymbol) return;
     
-    setLoadingData(true);
+    // Set loading state relative to ignore flag to prevent race conditions causing state updates after unmount
     let ignore = false;
+    setLoadingData(true);
     
     // Optimistic fetch - don't wait for symbols list
-    const url = `${SYMBOLS_API_URL}?action=getTimeseries&symbol=${encodeURIComponent(selectedSymbol)}`;
+    const url = `${SYMBOLS_API_URL}?action=getTimeseries&symbol=${encodeURIComponent(currentSymbol)}`;
 
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (ignore) return;
         if (data.error) {
-           console.warn(`Error fetching data for ${selectedSymbol}:`, data.error);
+           console.warn(`Error fetching data for ${currentSymbol}:`, data.error);
            setTimeseriesData([]);
         } else {
             // Sort by date ascending for proper charting
@@ -267,7 +256,7 @@ export const TickerTrends = () => {
       });
 
     return () => { ignore = true; };
-  }, [selectedSymbol]);
+  }, [currentSymbol]);
 
   const chartOptions = {
     responsive: true,
@@ -402,10 +391,12 @@ export const TickerTrends = () => {
       <div className="dashboard-header">
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
-            Ticker Trends
+            {currentSymbol ? `${currentSymbol} Trends` : "Ticker Trends"}
           </h2>
           <p style={{ color: "var(--text-secondary)" }}>
-            Historical performance and trend analysis for individual tickers
+            {currentSymbol 
+              ? `Historical performance and trend analysis for ${currentSymbol}`
+              : "Historical performance and trend analysis for individual tickers"}
           </p>
         </div>
 
@@ -413,16 +404,16 @@ export const TickerTrends = () => {
         <div className="glass-panel" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 16px", borderRadius: "12px" }}>
           <TrendingUp size={18} color="var(--text-secondary)" />
           <select
-            value={selectedSymbol}
+            value={currentSymbol}
             onChange={(e) => handleSymbolChange(e.target.value)}
             className="date-select"
             disabled={loadingData}
             style={{ minWidth: "120px" }}
           >
             {/* If the current selected symbol isn't in the list yet (optimistic), show it anyway */}
-            {selectedSymbol && !symbols.includes(selectedSymbol) && (
-                 <option key={selectedSymbol} value={selectedSymbol} style={{ background: "#1e293b" }}>
-                    {selectedSymbol}
+            {currentSymbol && !symbols.includes(currentSymbol) && (
+                 <option key={currentSymbol} value={currentSymbol} style={{ background: "#1e293b" }}>
+                    {currentSymbol}
                  </option>
             )}
             {symbols.map((symbol) => (
@@ -590,7 +581,7 @@ export const TickerTrends = () => {
         <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px", marginTop: "24px" }}>
           <p style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
             Showing <strong style={{ color: "var(--text-primary)" }}>{stats.dataPoints}</strong> data points for{" "}
-            <strong style={{ color: "var(--accent-primary)" }}>{selectedSymbol}</strong> |{" "}
+            <strong style={{ color: "var(--accent-primary)" }}>{currentSymbol}</strong> |{" "}
             Avg Daily Volume: <strong style={{ color: "var(--text-primary)" }}>{stats.avgVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong>
           </p>
         </div>
