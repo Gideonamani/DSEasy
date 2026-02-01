@@ -44,7 +44,15 @@ function App() {
   const [error, setError] = useState(null);
 
   // Get active tab from current route
-  const activeTab = ROUTES[location.pathname] || "Dashboard";
+  const activeTab = useMemo(() => {
+    // Exact match
+    if (ROUTES[location.pathname]) return ROUTES[location.pathname];
+    
+    // Sub-route match (e.g. /trends/CRDB -> Ticker Trends)
+    if (location.pathname.startsWith("/trends")) return "Ticker Trends";
+    
+    return "Dashboard";
+  }, [location.pathname]);
 
   // Handle tab change via navigation
   const handleTabChange = (tab) => {
@@ -248,6 +256,7 @@ function App() {
           change={topGainer.change}
           subtext={`Price: ${topGainer.close.toLocaleString()}`}
           type="success"
+          to={`/trends/${topGainer.symbol}`}
         />
         <StatCard
           title="Top Loser"
@@ -255,6 +264,7 @@ function App() {
           change={topLoser.change}
           subtext={`Price: ${topLoser.close.toLocaleString()}`}
           type="danger"
+          to={`/trends/${topLoser.symbol}`}
         />
         <StatCard
           title="Total Volume"
@@ -342,7 +352,7 @@ function App() {
             />
           } 
         />
-        <Route path="/trends" element={<TickerTrends />} />
+        <Route path="/trends/:symbol?" element={<TickerTrends />} />
         <Route 
           path="/notifications" 
           element={

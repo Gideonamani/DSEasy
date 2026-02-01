@@ -1,6 +1,7 @@
 import { ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-export const StatCard = ({ title, value, change, subtext, type = 'neutral' }) => {
+export const StatCard = ({ title, value, change, subtext, type = 'neutral', onClick, to }) => {
   const isPositive = type === 'success' || (parseFloat(change) > 0 && type !== 'danger');
   const isNegative = type === 'danger' || (parseFloat(change) < 0 && type !== 'success');
 
@@ -9,8 +10,8 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral' }) =>
   if (isNegative) accentColor = 'var(--accent-danger)';
   if (type === 'primary') accentColor = 'var(--accent-primary)';
 
-  return (
-    <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', position: 'relative', overflow: 'hidden' }}>
+  const content = (
+      <>
         {/* Background Glow */}
         <div style={{
             position: 'absolute',
@@ -36,7 +37,7 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral' }) =>
             </div>
         </div>
 
-        <div style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
+        <div style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px', textDecoration: to ? "none" : "inherit" }}>
             {value}
         </div>
 
@@ -56,6 +57,35 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral' }) =>
                 <span style={{ color: 'var(--text-secondary)' }}>{subtext || 'vs last close'}</span>
             </div>
         )}
+      </>
+  );
+
+  const cardStyles = { 
+    padding: '24px', 
+    borderRadius: '16px', 
+    position: 'relative', 
+    overflow: 'hidden',
+    cursor: (onClick || to) ? 'pointer' : 'default',
+    display: 'block', // Ensure Link behaves like block
+    textDecoration: 'none', // Remove default link underline
+    color: 'inherit' // Inherit text color
+  };
+
+  if (to) {
+      return (
+          <Link to={to} className="glass-panel" style={cardStyles}>
+              {content}
+          </Link>
+      );
+  }
+
+  return (
+    <div 
+        className="glass-panel" 
+        style={cardStyles}
+        onClick={onClick}
+    >
+        {content}
     </div>
   );
 };

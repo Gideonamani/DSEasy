@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useNavigate, Link } from "react-router-dom";
 
 export const MarketTable = ({ data }) => {
+    const navigate = useNavigate();
     const [sortConfig, setSortConfig] = useState({ key: 'change', direction: 'desc' });
 
     const sortedData = [...data].sort((a, b) => {
@@ -74,9 +76,30 @@ export const MarketTable = ({ data }) => {
                     </thead>
                     <tbody>
                         {sortedData.map((row) => (
-                            <tr key={row.symbol} style={{ transition: 'background 0.2s', ':hover': { background: 'rgba(255,255,255,0.02)' } }}>
+                            <tr 
+                                key={row.symbol} 
+                                onClick={() => navigate(`/trends/${row.symbol}`)}
+                                style={{ 
+                                    cursor: 'pointer',
+                                    transition: 'background 0.2s', 
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
                                 <td style={{...tdStyle, fontWeight: 600, color: 'var(--text-primary)'}}>
-                                    {row.symbol}
+                                    <Link 
+                                        to={`/trends/${row.symbol}`}
+                                        onClick={(e) => e.stopPropagation()} // Prevent row click
+                                        style={{ 
+                                            color: 'var(--accent-primary)', // Make it look like a link
+                                            textDecoration: 'none',
+                                            display: 'inline-block' 
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                        onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                                    >
+                                        {row.symbol}
+                                    </Link>
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right', fontFamily: 'monospace', fontSize: '15px' }}>
                                     {row.close.toLocaleString()}

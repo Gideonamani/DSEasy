@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -155,8 +156,11 @@ const TrendCard = ({ title, icon: Icon, children, explanation }) => {
 };
 
 export const TickerTrends = () => {
+  const { symbol: urlSymbol } = useParams();
+  const navigate = useNavigate();
+  
   const [symbols, setSymbols] = useState([]);
-  const [selectedSymbol, setSelectedSymbol] = useState("");
+  const [selectedSymbol, setSelectedSymbol] = useState(urlSymbol || "");
   const [timeseriesData, setTimeseriesData] = useState([]);
   
   // Track hidden metrics instead of single selected metric
@@ -165,6 +169,19 @@ export const TickerTrends = () => {
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState(null);
+
+  // Sync state with URL param if it changes (e.g. back button)
+  useEffect(() => {
+    if (urlSymbol) {
+      setSelectedSymbol(urlSymbol);
+    }
+  }, [urlSymbol]);
+
+  // Handle symbol change
+  const handleSymbolChange = (newSymbol) => {
+    setSelectedSymbol(newSymbol);
+    navigate(`/trends/${newSymbol}`);
+  };
 
   // Toggle metric visibility
   const toggleMetric = (key) => {
@@ -193,10 +210,10 @@ export const TickerTrends = () => {
           return;
         }
         setSymbols(data);
-        // Auto-select first symbol
-        if (data.length > 0) {
-          setSelectedSymbol(data[0]);
-          setLoadingData(true);
+        
+        // If no URL param and no selected symbol, auto-select first
+        if (!urlSymbol && !selectedSymbol && data.length > 0) {
+          handleSymbolChange(data[0]);
         }
         setLoadingSymbols(false);
       })
@@ -208,14 +225,16 @@ export const TickerTrends = () => {
       });
 
     return () => { ignore = true; };
-  }, []);
+  }, []); // Only run once on mount
 
   // 2. Fetch timeseries data when symbol changes
   useEffect(() => {
     if (!selectedSymbol) return;
-
+    
+    setLoadingData(true);
     let ignore = false;
     
+    // Optimistic fetch - don't wait for symbols list
     const url = `${SYMBOLS_API_URL}?action=getTimeseries&symbol=${encodeURIComponent(selectedSymbol)}`;
 
     fetch(url)
@@ -223,21 +242,21 @@ export const TickerTrends = () => {
       .then((data) => {
         if (ignore) return;
         if (data.error) {
-          setTimeseriesData([]);
-          setLoadingData(false);
-          return;
+           console.warn(`Error fetching data for ${selectedSymbol}:`, data.error);
+           setTimeseriesData([]);
+        } else {
+            // Sort by date ascending for proper charting
+            const sorted = [...data].sort((a, b) => {
+              const parseDate = (str) => {
+                const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
+                if (!match) return new Date(str);
+                const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+                return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
+              };
+              return parseDate(a.date) - parseDate(b.date);
+            });
+            setTimeseriesData(sorted);
         }
-        // Sort by date ascending for proper charting
-        const sorted = [...data].sort((a, b) => {
-          const parseDate = (str) => {
-            const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
-            if (!match) return new Date(str);
-            const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-            return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
-          };
-          return parseDate(a.date) - parseDate(b.date);
-        });
-        setTimeseriesData(sorted);
         setLoadingData(false);
       })
       .catch((err) => {
@@ -355,8 +374,8 @@ export const TickerTrends = () => {
     };
   }, [timeseriesData]);
 
-  // Loading state
-  if (loadingSymbols) {
+  // Loading state (only for initial symbols load, not data switch)
+  if (loadingSymbols && symbols.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "400px", flexDirection: "column", gap: "16px" }}>
         <Loader2 size={48} className="animate-spin" color="#6366f1" />
@@ -395,14 +414,17 @@ export const TickerTrends = () => {
           <TrendingUp size={18} color="var(--text-secondary)" />
           <select
             value={selectedSymbol}
-            onChange={(e) => {
-              setLoadingData(true);
-              setSelectedSymbol(e.target.value);
-            }}
+            onChange={(e) => handleSymbolChange(e.target.value)}
             className="date-select"
             disabled={loadingData}
             style={{ minWidth: "120px" }}
           >
+            {/* If the current selected symbol isn't in the list yet (optimistic), show it anyway */}
+            {selectedSymbol && !symbols.includes(selectedSymbol) && (
+                 <option key={selectedSymbol} value={selectedSymbol} style={{ background: "#1e293b" }}>
+                    {selectedSymbol}
+                 </option>
+            )}
             {symbols.map((symbol) => (
               <option key={symbol} value={symbol} style={{ background: "#1e293b" }}>
                 {symbol}

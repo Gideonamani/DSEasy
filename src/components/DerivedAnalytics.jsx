@@ -68,6 +68,8 @@ const AnalyticsCard = ({ title, icon, children, subtitle }) => {
   );
 };
 
+import { Link } from "react-router-dom";
+
 // Ranking table component for derived metrics
 const RankingTable = ({
   data,
@@ -141,7 +143,18 @@ const RankingTable = ({
                 {idx + 1}
               </td>
               <td style={{ padding: "10px 12px", fontWeight: 500 }}>
-                {item.symbol}
+                <Link 
+                    to={`/trends/${item.symbol}`}
+                    style={{ 
+                        color: 'var(--accent-primary)',
+                        textDecoration: 'none',
+                        display: 'inline-block'
+                    }}
+                    onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                    onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                >
+                    {item.symbol}
+                </Link>
               </td>
               <td
                 style={{
