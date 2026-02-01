@@ -12,9 +12,20 @@
 
 const ALERT_EMAIL = Session.getActiveUser().getEmail(); // Or hardcode "your@email.com"
 
-function triggerDailyClose() {
+function triggerDailyClose(e) {
   const now = new Date();
   const currentHour = now.getHours(); // 0-23
+
+  // 0. TIME WINDOW CHECK (7 PM - 12 AM approx)
+  // We strictly check between 19:00 and 23:59.
+  // Note: We check 'e' (event object) to ensure we only skip during AUTOMATED runs.
+  // Manual runs (testing) will have 'e' as undefined and will proceed.
+  if (e && currentHour < 19) {
+    Logger.log(
+      `[DailyWorkflow] Outside active hours (19:00 - 23:59). Current hour: ${currentHour}. Skipping.`,
+    );
+    return;
+  }
 
   Logger.log(`[DailyWorkflow] Running at ${now.toString()}`);
 
