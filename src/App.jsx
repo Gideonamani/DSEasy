@@ -68,12 +68,24 @@ function App() {
       .then((res) => res.json())
       .then((dates) => {
         if (ignore) return;
-        setAvailableDates(dates);
+        
+        // Handle both old (string[]) and new ({date, sheetName}[]) API responses for backward compatibility
+        const normalizedDates = dates.map(d => {
+           if (typeof d === 'string') return { date: null, sheetName: d };
+           return d;
+        });
+
+        // Sort if date objects exist, otherwise trust API order
+        if (normalizedDates.length > 0 && normalizedDates[0].date) {
+            normalizedDates.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        setAvailableDates(normalizedDates);
         
         // Auto-select the newest date (first in list)
-        if (dates.length > 0) {
-          if (dates[0]) setLoadingData(true); 
-          setSelectedDate(dates[0]);
+        if (normalizedDates.length > 0) {
+          if (normalizedDates[0]) setLoadingData(true); 
+          setSelectedDate(normalizedDates[0].sheetName);
         }
         setLoadingDates(false);
       })
@@ -93,6 +105,7 @@ function App() {
 
     let ignore = false;
     
+    // selectedDate is the sheetName
     const url = `${API_URL}?action=getData&date=${encodeURIComponent(selectedDate)}`;
 
     fetch(url)
@@ -176,13 +189,14 @@ function App() {
   const activeSymbolsCount = marketData.length;
 
   // Format selected date for display
-  const formattedDate = selectedDate 
-    ? new Date(selectedDate).toLocaleDateString("en-GB", {
+  const currentDateObj = availableDates.find(d => d.sheetName === selectedDate);
+  const formattedDate = currentDateObj && currentDateObj.date 
+    ? new Date(currentDateObj.date).toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "long",
         year: "numeric",
-      }) 
-    : "...";
+      })
+    : selectedDate; // Fallback to raw string if no date object or not found
 
   // Loading State (Initial)
   if (loadingDates) {
