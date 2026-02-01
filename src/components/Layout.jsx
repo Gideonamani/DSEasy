@@ -102,7 +102,7 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
             <div style={{ width: '32px', height: '32px', background: 'var(--accent-primary)', borderRadius: '8px', marginRight: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BarChart3 color="#fff" size={20} />
             </div>
-            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, letterSpacing: '-0.5px' }}>FinDash</h1>
+            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, letterSpacing: '-0.5px' }}>DSEasy</h1>
           </div>
           {isMobile && (
             <button onClick={toggleSidebar} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
