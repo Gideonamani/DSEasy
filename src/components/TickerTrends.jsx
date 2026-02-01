@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,7 +16,7 @@ import {
   Filler,
 } from "chart.js";
 import { Line, Bar, Chart } from "react-chartjs-2";
-import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info } from "lucide-react";
+import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar } from "lucide-react";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 
 ChartJS.register(
@@ -51,7 +54,6 @@ const METRICS = [
   { key: "changeVol", label: "Change/Vol", icon: TrendingUp, color: "#ec4899" },
 ];
 
-// Reusable card component
 // Reusable card component
 const TrendCard = ({ title, icon, children, explanation }) => {
   const MetricIcon = icon;
@@ -155,9 +157,20 @@ const TrendCard = ({ title, icon, children, explanation }) => {
   );
 };
 
+const PERIODS = [
+  { label: '1W', value: '1W' },
+  { label: '1M', value: '1M' },
+  { label: '3M', value: '3M' },
+  { label: '6M', value: '6M' },
+  { label: '1Y', value: '1Y' },
+  { label: 'ALL', value: 'ALL' },
+  { label: 'Custom', value: 'Custom' },
+];
+
 export const TickerTrends = () => {
   const { symbol: urlSymbol } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [symbols, setSymbols] = useState([]);
   const [timeseriesData, setTimeseriesData] = useState([]);
@@ -265,6 +278,105 @@ export const TickerTrends = () => {
     return () => { ignore = true; };
   }, [currentSymbol]);
 
+  // --- Filtering Logic ---
+  
+  // State for period and custom dates - initialize from URL
+  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "ALL");
+  const [customRange, setCustomRange] = useState({
+    start: searchParams.get("start") ? new Date(searchParams.get("start")) : null,
+    end: searchParams.get("end") ? new Date(searchParams.get("end")) : null,
+  });
+
+  // Sync URL when period/dates change
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    
+    if (selectedPeriod === "ALL") {
+       params.delete("period");
+       params.delete("start");
+       params.delete("end");
+    } else {
+       params.set("period", selectedPeriod);
+    }
+
+    if (selectedPeriod === "Custom") {
+      if (customRange.start) params.set("start", customRange.start.toISOString().split('T')[0]);
+      if (customRange.end) params.set("end", customRange.end.toISOString().split('T')[0]);
+    } else {
+      // Clear dates if not custom
+      params.delete("start");
+      params.delete("end");
+    }
+    
+    setSearchParams(params, { replace: true });
+  }, [selectedPeriod, customRange]);
+
+  // Filter Data
+  const filteredData = useMemo(() => {
+    if (!timeseriesData.length) return [];
+    if (selectedPeriod === "ALL") return timeseriesData;
+
+    let cutoffDate = new Date();
+    // Normalize today to start of day for comparison if needed, or just standard date calc
+    
+    // For Custom
+    if (selectedPeriod === "Custom") {
+        return timeseriesData.filter(d => {
+            const normalizeDate = (date) => {
+                 const d = new Date(date);
+                 d.setHours(0,0,0,0);
+                 return d;
+            };
+
+            const parseDate = (str) => {
+                const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
+                if (!match) return new Date(str);
+                const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+                return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
+            };
+            const itemDate = normalizeDate(parseDate(d.date));
+
+            let matchesStart = true;
+            let matchesEnd = true;
+            
+            if (customRange.start) matchesStart = itemDate >= normalizeDate(customRange.start);
+            if (customRange.end) matchesEnd = itemDate <= normalizeDate(customRange.end);
+            
+            return matchesStart && matchesEnd;
+        });
+    }
+
+    // For Relative Periods
+    // We need to base "1 Week" relative to the LATEST DATE in the data data? or Today?
+    // Financial apps usually do relative to Today.
+    
+    switch (selectedPeriod) {
+        case '1W': cutoffDate.setDate(cutoffDate.getDate() - 7); break;
+        case '1M': cutoffDate.setMonth(cutoffDate.getMonth() - 1); break;
+        case '3M': cutoffDate.setMonth(cutoffDate.getMonth() - 3); break;
+        case '6M': cutoffDate.setMonth(cutoffDate.getMonth() - 6); break;
+        case '1Y': cutoffDate.setFullYear(cutoffDate.getFullYear() - 1); break;
+        default: return timeseriesData;
+    }
+    
+    // Normalize cutoff to start of day
+    cutoffDate.setHours(0,0,0,0);
+
+    return timeseriesData.filter(d => {
+         const parseDate = (str) => {
+            const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
+            if (!match) return new Date(str);
+            const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+            const date = new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
+            return date;
+         };
+         const itemDate = parseDate(d.date);
+         itemDate.setHours(0,0,0,0);
+         return itemDate >= cutoffDate;
+    });
+
+  }, [timeseriesData, selectedPeriod, customRange]);
+
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -311,19 +423,19 @@ export const TickerTrends = () => {
 
   // Helper to generate chart data for any metric
   const getMetricData = (metricKey, color) => {
-    if (!timeseriesData.length) return null;
+    if (!filteredData.length) return null;
 
     // Special handling for Volume (Bar Chart with conditional colors)
     if (metricKey === "volume") {
       return {
-        labels: timeseriesData.map((d) => d.date),
+        labels: filteredData.map((d) => d.date),
         datasets: [
           {
             label: "Volume",
-            data: timeseriesData.map((d) => d.volume),
-            backgroundColor: timeseriesData.map((d, i) => {
+            data: filteredData.map((d) => d.volume),
+            backgroundColor: filteredData.map((d, i) => {
               if (i === 0) return "rgba(99, 102, 241, 0.7)";
-              return d.close >= timeseriesData[i - 1].close
+              return d.close >= filteredData[i - 1].close
                 ? "rgba(16, 185, 129, 0.7)"
                 : "rgba(239, 68, 68, 0.7)";
             }),
@@ -335,11 +447,11 @@ export const TickerTrends = () => {
 
     // Default Line chart for others
     return {
-      labels: timeseriesData.map((d) => d.date),
+      labels: filteredData.map((d) => d.date),
       datasets: [
         {
           label: metricKey.charAt(0).toUpperCase() + metricKey.slice(1),
-          data: timeseriesData.map((d) => metricKey === 'turnoverPct' ? (d[metricKey] || 0) * 100 : d[metricKey]),
+          data: filteredData.map((d) => metricKey === 'turnoverPct' ? (d[metricKey] || 0) * 100 : d[metricKey]),
           borderColor: color,
           backgroundColor: `${color}20`,
           fill: true,
@@ -351,13 +463,13 @@ export const TickerTrends = () => {
     };
   };
 
-  // Summary stats
+  // Recalculate stats based on FILTERED data
   const stats = useMemo(() => {
-    if (!timeseriesData.length) return null;
+    if (!filteredData.length) return null;
     
-    const closes = timeseriesData.map((d) => d.close).filter((c) => c > 0);
-    const latest = timeseriesData[timeseriesData.length - 1];
-    const first = timeseriesData[0];
+    const closes = filteredData.map((d) => d.close).filter((c) => c > 0);
+    const latest = filteredData[filteredData.length - 1];
+    const first = filteredData[0];
     const periodChange = first?.close ? ((latest?.close - first?.close) / first?.close) * 100 : 0;
     
     return {
@@ -365,10 +477,10 @@ export const TickerTrends = () => {
       high: Math.max(...closes),
       low: Math.min(...closes),
       periodChange,
-      avgVolume: timeseriesData.reduce((sum, d) => sum + d.volume, 0) / timeseriesData.length,
-      dataPoints: timeseriesData.length,
+      avgVolume: filteredData.reduce((sum, d) => sum + d.volume, 0) / filteredData.length,
+      dataPoints: filteredData.length,
     };
-  }, [timeseriesData]);
+  }, [filteredData]);
 
   // Loading state (only for initial symbols load, not data switch)
   if (loadingSymbols && symbols.length === 0) {
@@ -431,6 +543,120 @@ export const TickerTrends = () => {
           </select>
           {loadingData && <Loader2 size={16} className="animate-spin" />}
         </div>
+      </div>
+
+      {/* Period Selector */}
+      <div className="glass-panel" style={{ 
+          padding: "8px", 
+          borderRadius: "12px", 
+          marginBottom: "24px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "8px",
+          alignItems: "center"
+      }}>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {PERIODS.map((period) => (
+                <button
+                    key={period.value}
+                    onClick={() => setSelectedPeriod(period.value)}
+                    style={{
+                        padding: "6px 12px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: selectedPeriod === period.value ? "var(--accent-primary)" : "transparent",
+                        color: selectedPeriod === period.value ? "#fff" : "var(--text-secondary)",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                    }}
+                >
+                    {period.label}
+                </button>
+            ))}
+          </div>
+
+          {selectedPeriod === "Custom" && (
+             <div style={{ display: "flex", gap: "8px", alignItems: "center", borderLeft: "1px solid var(--glass-border)", paddingLeft: "12px", marginLeft: "4px" }}>
+                 <div style={{ position: 'relative' }}>
+                    <DatePicker 
+                        selected={customRange.start}
+                        onChange={(date) => setCustomRange(prev => ({ ...prev, start: date }))}
+                        selectsStart
+                        startDate={customRange.start}
+                        endDate={customRange.end}
+                        placeholderText="Start Date"
+                        className="custom-date-input"
+                        popperPlacement="bottom-start"
+                        popperContainer={({ children }) => createPortal(
+                            <div style={{ zIndex: 9999, position: 'relative' }}>{children}</div>,
+                            document.body
+                        )}
+                    />
+                    <Calendar size={14} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }} />
+                 </div>
+                 <span style={{ color: "var(--text-secondary)" }}>-</span>
+                 <div style={{ position: 'relative' }}>
+                    <DatePicker 
+                        selected={customRange.end}
+                        onChange={(date) => setCustomRange(prev => ({ ...prev, end: date }))}
+                        selectsEnd
+                        startDate={customRange.start}
+                        endDate={customRange.end}
+                        minDate={customRange.start}
+                        placeholderText="End Date"
+                        className="custom-date-input"
+                        popperPlacement="bottom-end"
+                        popperContainer={({ children }) => createPortal(
+                            <div style={{ zIndex: 9999, position: 'relative' }}>{children}</div>,
+                            document.body
+                        )}
+                    />
+                    <Calendar size={14} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }} />
+                 </div>
+                 
+                 <style>{`
+                    .custom-date-input {
+                        background: rgba(255, 255, 255, 0.05);
+                        border: 1px solid var(--glass-border);
+                        border-radius: 6px;
+                        padding: 6px 28px 6px 10px;
+                        color: white;
+                        font-family: inherit;
+                        font-size: 13px;
+                        width: 110px;
+                        cursor: pointer;
+                    }
+                    .react-datepicker {
+                        background-color: #1e293b !important;
+                        border: 1px solid var(--glass-border) !important;
+                        font-family: inherit !important;
+                        z-index: 9999 !important;
+                    }
+                    .react-datepicker__header {
+                        background-color: #0f172a !important;
+                        border-bottom: 1px solid var(--glass-border) !important;
+                    }
+                    .react-datepicker__current-month, .react-datepicker__day-name {
+                        color: #f8fafc !important;
+                    }
+                    .react-datepicker__day {
+                        color: #cbd5e1 !important;
+                    }
+                    .react-datepicker__day:hover {
+                         background-color: var(--accent-primary) !important;
+                         color: white !important;
+                    }
+                    .react-datepicker__day--selected, .react-datepicker__day--range-start, .react-datepicker__day--range-end {
+                        background-color: var(--accent-primary) !important;
+                    }
+                    .react-datepicker__day--in-range {
+                         background-color: rgba(99, 102, 241, 0.3) !important;
+                    }
+                 `}</style>
+             </div>
+          )}
       </div>
 
       {/* Stats Summary */}
@@ -515,7 +741,7 @@ export const TickerTrends = () => {
       </div>
 
       {/* High-Low-Close Analysis Chart */}
-      {timeseriesData.length > 0 && (
+      {filteredData.length > 0 && (
         <div style={{ marginTop: "24px" }}>
           <TrendCard 
             title="Price Action Analysis (High/Low/Close)" 
@@ -526,12 +752,12 @@ export const TickerTrends = () => {
               <Chart 
                 type='bar'
                 data={{
-                  labels: timeseriesData.map(d => d.date),
+                  labels: filteredData.map(d => d.date),
                   datasets: [
                     {
                       type: 'line',
                       label: 'Close Price',
-                      data: timeseriesData.map(d => d.close),
+                      data: filteredData.map(d => d.close),
                       borderColor: '#4f46e5', // Indigo-600
                       borderWidth: 2,
                       pointRadius: 0,
@@ -542,7 +768,7 @@ export const TickerTrends = () => {
                     {
                       type: 'bar',
                       label: 'High Deviation (Green)',
-                      data: timeseriesData.map(d => [d.close, d.high]),
+                      data: filteredData.map(d => [d.close, d.high]),
                       backgroundColor: 'rgba(16, 185, 129, 0.6)', // Green
                       borderColor: 'rgba(16, 185, 129, 1)',
                       borderWidth: { top: 1, right: 1, bottom: 0, left: 1 },
@@ -555,7 +781,7 @@ export const TickerTrends = () => {
                     {
                       type: 'bar',
                       label: 'Low Deviation (Red)',
-                      data: timeseriesData.map(d => [d.low, d.close]),
+                      data: filteredData.map(d => [d.low, d.close]),
                       backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
                       borderColor: 'rgba(239, 68, 68, 1)',
                       borderWidth: { top: 0, right: 1, bottom: 1, left: 1 },
