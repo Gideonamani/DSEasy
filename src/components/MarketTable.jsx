@@ -31,7 +31,6 @@ export const MarketTable = ({ data }) => {
 
     const thStyle = {
         textAlign: 'left',
-        padding: '16px 24px',
         color: 'var(--text-secondary)',
         fontSize: '12px',
         fontWeight: 600,
@@ -43,7 +42,6 @@ export const MarketTable = ({ data }) => {
     };
 
     const tdStyle = {
-        padding: '16px 24px',
         borderBottom: '1px solid rgba(255,255,255,0.02)',
         fontSize: '14px'
     };
@@ -54,22 +52,22 @@ export const MarketTable = ({ data }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                     <thead>
                         <tr>
-                            <th style={thStyle} onClick={() => requestSort('symbol')}>
+                            <th style={thStyle} className="market-table-cell" onClick={() => requestSort('symbol')}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>Symbol {getSortIcon('symbol')}</div>
                             </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('close')}>
+                            <th style={{...thStyle, textAlign: 'right'}} className="market-table-cell" onClick={() => requestSort('close')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Close {getSortIcon('close')}</div>
                             </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('change')}>
+                            <th style={{...thStyle, textAlign: 'right'}} className="market-table-cell" onClick={() => requestSort('change')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Change % {getSortIcon('change')}</div>
                             </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('volume')}>
+                            <th style={{...thStyle, textAlign: 'right'}} className="market-table-cell" onClick={() => requestSort('volume')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Volume {getSortIcon('volume')}</div>
                             </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('turnover')}>
+                            <th style={{...thStyle, textAlign: 'right'}} className="market-table-cell" onClick={() => requestSort('turnover')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Turnover {getSortIcon('turnover')}</div>
                             </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('mcap')}>
+                            <th style={{...thStyle, textAlign: 'right'}} className="market-table-cell" onClick={() => requestSort('mcap')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>MCap {getSortIcon('mcap')}</div>
                             </th>
                         </tr>
@@ -86,7 +84,7 @@ export const MarketTable = ({ data }) => {
                                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                             >
-                                <td style={{...tdStyle, fontWeight: 600, color: 'var(--text-primary)'}}>
+                                <td style={{...tdStyle, fontWeight: 600, color: 'var(--text-primary)'}} className="market-table-cell">
                                     <Link 
                                         to={`/trends/${row.symbol}`}
                                         onClick={(e) => e.stopPropagation()} // Prevent row click
@@ -101,10 +99,10 @@ export const MarketTable = ({ data }) => {
                                         {row.symbol}
                                     </Link>
                                 </td>
-                                <td style={{...tdStyle, textAlign: 'right', fontFamily: 'monospace', fontSize: '15px' }}>
+                                <td style={{...tdStyle, textAlign: 'right', fontFamily: 'monospace', fontSize: '15px' }} className="market-table-cell">
                                     {row.close.toLocaleString()}
                                 </td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>
+                                <td style={{...tdStyle, textAlign: 'right'}} className="market-table-cell">
                                     <span style={{
                                         padding: '4px 12px',
                                         borderRadius: '20px',
@@ -116,13 +114,13 @@ export const MarketTable = ({ data }) => {
                                         {row.change > 0 ? '+' : ''}{row.change}%
                                     </span>
                                 </td>
-                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-primary)'}}>
+                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-primary)'}} className="market-table-cell">
                                     {row.volume.toLocaleString()}
                                 </td>
-                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-secondary)'}}>
+                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-secondary)'}} className="market-table-cell">
                                     {row.turnover.toLocaleString()}
                                 </td>
-                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-secondary)'}}>
+                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-secondary)'}} className="market-table-cell">
                                     {row.mcap.toLocaleString()}
                                 </td>
                             </tr>
