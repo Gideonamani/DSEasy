@@ -16,6 +16,7 @@ function onOpen() {
     .addItem("⚙️ Update Date Config", "updateDateConfig")
     .addSeparator()
     .addItem("🌍 Scrape DSE Data", "scrapeDSEData")
+    .addItem("🚀 Run Daily Close (Test)", "triggerDailyClose")
     .addSeparator()
     .addItem("⚠️ Undo Last Sync", "undoLastSync")
     .addToUi();

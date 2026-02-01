@@ -10,71 +10,96 @@
   5. Appends the data.
 */
 
-function scrapeDSEData() {
+function scrapeDSEData(interactive = true) {
   const url = "https://dse.co.tz";
-  const html = UrlFetchApp.fetch(url, {
-    muteHttpExceptions: true,
-  }).getContentText();
+  let html;
+
+  try {
+    html = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+    }).getContentText();
+  } catch (e) {
+    if (interactive)
+      SpreadsheetApp.getUi().alert("Error fetching DSE website: " + e.message);
+    return { success: false, message: "Fetch error: " + e.message };
+  }
 
   // 1. EXTRACT DATA DATE
-  // Look for: <h5 class="ms-2 w500"  style="font-size: 14px">January 30, 2026</h5>
-  // We'll use a regex that is flexible with attributes
   const dateRegex =
     /Market Summary\s*:\s*<\/h5>\s*<h5[^>]*>\s*([A-Za-z]+\s+\d{1,2},\s+\d{4})\s*<\/h5>/i;
   const dateMatch = html.match(dateRegex);
 
   if (!dateMatch) {
-    SpreadsheetApp.getUi().alert(
-      "Could not find Market Summary date on DSE homepage.",
-    );
-    Logger.log("Error: Date not found in HTML.");
-    return;
+    if (interactive)
+      SpreadsheetApp.getUi().alert(
+        "Could not find Market Summary date on DSE homepage.",
+      );
+    return { success: false, message: "Date not found in HTML" };
   }
 
-  const rawDateStr = dateMatch[1].trim(); // e.g., "January 30, 2026"
+  const rawDateStr = dateMatch[1].trim();
   Logger.log("Found Date: " + rawDateStr);
 
-  // Convert "January 30, 2026" -> "30Jan2026"
   let formattedDate = formatDateForSheet(rawDateStr);
   if (!formattedDate) {
-    SpreadsheetApp.getUi().alert("Could not parse date: " + rawDateStr);
-    return;
+    if (interactive)
+      SpreadsheetApp.getUi().alert("Could not parse date: " + rawDateStr);
+    return { success: false, message: "Date parse failed: " + rawDateStr };
   }
 
   // 2. CHECK SHEET & PREPARE DESTINATION
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // [PRODUCTION MODE] Removed test prefix for final version
+  // formattedDate = "2ndTest" + formattedDate;
+
   let targetSheet = ss.getSheetByName(formattedDate);
+  let sheetCreated = false;
 
   if (targetSheet) {
-    const ui = SpreadsheetApp.getUi();
-    const response = ui.alert(
-      "Sheet Exists",
-      `A sheet named "${formattedDate}" already exists. Do you want to overwrite it?`,
-      ui.ButtonSet.YES_NO,
-    );
-
-    if (response == ui.Button.NO) {
-      Logger.log("User cancelled overwrite.");
-      return;
+    // IF SHEET EXISTS
+    if (interactive) {
+      const ui = SpreadsheetApp.getUi();
+      const response = ui.alert(
+        "Sheet Exists",
+        `A sheet named "${formattedDate}" already exists. Do you want to overwrite it?`,
+        ui.ButtonSet.YES_NO,
+      );
+      if (response == ui.Button.NO) {
+        return {
+          success: true,
+          dateStr: formattedDate,
+          sheetName: formattedDate,
+          exists: true,
+          created: false,
+          message: "User cancelled overwrite",
+        };
+      }
+      // Interactive YES -> Overwrite
+      targetSheet.getRange("A2:M").clearContent();
+    } else {
+      // Headless -> Assume we are just checking.
+      // Optimization: If it exists, we assume we already scraped it today.
+      // We return 'exists: true' so the caller knows data is present.
+      return {
+        success: true,
+        dateStr: formattedDate,
+        sheetName: formattedDate,
+        exists: true,
+        created: false,
+        message: "Sheet already exists",
+      };
     }
-    // Clear existing data range only (A-M) to preserve extra columns if they exist
-    // Actually, if we overwrite, we might want to start fresh or just clear A-M
-    targetSheet.getRange("A2:M").clearContent();
   } else {
-    // TEMPLATE STRATEGY
+    // CREATE NEW (TEMPLATE OR BLANK)
     const templateName = "_##2026";
     const templateSheet = ss.getSheetByName(templateName);
 
     if (templateSheet) {
       targetSheet = templateSheet.copyTo(ss).setName(formattedDate);
-      // Clear any placeholder data in the template's data range (A-M)
-      // Assuming headers are in row 1
       targetSheet.getRange("A2:M").clearContent();
     } else {
-      // Fallback: Create new if template missing
       targetSheet = ss.insertSheet(formattedDate);
-      // Add Headers since new sheet is empty
       const headers = [
         "Symbol",
         "Open",
@@ -93,41 +118,38 @@ function scrapeDSEData() {
       targetSheet.appendRow(headers);
       targetSheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
     }
+    sheetCreated = true;
   }
 
   // 3. EXTRACT TABLE DATA
-  // We look for the Equity table. It usually starts after "id=\"equity-watch\""
   const tableStartRegex = /id="equity-watch"[^>]*>[\s\S]*?<tbody[^>]*>/i;
   const tableStartMatch = html.match(tableStartRegex);
 
   if (!tableStartMatch) {
-    SpreadsheetApp.getUi().alert("Could not find Equity table in HTML.");
-    return;
+    if (interactive)
+      SpreadsheetApp.getUi().alert("Could not find Equity table in HTML.");
+    return { success: false, message: "Equity table not found" };
   }
 
-  // Slice HTML from the start of the tbody to reduce search space
   const tableContentStart = tableStartMatch.index + tableStartMatch[0].length;
   const htmlAfterTableStart = html.substring(tableContentStart);
   const tbodyEndIndex = htmlAfterTableStart.indexOf("</tbody>");
 
   if (tbodyEndIndex === -1) {
-    SpreadsheetApp.getUi().alert("Could not find end of Equity table.");
-    return;
+    if (interactive)
+      SpreadsheetApp.getUi().alert("Could not find end of Equity table.");
+    return { success: false, message: "Table end not found" };
   }
 
   const tbodyContent = htmlAfterTableStart.substring(0, tbodyEndIndex);
 
   // 4. PARSE ROWS
-  // Each row is within <tr>...</tr>
   const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   let rowMatch;
   const parsedRows = [];
 
   while ((rowMatch = rowRegex.exec(tbodyContent)) !== null) {
     const rowInnerHtml = rowMatch[1];
-
-    // Extract cells <td>...</td>
-    // DSE table has 13 columns based on inspection
     const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
     const cells = [];
     let cellMatch;
@@ -144,18 +166,15 @@ function scrapeDSEData() {
     }
   }
 
-  Logger.log("Parsed " + parsedRows.length + " rows.");
-
   if (parsedRows.length === 0) {
-    SpreadsheetApp.getUi().alert("No data rows found in the table.");
-    return;
+    if (interactive)
+      SpreadsheetApp.getUi().alert("No data rows found in the table.");
+    return { success: false, message: "No data rows found" };
   }
 
   // 5. WRITE TO SHEET
   const finalData = parsedRows.map((row) => {
-    // Map extracted strings to correct format (Columns A-M)
     if (row.length < 13) return row;
-
     return [
       row[0], // Symbol
       parseDseNumber(row[1]),
@@ -163,7 +182,7 @@ function scrapeDSEData() {
       parseDseNumber(row[3]),
       parseDseNumber(row[4]),
       parseDseNumber(row[5]),
-      parseDseChange(row[6]), // Change (text or number)
+      parseDseChange(row[6]), // Change
       parseDseNumber(row[7]),
       parseDseNumber(row[8]),
       parseDseNumber(row[9]),
@@ -174,15 +193,23 @@ function scrapeDSEData() {
   });
 
   if (finalData.length > 0) {
-    // Overwrite A2:M... with new data
     targetSheet
       .getRange(2, 1, finalData.length, finalData[0].length)
       .setValues(finalData);
   }
 
-  SpreadsheetApp.getUi().alert(
-    `Import complete! Correctly imported ${finalData.length} symbols to sheet "${formattedDate}" (Template Used: ${targetSheet.getName() !== formattedDate ? "No" : "Yes"}).`,
-  );
+  const successMsg = `Import complete! Imported ${finalData.length} symbols to "${formattedDate}".`;
+  if (interactive) SpreadsheetApp.getUi().alert(successMsg);
+
+  return {
+    success: true,
+    dateStr: formattedDate,
+    sheetName: targetSheet.getName(),
+    created: sheetCreated,
+    exists: !sheetCreated,
+    message: successMsg,
+    rowCount: finalData.length,
+  };
 }
 
 // HELPER: Convert "January 30, 2026" -> "30Jan2026"
