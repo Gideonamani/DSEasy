@@ -30,17 +30,40 @@ function doGet(e) {
 // 1. Function to get list of sheets (Dates)
 function getAvailableDates() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const configSheet = ss.getSheetByName("_config_dates");
+
+  // FAST PATH: Read from config sheet if it exists
+  if (configSheet) {
+    const lastRow = configSheet.getLastRow();
+    if (lastRow > 1) {
+      // Get Date (Col A) and SheetName (Col B)
+      const data = configSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+
+      const configDates = data.map((row) => {
+        const dateObj = new Date(row[0]);
+        // Format as YYYY-MM-DD for consistency or ISO string
+        return {
+          date: dateObj.toISOString(),
+          sheetName: row[1],
+        };
+      });
+      return jsonResponse(configDates);
+    }
+  }
+
+  // SLOW PATH: Fallback to scanning sheets (if config doesn't exist yet)
   const sheets = ss.getSheets();
   const dateList = [];
-
-  // Excluded list
-  const EXCLUDED = ["Market Summary", "Equity", "Bonds", "template", "_config"];
 
   sheets.forEach((sheet) => {
     const name = sheet.getName();
     // Rule: Exclude if starts with "_" OR is in excluded list
-    if (!name.startsWith("_") && !EXCLUDED.includes(name)) {
-      dateList.push(name);
+    if (!name.startsWith("_") && !EXCLUDED_SHEET_NAMES.includes(name)) {
+      // Mock the structure
+      dateList.push({
+        date: null, // We might not parse it here perfectly in fallback mode, or we can try
+        sheetName: name,
+      });
     }
   });
 
