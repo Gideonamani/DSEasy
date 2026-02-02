@@ -12,6 +12,7 @@ function onOpen() {
     .addItem("Sync Latest Day", "syncDailyToTrends")
     .addSeparator()
     .addItem("Backfill All History", "backfillAllHistory")
+    .addItem("🔔 Send Test Notification", "testServiceWorkerNotification")
     .addSeparator()
     .addItem("⚙️ Update Date Config", "updateDateConfig")
     .addSeparator()

@@ -114,3 +114,62 @@ function fetchLivePricesMap() {
     return {};
   }
 }
+
+// ---------------------------------------------------
+// TEST FUNCTION FOR SERVICE WORKER
+// ---------------------------------------------------
+function testServiceWorkerNotification() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(ALERTS_SHEET_NAME);
+
+  if (!sheet || sheet.getLastRow() < 2) {
+    SpreadsheetApp.getUi().alert("No alerts found.");
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  let sentCount = 0;
+  let errors = [];
+
+  // Iterate rows (skip header)
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    // Columns: 0=Email, 1=Symbol, 2=Target, 3=Condition, 4=Token, 5=Status, 6=Created
+    const email = row[0];
+    const fcmToken = row[4];
+    const status = row[5];
+
+    // ONLY send if Status explicitly says "TEST"
+    if (status === "TEST") {
+      if (!fcmToken) {
+        errors.push(`Row ${i + 1}: No Token`);
+        continue;
+      }
+
+      const title = "🔔 TEST MODE";
+      const body = `Test notification for ${email}.`;
+
+      try {
+        const result = sendPushNotification(fcmToken, title, body);
+        if (result) {
+          sentCount++;
+        } else {
+          errors.push(`Row ${i + 1}: Check Logs (Key Error?)`);
+        }
+      } catch (e) {
+        errors.push(`Row ${i + 1}: ${e.toString()}`);
+      }
+    }
+  }
+
+  const message =
+    sentCount > 0
+      ? `✅ Sent ${sentCount} test notifications.`
+      : "⚠️ No rows found with Status = 'TEST'.\n\nChange the Status column to 'TEST' for the rows you want to check.";
+
+  if (errors.length > 0) {
+    SpreadsheetApp.getUi().alert(message + "\n\nErrors:\n" + errors.join("\n"));
+  } else {
+    SpreadsheetApp.getUi().alert(message);
+  }
+}

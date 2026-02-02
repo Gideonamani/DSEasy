@@ -14,7 +14,8 @@ const FIREBASE_PROJECT_ID = scriptProps.getProperty("FIREBASE_PROJECT_ID");
 const FIREBASE_CLIENT_EMAIL = scriptProps.getProperty("FIREBASE_CLIENT_EMAIL");
 const FIREBASE_PRIVATE_KEY = scriptProps
   .getProperty("FIREBASE_PRIVATE_KEY")
-  .replace(/\\n/g, "\n");
+  .replace(/\\n/g, "\n")
+  .replace(/^"|"$/g, ""); // Remove wrapping quotes if present
 
 if (!FIREBASE_PRIVATE_KEY || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PROJECT_ID) {
   Logger.log("ERROR: Missing Firebase Credentials in Script Properties");
