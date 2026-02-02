@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, BarChart3, TrendingUp, LineChart, Settings, Bell, Search, Menu, X } from 'lucide-react';
+import { LayoutDashboard, BarChart3, TrendingUp, LineChart, Settings, Bell, Search, Menu, X, LogIn, LogOut, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const SidebarItem = ({ icon, label, active, onClick }) => {
   const Icon = icon;
@@ -37,6 +38,105 @@ const SidebarItem = ({ icon, label, active, onClick }) => {
     </div>
   );
 };
+
+const UserProfileSection = () => {
+    const { currentUser, loginWithGoogle, logout } = useAuth();
+    const [loading, setLoading] = useState(false);
+  
+    const handleLogin = async () => {
+      try {
+        setLoading(true);
+        await loginWithGoogle();
+      } catch (error) {
+        console.error("Login failed", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error("Logout failed", error);
+        }
+    };
+  
+    if (currentUser) {
+      return (
+        <div>
+           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+             {currentUser.photoURL ? (
+                <img 
+                    src={currentUser.photoURL} 
+                    alt={currentUser.displayName} 
+                    style={{ width: '36px', height: '36px', borderRadius: '50%', marginRight: '12px', border: '1px solid var(--glass-border)' }}
+                />
+             ) : (
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-primary)', marginRight: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <User size={18} color="#fff" />
+                </div>
+             )}
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                {currentUser.displayName || "User"}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                {currentUser.email}
+              </div>
+            </div>
+          </div>
+          
+          <button 
+            onClick={handleLogout}
+            style={{ 
+                width: '100%',
+                padding: '8px', 
+                background: 'rgba(255,255,255,0.05)', 
+                border: '1px solid var(--glass-border)', 
+                borderRadius: '8px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '13px',
+                transition: 'all 0.2s'
+            }}
+            className="hover-bg"
+          >
+            <LogOut size={14} style={{ marginRight: '8px' }} />
+            Sign Out
+          </button>
+        </div>
+      );
+    }
+  
+    return (
+      <button 
+        onClick={handleLogin}
+        disabled={loading}
+        style={{ 
+            width: '100%',
+            padding: '10px', 
+            background: 'var(--accent-primary)', 
+            border: 'none', 
+            borderRadius: '8px',
+            color: 'white',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 500,
+            opacity: loading ? 0.7 : 1,
+            transition: 'opacity 0.2s'
+        }}
+      >
+        <LogIn size={16} style={{ marginRight: '8px' }} />
+        {loading ? 'Signing In...' : 'Sign In with Google'}
+      </button>
+    );
+  };
 
 export const Layout = ({ children, activeTab, onTabChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -99,9 +199,7 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
       >
         <div style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: '32px', height: '32px', background: 'var(--accent-primary)', borderRadius: '8px', marginRight: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <BarChart3 color="#fff" size={20} />
-            </div>
+            <img src="/icons/icon-48x48.png" alt="DSEasy Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '12px' }} />
             <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, letterSpacing: '-0.5px' }}>DSEasy</h1>
           </div>
           {isMobile && (
@@ -132,13 +230,7 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
         </div>
 
         <div style={{ padding: '24px', borderTop: '1px solid var(--glass-border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#475569', marginRight: '12px' }}></div>
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 500 }}>Keon Geraldo</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Pro Trader</div>
-            </div>
-          </div>
+          <UserProfileSection />
         </div>
       </aside>
 

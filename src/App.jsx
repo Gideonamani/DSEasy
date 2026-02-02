@@ -29,6 +29,8 @@ const TAB_TO_ROUTE = {
   "Settings": "/settings",
 };
 
+import { AuthProvider } from "./contexts/AuthContext";
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -336,6 +338,7 @@ function App() {
   );
 
   return (
+    <AuthProvider>
     <Layout activeTab={activeTab} onTabChange={handleTabChange}>
       <Routes>
         <Route path="/" element={dashboardContent} />
@@ -373,6 +376,7 @@ function App() {
         />
       </Routes>
     </Layout>
+    </AuthProvider>
   );
 }
 
