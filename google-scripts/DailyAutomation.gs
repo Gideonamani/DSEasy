@@ -10,7 +10,11 @@
   5. If old data AND it's late (e.g. > 11 PM) -> Sends email alert.
 */
 
-const ALERT_EMAIL = Session.getActiveUser().getEmail(); // Or hardcode "your@email.com"
+// 1. Try Script Properties (Environment Variables)
+// 2. Fallback to Effective User (The account running the trigger)
+const ALERT_EMAIL =
+  PropertiesService.getScriptProperties().getProperty("ALERT_EMAIL") ||
+  Session.getEffectiveUser().getEmail();
 
 function triggerDailyClose(e) {
   const now = new Date();
