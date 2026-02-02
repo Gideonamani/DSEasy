@@ -7,6 +7,13 @@
 - [ ] **VWAP**: Calculate and display Volume Weighted Average Price.
 - [ ] **Comparative Performance**: Enable multi-symbol comparison on the same chart (normalized %).
 
+## User Experience & Features
+
+- [ ] **Better Loading Experience**: Improve initial load states and transitions.
+- [ ] **User Authentication**: Implement real user login and remove the placeholder "Keon Top Trader".
+- [ ] **PWA & Notifications**: Investigate and implement Progressive Web App capabilities and push notifications.
+- [ ] **Settings Menu**: Explore and define functionality for the settings menu.
+
 ## Backlog
 
 - [ ] Refactor API calls to use a dedicated service layer.
