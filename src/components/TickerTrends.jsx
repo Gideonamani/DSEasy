@@ -16,8 +16,9 @@ import {
   Filler,
 } from "chart.js";
 import { Line, Bar, Chart } from "react-chartjs-2";
-import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar } from "lucide-react";
+import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, Bell } from "lucide-react";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
+import { AlertModal } from "./AlertModal";
 
 ChartJS.register(
   CategoryScale,
@@ -181,6 +182,9 @@ export const TickerTrends = () => {
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState(null);
+  
+  // NEW: Alert Modal State
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
   // Derived state: current symbol comes from URL or defaults to first in list
   const currentSymbol = urlSymbol || (symbols.length > 0 ? symbols[0] : "");
@@ -519,31 +523,45 @@ export const TickerTrends = () => {
           </p>
         </div>
 
-        {/* Symbol Selector */}
-        <div className="glass-panel" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 16px", borderRadius: "12px" }}>
-          <TrendingUp size={18} color="var(--text-secondary)" />
-          <select
-            value={currentSymbol}
-            onChange={(e) => handleSymbolChange(e.target.value)}
-            className="date-select"
-            disabled={loadingData}
-            style={{ minWidth: "120px" }}
-          >
-            {/* If the current selected symbol isn't in the list yet (optimistic), show it anyway */}
-            {currentSymbol && !symbols.includes(currentSymbol) && (
-                 <option key={currentSymbol} value={currentSymbol} style={{ background: "#1e293b" }}>
-                    {currentSymbol}
-                 </option>
-            )}
-            {symbols.map((symbol) => (
-              <option key={symbol} value={symbol} style={{ background: "#1e293b" }}>
-                {symbol}
-              </option>
-            ))}
-          </select>
-          {loadingData && <Loader2 size={16} className="animate-spin" />}
+        {/* Symbol Selector & Alert Button */}
+        <div style={{ display: "flex", gap: "12px" }}>
+             <div className="glass-panel" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0", width: "42px", height: "42px", borderRadius: "12px", cursor: "pointer", border: "1px solid var(--glass-border)", color: "var(--accent-primary)" }} onClick={() => setIsAlertModalOpen(true)}>
+                 <Bell size={20} />
+             </div>
+
+             <div className="glass-panel" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 16px", borderRadius: "12px" }}>
+              <TrendingUp size={18} color="var(--text-secondary)" />
+              <select
+                value={currentSymbol}
+                onChange={(e) => handleSymbolChange(e.target.value)}
+                className="date-select"
+                disabled={loadingData}
+                style={{ minWidth: "120px" }}
+              >
+                {/* If the current selected symbol isn't in the list yet (optimistic), show it anyway */}
+                {currentSymbol && !symbols.includes(currentSymbol) && (
+                     <option key={currentSymbol} value={currentSymbol} style={{ background: "#1e293b" }}>
+                        {currentSymbol}
+                     </option>
+                )}
+                {symbols.map((symbol) => (
+                  <option key={symbol} value={symbol} style={{ background: "#1e293b" }}>
+                    {symbol}
+                  </option>
+                ))}
+              </select>
+              {loadingData && <Loader2 size={16} className="animate-spin" />}
+            </div>
         </div>
       </div>
+
+      {/* Alert Modal */}
+      <AlertModal 
+        isOpen={isAlertModalOpen} 
+        onClose={() => setIsAlertModalOpen(false)}
+        symbol={currentSymbol}
+        currentPrice={stats?.latest || 0}
+      />
 
       {/* Period Selector */}
       <div className="glass-panel" style={{ 

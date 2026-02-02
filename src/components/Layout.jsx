@@ -70,6 +70,7 @@ const UserProfileSection = () => {
                 <img 
                     src={currentUser.photoURL} 
                     alt={currentUser.displayName} 
+                    referrerPolicy="no-referrer"
                     style={{ width: '36px', height: '36px', borderRadius: '50%', marginRight: '12px', border: '1px solid var(--glass-border)' }}
                 />
              ) : (
