@@ -47,10 +47,19 @@ function syncDailyToTrends() {
 
   Logger.log("Processing: " + rawName + " as " + dateStr);
 
-  processSheetData(targetSheet, destSs, dateStr);
+  const result = processSheetData(targetSheet, destSs, dateStr, true); // Strict Mode = ON
+  
+  if (result.skipped.length > 0) {
+    Logger.log("WARNING: Skipped new symbols: " + result.skipped.join(", "));
+    // We could send an email here if this was triggered manually, but usually triggering from ScrapeDSEData handles the email.
+    // If triggered from menu "Sync Latest Day", we likely want a UI alert.
+    // Let's rely on the caller or add a UI alert if possible.
+  }
 
   // Auto-update config after sync
   updateDateConfig(); // Calls function from AdminActions.gs
+  
+  return result; // Return result for caller (e.g. ScrapeDSEData)
 }
 
 // 2. BACKFILL HISTORY FUNCTION (Run manually to fill database with old sheets)
@@ -69,7 +78,7 @@ function backfillAllHistory() {
     const dateStr = formatDateString(name);
 
     Logger.log("Backfilling: " + name + " -> " + dateStr);
-    processSheetData(sheet, destSs, dateStr);
+    processSheetData(sheet, destSs, dateStr, false); // Strict Mode = OFF (Create missing sheets)
 
     Utilities.sleep(500); // Respect rate limits
   }
@@ -78,9 +87,12 @@ function backfillAllHistory() {
 }
 
 // 3. SHARED PROCESSING LOGIC
-function processSheetData(sheet, destSs, dateStr) {
+// Returns object: { processed: count, skipped: [symbol list] }
+function processSheetData(sheet, destSs, dateStr, strictMode = true) {
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return;
+  const result = { processed: 0, skipped: [] };
+  
+  if (lastRow < 2) return result;
 
   const range = sheet.getRange(2, 1, lastRow - 1, DATA_COLUMN_COUNT); // Uses shared constant
   const values = range.getValues();
@@ -98,41 +110,50 @@ function processSheetData(sheet, destSs, dateStr) {
     if (row[6]) row[6] = "'" + row[6]; // Fix formula error for the Change column
 
     const rowData = [dateStr, ...row.slice(1)];
-
+    
     let symbolSheet = destSs.getSheetByName(symbol);
 
     if (!symbolSheet) {
-      symbolSheet = destSs.insertSheet(symbol);
-      symbolSheet.appendRow([
-        "Date",
-        "Open",
-        "Prev Close",
-        "Close",
-        "High",
-        "Low",
-        "Change",
-        "Turn Over",
-        "Deals",
-        "Out Standing Bid",
-        "Out Standing Offer",
-        "Volume",
-        "MCAP (TZS 'B)",
-        "Change Value",
-        "",
-        "Bid/Offer",
-        "High/Low Spread",
-        "Turnover % of Daily Traded",
-        "Turnover / MCAP",
-        "Vol/Deal",
-        "Turnover/Deal",
-        "Change/Vol",
-      ]);
-      symbolSheet.getRange("G:G").setNumberFormat("@");
+      if (strictMode) {
+        // STRICT MODE: Do not create new sheet. Log as skipped.
+        result.skipped.push(symbol);
+        return; // Skip this row
+      } else {
+        // PERMISSIVE MODE: Create new sheet (Backfill or explicit override)
+        symbolSheet = destSs.insertSheet(symbol);
+        symbolSheet.appendRow([
+          "Date",
+          "Open",
+          "Prev Close",
+          "Close",
+          "High",
+          "Low",
+          "Change",
+          "Turn Over",
+          "Deals",
+          "Out Standing Bid",
+          "Out Standing Offer",
+          "Volume",
+          "MCAP (TZS 'B)",
+          "Change Value",
+          "",
+          "Bid/Offer",
+          "High/Low Spread",
+          "Turnover % of Daily Traded",
+          "Turnover / MCAP",
+          "Vol/Deal",
+          "Turnover/Deal",
+          "Change/Vol",
+        ]);
+        symbolSheet.getRange("G:G").setNumberFormat("@");
+      }
     }
 
     // Duplicate Check
     const destData = symbolSheet.getDataRange().getValues();
     let dateExists = false;
+    // Optimization: Check last row first? Or just iterate. 
+    // Usually we append to end, so checking last row date (if sorted) is faster but let's stick to safe iterate.
     for (let d = 1; d < destData.length; d++) {
       if (destData[d][0].toString() === dateStr.toString()) {
         dateExists = true;
@@ -142,6 +163,9 @@ function processSheetData(sheet, destSs, dateStr) {
 
     if (!dateExists) {
       symbolSheet.appendRow(rowData);
+      result.processed++;
     }
   });
+  
+  return result;
 }

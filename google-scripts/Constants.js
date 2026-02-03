@@ -19,3 +19,12 @@ const EXCLUDED_SHEET_NAMES = [
 ];
 
 const DATA_COLUMN_COUNT = 22; // Columns A-V
+
+// Canonical Registry for Symbol Normalization
+// Maps "Bad/New Name" -> "Canonical/Old Name"
+const SYMBOL_MAPPINGS = {
+  "VERTEX-ETF": "VERTEX ETF",
+  "IEACLC-ETF": "IEACLC ETF",
+  "ITRUST ETF": "IEACLC ETF",
+  // Add future renames here as needed
+};

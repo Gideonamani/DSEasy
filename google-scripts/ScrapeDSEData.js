@@ -176,7 +176,7 @@ function scrapeDSEData(interactive = true) {
   const finalData = parsedRows.map((row) => {
     if (row.length < 13) return row;
     return [
-      row[0], // Symbol
+      normalizeSymbol(row[0]), // Symbol (Normalized)
       parseDseNumber(row[1]),
       parseDseNumber(row[2]),
       parseDseNumber(row[3]),
@@ -201,17 +201,24 @@ function scrapeDSEData(interactive = true) {
   const successMsg = `Import complete! Imported ${finalData.length} symbols to "${formattedDate}".`;
   
   // 6. SYNC & UPDATE CONFIG
+  let syncSkipped = [];
   try {
     const destSs = SpreadsheetApp.openById(DESTINATION_SPREADSHEET_ID);
-    // formatDateString is in ClosingToSymbols.gs
-    // processSheetData is in ClosingToSymbols.gs
-    // updateDateConfig is in AdminActions.gs
     
     // Convert "30Jan2026" -> "30 Jan 2026"
     const prettyDate = formatDateString(formattedDate); 
     
-    // Sync to Trends Spreadsheet
-    processSheetData(targetSheet, destSs, prettyDate);
+    // Sync to Trends Spreadsheet (Strict Mode = True by default in ClosingToSymbols)
+    const syncResult = processSheetData(targetSheet, destSs, prettyDate, true);
+    
+    if (syncResult && syncResult.skipped && syncResult.skipped.length > 0) {
+      syncSkipped = syncResult.skipped;
+      const skipMsg = "⚠️ Skipped unknown symbols: " + syncSkipped.join(", ") + "\nPlease update Constants.js if they are valid renames.";
+      Logger.log(skipMsg);
+      if (interactive) {
+        SpreadsheetApp.getUi().alert(skipMsg);
+      }
+    }
     
     // Update local config index
     updateDateConfig();
@@ -224,7 +231,9 @@ function scrapeDSEData(interactive = true) {
     }
   }
 
-  if (interactive) SpreadsheetApp.getUi().alert(successMsg + "\n\nAlso synced to Trends & updated Date Config.");
+  if (interactive && syncSkipped.length === 0) {
+    SpreadsheetApp.getUi().alert(successMsg + "\n\nAlso synced to Trends & updated Date Config.");
+  }
 
   return {
     success: true,
@@ -234,6 +243,7 @@ function scrapeDSEData(interactive = true) {
     exists: !sheetCreated,
     message: successMsg,
     rowCount: finalData.length,
+    skippedSymbols: syncSkipped
   };
 }
 
@@ -273,6 +283,14 @@ function parseDseNumber(str) {
   const clean = str.replace(/,/g, "").trim();
   const val = parseFloat(clean);
   return isNaN(val) ? 0 : val;
+}
+
+// HELPER: Normalize Symbol Names using Registry
+function normalizeSymbol(rawSymbol) {
+  if (!rawSymbol) return "";
+  const trimmed = rawSymbol.trim();
+  // Check mapping (Constants.gs) or return original
+  return SYMBOL_MAPPINGS[trimmed] || trimmed;
 }
 
 // HELPER: "-▼ -2.48" -> -2.48

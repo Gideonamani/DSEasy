@@ -110,24 +110,41 @@ function triggerDailyClose(e) {
   if (result.created) {
     Logger.log("[DailyWorkflow] New data detected! Proceeding to Sync...");
 
-    // Call the sync function (from ClosingToSymbols.gs)
+    // Call the sync function (Implicitly handled by scrapeDSEData now? NO. scrapeDSEData calls sync if created.)
+    // Wait, scrapeDSEData logic we just added DOES call sync IF successful. 
+    // BUT triggerDailyClose calls scrapeDSEData(false).
+    // So sync HAPPENS INSIDE scrapeDSEData now.
+    
+    // CHECK FOR SKIPPED SYMBOLS
+    if (result.skippedSymbols && result.skippedSymbols.length > 0) {
+       Logger.log("[DailyWorkflow] Found skipped symbols: " + result.skippedSymbols.join(", "));
+       const emailAddr = getAlertEmail();
+       if (emailAddr) {
+         MailApp.sendEmail({
+           to: emailAddr,
+           subject: "⚠️ DSE Scraper: Unknown Symbols Detected",
+           body: `The scraper found symbols that do not match existing sheets and were blocked from syncing:\n\n${result.skippedSymbols.join("\n")}\n\nPlease check if these are renames and update Constants.js, or manually create new sheets for them.`
+         });
+       }
+    }
+
+    // Retaining legacy explicit sync call logic only if scrapeDSEData DIDN'T do it?
+    // In our new architecture, scrapeDSEData performs the sync automatically.
+    // However, DailyAutomation.js logic below is:
+    // "IF DATA IS FRESH & NEWLY CREATED -> SYNC"
+    // But scrapeDSEData returns { created: true ... }
+    
+    // Issue: If scrapeDSEData already synced, calling syncDailyToTrends here is redundant or harmful.
+    // Let's REMOVE the explicit sync call here since ScrapeDSEData now handles it.
+    Logger.log("[DailyWorkflow] Scrape & Sync cycle complete.");
+    
+    /* 
+    Legacy Sync Block Removed - now handled inside scrapeDSEData 
     try {
       syncDailyToTrends();
-      Logger.log("[DailyWorkflow] Sync successful.");
-
-      // Optional: Email success summary
-      // MailApp.sendEmail(ALERT_EMAIL, "DSE Data Synced", `Synced data for ${result.dateStr}`);
-    } catch (e) {
-      Logger.log("[DailyWorkflow] Sync failed: " + e.message);
-      const emailAddr = getAlertEmail();
-      if (emailAddr) {
-        MailApp.sendEmail(
-          emailAddr,
-          "❌ DSE Sync Failed",
-          `Scraped data for ${result.dateStr} but Sync failed.\nError: ${e.message}`,
-        );
-      }
+      ...
     }
+    */
   } else {
     Logger.log(
       "[DailyWorkflow] Data for today already exists. No action needed.",
