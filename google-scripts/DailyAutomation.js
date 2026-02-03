@@ -12,9 +12,35 @@
 
 // 1. Try Script Properties (Environment Variables)
 // 2. Fallback to Effective User (The account running the trigger)
-const ALERT_EMAIL =
-  PropertiesService.getScriptProperties().getProperty("ALERT_EMAIL") ||
-  Session.getEffectiveUser().getEmail();
+// const ALERT_EMAIL =
+//   PropertiesService.getScriptProperties().getProperty("ALERT_EMAIL") ||
+//   Session.getEffectiveUser().getEmail();
+
+function getAlertEmail() {
+  try {
+    // 1. Try Script Properties
+    const props = PropertiesService.getScriptProperties();
+    const emailProp = props.getProperty("ALERT_EMAIL");
+    if (emailProp) {
+      // Logger.log("[DailyWorkflow] Found ALERT_EMAIL in Script Properties.");
+      return emailProp;
+    }
+
+    // 2. Fallback to Effective User (only works if user triggers it, or specific permissions)
+    Logger.log(
+      "[DailyWorkflow] ALERT_EMAIL not found in props. Trying Session.getEffectiveUser()...",
+    );
+    const userEmail = Session.getEffectiveUser().getEmail();
+    return userEmail;
+  } catch (e) {
+    // This catches the "You do not have permission to call Session.getActiveUser" error
+    Logger.log(
+      "[DailyWorkflow] Warning: Could not resolve email address. Error: " +
+        e.message,
+    );
+    return null;
+  }
+}
 
 function triggerDailyClose(e) {
   const now = new Date();
@@ -62,12 +88,19 @@ function triggerDailyClose(e) {
     const isWeekend = now.getDay() === 0 || now.getDay() === 6;
 
     if (!isWeekend && currentHour >= 23) {
-      MailApp.sendEmail({
-        to: ALERT_EMAIL,
-        subject: `⚠️ DSE Data Missing for ${todayFormatted}`,
-        body: `The automated scraper checked at ${now.toLocaleTimeString()} and the DSE website is still showing data for ${result.dateStr}.\n\nPlease check dse.co.tz manually.`,
-      });
-      Logger.log("[DailyWorkflow] Sent missing data alert email.");
+      const emailAddr = getAlertEmail();
+      if (emailAddr) {
+        MailApp.sendEmail({
+          to: emailAddr,
+          subject: `⚠️ DSE Data Missing for ${todayFormatted}`,
+          body: `The automated scraper checked at ${now.toLocaleTimeString()} and the DSE website is still showing data for ${result.dateStr}.\n\nPlease check dse.co.tz manually.`,
+        });
+        Logger.log("[DailyWorkflow] Sent missing data alert email.");
+      } else {
+        Logger.log(
+          "[DailyWorkflow] Skipped missing data email (no email address resolved).",
+        );
+      }
     }
 
     return;
@@ -86,11 +119,14 @@ function triggerDailyClose(e) {
       // MailApp.sendEmail(ALERT_EMAIL, "DSE Data Synced", `Synced data for ${result.dateStr}`);
     } catch (e) {
       Logger.log("[DailyWorkflow] Sync failed: " + e.message);
-      MailApp.sendEmail(
-        ALERT_EMAIL,
-        "❌ DSE Sync Failed",
-        `Scraped data for ${result.dateStr} but Sync failed.\nError: ${e.message}`,
-      );
+      const emailAddr = getAlertEmail();
+      if (emailAddr) {
+        MailApp.sendEmail(
+          emailAddr,
+          "❌ DSE Sync Failed",
+          `Scraped data for ${result.dateStr} but Sync failed.\nError: ${e.message}`,
+        );
+      }
     }
   } else {
     Logger.log(
