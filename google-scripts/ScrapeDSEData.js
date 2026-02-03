@@ -199,7 +199,32 @@ function scrapeDSEData(interactive = true) {
   }
 
   const successMsg = `Import complete! Imported ${finalData.length} symbols to "${formattedDate}".`;
-  if (interactive) SpreadsheetApp.getUi().alert(successMsg);
+  
+  // 6. SYNC & UPDATE CONFIG
+  try {
+    const destSs = SpreadsheetApp.openById(DESTINATION_SPREADSHEET_ID);
+    // formatDateString is in ClosingToSymbols.gs
+    // processSheetData is in ClosingToSymbols.gs
+    // updateDateConfig is in AdminActions.gs
+    
+    // Convert "30Jan2026" -> "30 Jan 2026"
+    const prettyDate = formatDateString(formattedDate); 
+    
+    // Sync to Trends Spreadsheet
+    processSheetData(targetSheet, destSs, prettyDate);
+    
+    // Update local config index
+    updateDateConfig();
+    
+    Logger.log("Auto-sync and config update successful.");
+  } catch (err) {
+    Logger.log("Error during auto-sync: " + err.message);
+    if (interactive) {
+      SpreadsheetApp.getUi().alert("Data Scraped, but Sync failed: " + err.message);
+    }
+  }
+
+  if (interactive) SpreadsheetApp.getUi().alert(successMsg + "\n\nAlso synced to Trends & updated Date Config.");
 
   return {
     success: true,
