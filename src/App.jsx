@@ -30,11 +30,13 @@ const TAB_TO_ROUTE = {
   "Settings": "/settings",
 };
 
-import { AuthProvider } from "./contexts/AuthContext";
+import { useSettings } from "./contexts/SettingsContext";
+import { Settings } from "./components/Settings";
 
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { settings } = useSettings();
   
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
@@ -227,7 +229,24 @@ function App() {
     );
   }
 
-  // Dashboard content rendered inline
+
+
+  // Helper for large numbers
+  const formatLargeNumber = (num) => {
+    if (!num) return "0";
+    if (settings.numberFormat === 'full') {
+      return num.toLocaleString();
+    }
+    // Abbreviated
+    // For TZS (Turnover/MCap) usually Billions/Trillions
+    // For Volume usually Millions
+    if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+    return num.toString();
+  };
+
   const dashboardContent = (
     <>
       <div className="dashboard-header">
@@ -271,18 +290,14 @@ function App() {
         />
         <StatCard
           title="Total Volume"
-          value={totalVolume > 1000000000 ? (totalVolume / 1000000000).toFixed(2) + 'B' : (totalVolume / 1000000).toFixed(2) + 'M'}
+          value={formatLargeNumber(totalVolume)}
           change={null}
           subtext="Total Shares Traded"
           type="primary"
         />
         <StatCard
           title="Total Turnover"
-          value={
-            totalTurnover > 1000000000
-              ? (totalTurnover / 1000000000).toFixed(2) + "B"
-              : (totalTurnover / 1000000).toFixed(2) + "M"
-          }
+          value={formatLargeNumber(totalTurnover)}
           change={null}
           subtext="TZS Turnover"
           type="neutral"
@@ -300,11 +315,7 @@ function App() {
         />
         <StatCard
           title="Total Market Cap"
-          value={
-            totalMcap > 1000000000000
-              ? (totalMcap / 1000000000000).toFixed(2) + "T"
-              : (totalMcap / 1000000000).toFixed(2) + "B"
-          }
+          value={formatLargeNumber(totalMcap)}
           change={null}
           subtext="TZS Market Cap"
           type="primary"
@@ -339,7 +350,6 @@ function App() {
   );
 
   return (
-    <AuthProvider>
     <Layout activeTab={activeTab} onTabChange={handleTabChange}>
       <Routes>
         <Route path="/" element={dashboardContent} />
@@ -358,18 +368,9 @@ function App() {
         />
         <Route path="/trends/:symbol?" element={<TickerTrends />} />
         <Route path="/notifications" element={<NotificationsManager />} />
-        <Route 
-          path="/settings" 
-          element={
-            <div className="glass-panel" style={{ padding: "48px", textAlign: "center", borderRadius: "16px" }}>
-              <h3 style={{ marginBottom: "12px" }}>Settings</h3>
-              <p style={{ color: "var(--text-secondary)" }}>Settings page coming soon</p>
-            </div>
-          } 
-        />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>
-    </AuthProvider>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useSettings } from "../contexts/SettingsContext"; // Import useSettings
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
@@ -172,6 +173,8 @@ export const TickerTrends = () => {
   const { symbol: urlSymbol } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { settings } = useSettings(); // Use settings hook
+  const isLight = settings.theme === 'light';
   
   const [symbols, setSymbols] = useState([]);
   const [timeseriesData, setTimeseriesData] = useState([]);
@@ -387,11 +390,11 @@ export const TickerTrends = () => {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
+        backgroundColor: isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(15, 23, 42, 0.95)",
         borderColor: "var(--glass-border)",
         borderWidth: 1,
-        titleColor: "#fff",
-        bodyColor: "#94a3b8",
+        titleColor: isLight ? "#0f172a" : "#fff",
+        bodyColor: isLight ? "#64748b" : "#94a3b8",
         padding: 12,
         cornerRadius: 8,
       },
@@ -400,15 +403,15 @@ export const TickerTrends = () => {
       x: {
         grid: { display: false },
         ticks: { 
-          color: "#64748b", 
+          color: isLight ? "#64748b" : "#94a3b8", 
           font: { size: 10 },
           maxTicksLimit: 10,
         },
       },
       y: {
-        grid: { color: "rgba(255,255,255,0.05)" },
+        grid: { color: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)" },
         ticks: { 
-          color: "#64748b", 
+          color: isLight ? "#64748b" : "#94a3b8", 
           font: { size: 11 },
           callback: (value) => {
             if (value >= 1000000000) return (value / 1000000000).toFixed(1) + "B";
@@ -540,12 +543,12 @@ export const TickerTrends = () => {
               >
                 {/* If the current selected symbol isn't in the list yet (optimistic), show it anyway */}
                 {currentSymbol && !symbols.includes(currentSymbol) && (
-                     <option key={currentSymbol} value={currentSymbol} style={{ background: "#1e293b" }}>
+                     <option key={currentSymbol} value={currentSymbol} style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}>
                         {currentSymbol}
                      </option>
                 )}
                 {symbols.map((symbol) => (
-                  <option key={symbol} value={symbol} style={{ background: "#1e293b" }}>
+                  <option key={symbol} value={symbol} style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}>
                     {symbol}
                   </option>
                 ))}

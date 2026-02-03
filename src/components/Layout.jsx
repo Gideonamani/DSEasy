@@ -14,8 +14,8 @@ const SidebarItem = ({ icon, label, active, onClick }) => {
         margin: '4px 8px',
         borderRadius: '8px',
         cursor: 'pointer',
-        backgroundColor: active ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-        color: active ? '#fff' : 'var(--text-secondary)',
+        backgroundColor: active ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+        color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
         transition: 'all 0.2s ease',
         position: 'relative',
         overflow: 'hidden'
@@ -93,8 +93,8 @@ const UserProfileSection = () => {
             style={{ 
                 width: '100%',
                 padding: '8px', 
-                background: 'rgba(255,255,255,0.05)', 
-                border: '1px solid var(--glass-border)', 
+                background: 'var(--bg-input)', 
+                border: '1px solid var(--border-subtle)', 
                 borderRadius: '8px',
                 color: 'var(--text-secondary)',
                 cursor: 'pointer',
@@ -195,12 +195,12 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
           flexDirection: 'column',
           zIndex: 60,
           transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          background: 'var(--bg-card)' // Ensure opacity for overlay
+          background: 'var(--bg-sidebar)' // Use themed sidebar background
         }}
       >
         <div style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <img src="/icons/icon-48x48.png" alt="DSEasy Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '12px' }} />
+            <img src="/icons/icon-48x48.png" alt="DSEasy Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '12px', border: '1px solid var(--glass-border)' }} />
             <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, letterSpacing: '-0.5px' }}>DSEasy</h1>
           </div>
           {isMobile && (
@@ -275,11 +275,11 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
                         type="text" 
                         placeholder="Search..." 
                         style={{ 
-                            background: 'rgba(255,255,255,0.05)', 
-                            border: '1px solid var(--glass-border)', 
+                            background: 'var(--bg-input)', 
+                            border: '1px solid var(--border-subtle)', 
                             borderRadius: '20px', 
                             padding: '8px 16px 8px 36px', 
-                            color: 'white',
+                            color: 'var(--text-primary)',
                             outline: 'none',
                             width: '200px',
                             fontSize: '14px'

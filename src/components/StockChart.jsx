@@ -9,6 +9,7 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
+import { useSettings } from '../contexts/SettingsContext';
 
 ChartJS.register(
   CategoryScale,
@@ -20,31 +21,40 @@ ChartJS.register(
   ArcElement
 );
 
-const defaultOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            position: 'top',
-            labels: { color: '#94a3b8' } // text-secondary
+const getChartOptions = (theme) => {
+    const isLight = theme === 'light';
+    const gridColor = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)';
+    const textColor = isLight ? '#64748b' : '#94a3b8';
+
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: { color: textColor }
+            },
+            title: {
+                display: false,
+            },
         },
-        title: {
-            display: false,
-        },
-    },
-    scales: {
-        x: {
-            ticks: { color: '#94a3b8' },
-            grid: { color: 'rgba(255, 255, 255, 0.05)' }
-        },
-        y: {
-            ticks: { color: '#94a3b8' },
-            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+        scales: {
+            x: {
+                ticks: { color: textColor },
+                grid: { color: gridColor }
+            },
+            y: {
+                ticks: { color: textColor },
+                grid: { color: gridColor }
+            }
         }
-    }
+    };
 };
 
 export const PriceChangeChart = ({ data }) => {
+    const { settings } = useSettings();
+    const options = getChartOptions(settings.theme);
+
     // Top 10 by absolute change
     const chartData = [...data].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10);
 
@@ -66,7 +76,7 @@ export const PriceChangeChart = ({ data }) => {
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', height: '400px' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--text-secondary)' }}>Top Price Changes (%)</h3>
             <div style={{ position: 'relative', height: '320px' }}>
-                <Bar options={defaultOptions} data={config} />
+                <Bar options={options} data={config} />
             </div>
         </div>
     );
@@ -95,14 +105,18 @@ export const TurnoverChart = ({ data }) => {
         ],
     };
 
+    const { settings } = useSettings();
+    const isLight = settings.theme === 'light';
+    const textColor = isLight ? '#64748b' : '#94a3b8';
+
     const doughnutOptions = {
-        ...defaultOptions,
+        ...getChartOptions(settings.theme),
         scales: {}, // No scales for doughnut
         cutout: '70%',
         plugins: {
             legend: {
                 position: 'right',
-                labels: { color: '#94a3b8', padding: 20 }
+                labels: { color: textColor, padding: 20 }
             }
         }
     };
