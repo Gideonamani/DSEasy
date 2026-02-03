@@ -179,3 +179,57 @@ function testServiceWorkerNotification() {
     SpreadsheetApp.getUi().alert(message);
   }
 }
+
+// 4. Get Alerts (API)
+function getAlerts(email) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(ALERTS_SHEET_NAME);
+  if (!sheet) return [];
+
+  const data = sheet.getDataRange().getValues();
+  const alerts = [];
+
+  // Skip header, check Status=ACTIVE
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    // [Email, Symbol, Target, Condition, Token, Status, Created]
+    if (row[5] === "ACTIVE") {
+      if (!email || row[0] === email) {
+        alerts.push({
+          email: row[0],
+          symbol: row[1],
+          targetPrice: row[2],
+          condition: row[3],
+          fcmToken: row[4],
+          status: row[5],
+          created: row[6],
+        });
+      }
+    }
+  }
+  return alerts;
+}
+
+// 5. Delete Alert (API)
+function deleteAlert(email, symbol, targetPrice, condition) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(ALERTS_SHEET_NAME);
+  if (!sheet) return { success: false, error: "No sheet" };
+
+  const data = sheet.getDataRange().getValues();
+  // Iterate backwards loop
+  for (let i = data.length - 1; i >= 1; i--) {
+    const row = data[i];
+    // Match logic
+    if (
+      row[0] == email &&
+      row[1] == symbol &&
+      row[2] == targetPrice &&
+      row[3] == condition
+    ) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { success: false, error: "Alert not found" };
+}

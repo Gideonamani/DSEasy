@@ -7,6 +7,15 @@ function doGet(e) {
   const params = e.parameter;
   const action = params.action;
 
+  // Alerts Actions
+  if (action === "getAlerts") {
+    return jsonResponse(getAlerts(params.email));
+  }
+
+  if (action === "deleteAlert") {
+    return jsonResponse(deleteAlert(params.email, params.symbol, params.targetPrice, params.condition));
+  }
+
   // New Alert Action
   if (action === "createAlert") {
     const email = params.email;
