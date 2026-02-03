@@ -41,6 +41,11 @@ function createAlert(email, symbol, targetPrice, condition, fcmToken) {
 
 // 2. Monitoring Function (Run via Trigger)
 function checkIntradayAlerts() {
+  // Time Window Check: 9:30 AM - 4:15 PM
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  if (mins < 570 || mins > 975) return;
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(ALERTS_SHEET_NAME);
 
@@ -102,10 +107,11 @@ function fetchLivePricesMap() {
     const map = {};
     if (json.data && json.data.length > 0) {
       json.data.forEach((item) => {
-        // "symbol": "CRDB", "close": "550" (or similar)
-        // Usually live prices are in Different fields, verify structure if needed
-        // Assuming 'Close' is the current trading price for simplicity or 'close' from API
-        map[item.Symbol] = Number(item.Close) || 0;
+        // DSE API returns 'price' as the Open price and 'change' as the difference.
+        // To get the current live price, we must add the change to the open price.
+        const price = Number(item.price) || 0;
+        const change = Number(item.change) || 0;
+        map[item.company] = price + change;
       });
     }
     return map;
