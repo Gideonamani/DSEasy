@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCR8Oysnz5l8UVt92jk9UmR4NqgPBkJkBA",
-  authDomain: "dse-easy.firebaseapp.com",
-  projectId: "dse-easy",
-  storageBucket: "dse-easy.firebasestorage.app",
-  messagingSenderId: "614010697994",
-  appId: "1:614010697994:web:2a89878437b01fca7562f3",
-  measurementId: "G-5EPE3H3S04"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);

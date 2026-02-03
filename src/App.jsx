@@ -8,6 +8,7 @@ import { DerivedAnalytics } from "./components/DerivedAnalytics";
 import { TickerTrends } from "./components/TickerTrends";
 import { DatePicker } from "./components/DatePicker";
 import { Loader2 } from "lucide-react";
+import { NotificationsManager } from "./components/NotificationsManager";
 
 // API URL
 const API_URL = "https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec";
@@ -356,15 +357,7 @@ function App() {
           } 
         />
         <Route path="/trends/:symbol?" element={<TickerTrends />} />
-        <Route 
-          path="/notifications" 
-          element={
-            <div className="glass-panel" style={{ padding: "48px", textAlign: "center", borderRadius: "16px" }}>
-              <h3 style={{ marginBottom: "12px" }}>Notifications</h3>
-              <p style={{ color: "var(--text-secondary)" }}>No new notifications</p>
-            </div>
-          } 
-        />
+        <Route path="/notifications" element={<NotificationsManager />} />
         <Route 
           path="/settings" 
           element={

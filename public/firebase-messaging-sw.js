@@ -5,7 +5,7 @@ importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compa
 
 // Initialize the Firebase app in the service worker by passing in the messagingSenderId.
 firebase.initializeApp({
-  apiKey: "AIzaSyCR8Oysnz5l8UVt92jk9UmR4NqgPBkJkBA",
+  apiKey: "AIzaSyDhpOVxTPWaDn2enRHQpc-UhMYaAnZ-nw8",
   authDomain: "dse-easy.firebaseapp.com",
   projectId: "dse-easy",
   storageBucket: "dse-easy.firebasestorage.app",
