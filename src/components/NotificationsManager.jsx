@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, History, BellRing } from "lucide-react";
 
 // API URL (Same as App.jsx)
 const API_URL = "https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec";
@@ -10,6 +10,7 @@ export function NotificationsManager() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
 
   const fetchAlerts = useCallback(() => {
     setLoading(true);
@@ -81,10 +82,14 @@ export function NotificationsManager() {
      return <div style={{ textAlign: "center", padding: "32px", color: "var(--text-secondary)" }}>Please log in to view alerts.</div>;
   }
 
+  const activeAlerts = alerts.filter(a => a.status === 'ACTIVE');
+  const historyAlerts = alerts.filter(a => a.status !== 'ACTIVE');
+  const displayedAlerts = activeTab === 'active' ? activeAlerts : historyAlerts;
+
   return (
     <div className="glass-panel" style={{ padding: "32px", borderRadius: "16px", maxWidth: "800px", margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: "bold" }}>Active Price Alerts</h2>
+        <h2 style={{ fontSize: "24px", fontWeight: "bold" }}>Price Alerts</h2>
         <button 
             onClick={fetchAlerts}
             style={{ 
@@ -100,19 +105,69 @@ export function NotificationsManager() {
         </button>
       </div>
 
-      {alerts.length === 0 ? (
-          <p style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px" }}>No active alerts set.</p>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', padding: '4px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', width: 'fit-content' }}>
+        <button
+          onClick={() => setActiveTab('active')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            background: activeTab === 'active' ? 'var(--accent-primary)' : 'transparent',
+            color: activeTab === 'active' ? 'white' : 'var(--text-secondary)',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          <BellRing size={16} />
+          <span>Active ({activeAlerts.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            background: activeTab === 'history' ? 'rgba(255,255,255,0.1)' : 'transparent',
+            color: activeTab === 'history' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          <History size={16} />
+          <span>History ({historyAlerts.length})</span>
+        </button>
+      </div>
+
+      {displayedAlerts.length === 0 ? (
+          <div style={{ 
+            textAlign: "center", 
+            color: "var(--text-secondary)", 
+            padding: "48px 32px",
+            background: 'rgba(255,255,255,0.02)',
+            borderRadius: '12px',
+            border: '1px dashed rgba(255,255,255,0.1)'
+          }}>
+            <p>{activeTab === 'active' ? 'No active price alerts.' : 'No alert history available.'}</p>
+          </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-           {alerts.map((alert, idx) => (
+           {displayedAlerts.map((alert, idx) => (
              <div key={idx} style={{ 
                 display: "flex", 
                 alignItems: "center", 
                 justifyContent: "space-between",
                 padding: "16px",
-                backgroundColor: "rgba(255,255,255,0.02)",
+                backgroundColor: activeTab === 'active' ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.01)",
                 borderRadius: "12px",
-                border: "1px solid rgba(255,255,255,0.05)"
+                border: "1px solid rgba(255,255,255,0.05)",
+                opacity: activeTab === 'history' ? 0.7 : 1
              }}>
                <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -126,9 +181,22 @@ export function NotificationsManager() {
                     }}>
                       {alert.condition} {alert.targetPrice.toLocaleString()}
                     </span>
+                    {activeTab === 'history' && (
+                         <span style={{ 
+                            padding: "2px 6px", 
+                            borderRadius: "4px", 
+                            fontSize: "10px",
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            color: 'var(--text-secondary)',
+                            textTransform: 'uppercase'
+                        }}>
+                             {alert.status}
+                        </span>
+                    )}
                   </div>
                   <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                    Created: {new Date(alert.created).toLocaleDateString()}
+                    {activeTab === 'active' ? 'Created: ' : 'Triggered: '} 
+                    {new Date(alert.created).toLocaleDateString()} {new Date(alert.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                </div>
                
