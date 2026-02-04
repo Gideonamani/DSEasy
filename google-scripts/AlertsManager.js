@@ -44,16 +44,36 @@ function checkIntradayAlerts() {
   // Time Window Check: 9:30 AM - 4:15 PM
   const now = new Date();
   const mins = now.getHours() * 60 + now.getMinutes();
-  if (mins < 570 || mins > 975) return;
+  const isWeekday = now.getDay() > 0 && now.getDay() < 6;
+  
+  // 9:30 AM = 570 mins, 4:15 PM = 975 mins
+  if (!isWeekday || mins < 570 || mins > 975) {
+    Logger.log("Outside of trading hours or weekend. Skipping.");
+    return;
+  }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(ALERTS_SHEET_NAME);
 
-  if (!sheet || sheet.getLastRow() < 2) return;
+  // 1. Fetch Live Data (Raw List)
+  const marketData = fetchLiveMarketData(); // Returns Array
+  if (!marketData || marketData.length === 0) {
+    Logger.log("No market data fetched.");
+    return;
+  }
 
-  // 1. Fetch Live Prices (Reusing scrape logic slightly modified for speed or just latest close)
-  // ideally we fetch from the DSE API directly here for "Live" feel
-  const livePrices = fetchLivePricesMap();
+  // 2. Log to History (_live_prices)
+  logLivePricesToHistory(ss, marketData);
+
+  // 3. Prepare Map for Alert Checking
+  const livePrices = {};
+  marketData.forEach(item => {
+    const price = Number(item.price) || 0;   // Open Price
+    const change = Number(item.change) || 0; // Change
+    livePrices[item.company] = price + change; // Current Price
+  });
+
+  if (!sheet || sheet.getLastRow() < 2) return;
 
   const data = sheet.getDataRange().getValues();
   // Row 0 is header
@@ -65,7 +85,7 @@ function checkIntradayAlerts() {
     if (status !== "ACTIVE") continue;
 
     const currentPrice = livePrices[symbol];
-    if (!currentPrice) continue;
+    if (currentPrice === undefined) continue;
 
     let triggered = false;
 
@@ -96,29 +116,79 @@ function checkIntradayAlerts() {
   }
 }
 
-// Helper: Quick fetch of live prices
-function fetchLivePricesMap() {
-  // Use the same API endpoint used in ScrapeDSEData
-  const url = "https://dse.co.tz/api/get/live/market/prices"; // We trust this exists
+// ---------------------------------------------------
+// SETUP & LOGGING
+// ---------------------------------------------------
+
+// Run this ONCE to set up the 15-minute trigger
+function setupIntradayTrigger() {
+  const functionName = "checkIntradayAlerts";
+  
+  // Check if exists
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === functionName) {
+      Logger.log("Trigger already exists.");
+      return;
+    }
+  }
+
+  ScriptApp.newTrigger(functionName)
+    .timeBased()
+    .everyMinutes(15)
+    .create();
+    
+  Logger.log("Intraday trigger set up successfully.");
+}
+
+function fetchLiveMarketData() {
+  const url = "https://dse.co.tz/api/get/live/market/prices";
   try {
     const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const json = JSON.parse(response.getContentText());
-
-    const map = {};
-    if (json.data && json.data.length > 0) {
-      json.data.forEach((item) => {
-        // DSE API returns 'price' as the Open price and 'change' as the difference.
-        // To get the current live price, we must add the change to the open price.
-        const price = Number(item.price) || 0;
-        const change = Number(item.change) || 0;
-        map[item.company] = price + change;
-      });
+    if (json.data && Array.isArray(json.data)) {
+      return json.data;
     }
-    return map;
   } catch (e) {
-    Logger.log("Error fetching live prices: " + e.toString());
-    return {};
+    Logger.log("Error fetching live data: " + e.toString());
   }
+  return [];
+}
+
+function logLivePricesToHistory(ss, dataList) {
+  const sheetName = "_live_prices";
+  let sheet = ss.getSheetByName(sheetName);
+  
+  // Sort data alphabetically by company symbol
+  dataList.sort((a, b) => a.company.localeCompare(b.company));
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    // Create Header Row
+    const headers = ["Timestamp"];
+    dataList.forEach(item => {
+      headers.push(`${item.company} Open`);
+      headers.push(`${item.company} Change`);
+    });
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+  }
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const row = new Array(headers.length).fill("");
+  
+  row[0] = new Date(); // Timestamp
+  
+  dataList.forEach(item => {
+    // Find columns
+    const openIndex = headers.indexOf(`${item.company} Open`);
+    const changeIndex = headers.indexOf(`${item.company} Change`);
+    
+    if (openIndex > -1) row[openIndex] = item.price;
+    if (changeIndex > -1) row[changeIndex] = item.change;
+  });
+  
+  sheet.appendRow(row);
 }
 
 // ---------------------------------------------------
