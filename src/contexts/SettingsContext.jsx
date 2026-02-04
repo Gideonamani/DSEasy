@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 
 const SettingsContext = createContext();
 
@@ -59,11 +59,11 @@ export function SettingsProvider({ children }) {
     setSettings(DEFAULT_SETTINGS);
   };
 
-  const value = {
+  const value = useMemo(() => ({
     settings,
     updateSetting,
     resetSettings,
-  };
+  }), [settings]);
 
   return (
     <SettingsContext.Provider value={value}>
