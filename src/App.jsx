@@ -8,9 +8,7 @@ import { NotificationsManager } from "./components/NotificationsManager";
 import { Loader2 } from "lucide-react";
 import { useSettings } from "./contexts/SettingsContext";
 import { Settings } from "./components/Settings";
-
-// API URL
-const API_URL = "https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec";
+import { useMarketDates, useMarketData } from "./hooks/useMarketQuery";
 
 // Route configuration
 const ROUTES = {
@@ -34,15 +32,21 @@ function App() {
   const navigate = useNavigate();
   const { settings } = useSettings();
   
-  const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
   
-  // Data for the CURRENTLY selected date
-  const [marketData, setMarketData] = useState([]);
+  // React Query Hooks
+  const { data: availableDates = [], isLoading: loadingDates, error: datesError } = useMarketDates();
   
-  const [loadingDates, setLoadingDates] = useState(true);
-  const [loadingData, setLoadingData] = useState(false);
-  const [error, setError] = useState(null);
+  // Auto-select latest date when loaded
+  useEffect(() => {
+    if (availableDates.length > 0 && !selectedDate) {
+        setSelectedDate(availableDates[0].sheetName);
+    }
+  }, [availableDates, selectedDate]);
+
+  const { data: marketData = [], isLoading: loadingData, error: dataError } = useMarketData(selectedDate);
+  
+  const error = datesError || dataError ? "Failed to load market data" : null;
 
   // Get active tab from current route
   const activeTab = useMemo(() => {
@@ -65,104 +69,8 @@ function App() {
 
   // Handle date change
   const handleDateChange = (date) => {
-    setLoadingData(true);
     setSelectedDate(date);
   };
-
-  // 1. Initial Load: Fetch Dates
-  useEffect(() => {
-    let ignore = false;
-    
-    fetch(`${API_URL}?action=getDates`)
-      .then((res) => res.json())
-      .then((dates) => {
-        if (ignore) return;
-        
-        // Handle both old (string[]) and new ({date, sheetName}[]) API responses for backward compatibility
-        const normalizedDates = dates.map(d => {
-           if (typeof d === 'string') return { date: null, sheetName: d };
-           return d;
-        });
-
-        // Sort if date objects exist, otherwise trust API order
-        if (normalizedDates.length > 0 && normalizedDates[0].date) {
-            normalizedDates.sort((a, b) => new Date(b.date) - new Date(a.date));
-        }
-
-        setAvailableDates(normalizedDates);
-        
-        // Auto-select the newest date (first in list)
-        if (normalizedDates.length > 0) {
-          if (normalizedDates[0]) setLoadingData(true); 
-          setSelectedDate(normalizedDates[0].sheetName);
-        }
-        setLoadingDates(false);
-      })
-      .catch((err) => {
-        if (ignore) return;
-        console.error("Failed to fetch dates:", err);
-        setError("Failed to load available dates.");
-        setLoadingDates(false);
-      });
-
-    return () => { ignore = true; };
-  }, []);
-
-  // 2. Fetch Data when Date Changes
-  useEffect(() => {
-    if (!selectedDate) return;
-
-    let ignore = false;
-    
-    // selectedDate is the sheetName
-    const url = `${API_URL}?action=getData&date=${encodeURIComponent(selectedDate)}`;
-
-    fetch(url)
-      .then((res) => res.json())
-      .then((rawData) => {
-        if (ignore) return;
-        
-        // --- Data Cleaning Logic ---
-        const rowMap = new Map();
-
-        rawData.forEach((item) => {
-          if (!item.symbol || item.symbol === "Co." || item.symbol === "---" || item.symbol === "Total") {
-            return;
-          }
-
-          if (rowMap.has(item.symbol)) {
-            const prev = rowMap.get(item.symbol);
-            rowMap.set(item.symbol, {
-              ...prev,
-              open: prev.open || item.open,
-              close: prev.close || item.close,
-              high: Math.max(prev.high || 0, item.high || 0),
-              low: prev.low && item.low ? Math.min(prev.low, item.low) : prev.low || item.low,
-              change: prev.change !== 0 ? prev.change : item.change,
-              volume: (prev.volume || 0) + (item.volume || 0),
-              turnover: (prev.turnover || 0) + (item.turnover || 0),
-              deals: (prev.deals || 0) + (item.deals || 0),
-              mcap: prev.mcap || item.mcap,
-            });
-          } else {
-            rowMap.set(item.symbol, item);
-          }
-        });
-
-        const cleanList = Array.from(rowMap.values()).filter((item) => item.close > 0);
-        
-        setMarketData(cleanList);
-        setLoadingData(false);
-      })
-      .catch((err) => {
-        if (ignore) return;
-        console.error("Failed to fetch day data:", err);
-        setMarketData([]); 
-        setLoadingData(false);
-      });
-
-    return () => { ignore = true; };
-  }, [selectedDate]);
 
   // Derived Stats
   const topGainer = useMemo(() => {

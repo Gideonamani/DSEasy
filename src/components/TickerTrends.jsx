@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useSettings } from "../contexts/SettingsContext"; // Import useSettings
+import { useTickerSymbols, useTickerHistory } from "../hooks/useMarketQuery";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
@@ -21,6 +22,7 @@ import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, B
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
 
+// ChartJS registration (TODO: Centralize this later)
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -32,9 +34,6 @@ ChartJS.register(
   Legend,
   Filler
 );
-
-// Symbols Timeseries API URL - UPDATE THIS AFTER DEPLOYMENT
-const SYMBOLS_API_URL = "https://script.google.com/macros/s/AKfycbwMbFZmHxoMbixaTPXRUWH_v_tgHiMANTpj9iFZdzIjmzPBUIctpoFZl1ogy0tmiIQz/exec";
 
 // Available metrics for visualization
 const METRICS = [
@@ -176,21 +175,31 @@ export const TickerTrends = () => {
   const { settings } = useSettings(); // Use settings hook
   const isLight = settings.theme === 'light';
   
-  const [symbols, setSymbols] = useState([]);
-  const [timeseriesData, setTimeseriesData] = useState([]);
-  
   // Track hidden metrics instead of single selected metric
   const [hiddenMetrics, setHiddenMetrics] = useState(new Set());
-  
-  const [loadingSymbols, setLoadingSymbols] = useState(true);
-  const [loadingData, setLoadingData] = useState(false);
-  const [error, setError] = useState(null);
   
   // NEW: Alert Modal State
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
+  // 1. Fetch Symbols using Hook
+  const { 
+    data: symbols = [], 
+    isLoading: loadingSymbols, 
+    error: symbolsError 
+  } = useTickerSymbols();
+
   // Derived state: current symbol comes from URL or defaults to first in list
+  // Note: we can only default once symbols are loaded
   const currentSymbol = urlSymbol || (symbols.length > 0 ? symbols[0] : "");
+
+  // 2. Fetch History using Hook (Cached!)
+  const {
+      data: timeseriesData = [],
+      isLoading: loadingData,
+      error: dataError
+  } = useTickerHistory(currentSymbol);
+
+  const error = symbolsError ? "Failed to load symbols" : (dataError ? "Failed to load ticker data" : null);
 
   // Handle symbol change - just navigate
   const handleSymbolChange = (newSymbol) => {
@@ -209,81 +218,6 @@ export const TickerTrends = () => {
       return next;
     });
   };
-
-  // 1. Fetch available symbols on mount
-  useEffect(() => {
-    let ignore = false;
-
-    fetch(`${SYMBOLS_API_URL}?action=getSymbols`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (ignore) return;
-        if (data.error) {
-          setError(data.error);
-          setLoadingSymbols(false);
-          return;
-        }
-        setSymbols(data);
-        setLoadingSymbols(false);
-      })
-      .catch((err) => {
-        if (ignore) return;
-        console.error("Failed to fetch symbols:", err);
-        setError("Failed to load symbols. Check API URL.");
-        setLoadingSymbols(false);
-      });
-
-    return () => { ignore = true; };
-  }, []); // Only run once on mount
-
-  // 2. Fetch timeseries data when currentSymbol changes
-  useEffect(() => {
-    if (!currentSymbol) return;
-    
-    // Set loading state relative to ignore flag to prevent race conditions causing state updates after unmount
-    let ignore = false;
-    
-    const fetchData = async () => {
-        setLoadingData(true);
-        
-        // Optimistic fetch - don't wait for symbols list
-        const url = `${SYMBOLS_API_URL}?action=getTimeseries&symbol=${encodeURIComponent(currentSymbol)}`;
-
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            
-            if (ignore) return;
-            
-            if (data.error) {
-               console.warn(`Error fetching data for ${currentSymbol}:`, data.error);
-               setTimeseriesData([]);
-            } else {
-                // Sort by date ascending for proper charting
-                const sorted = [...data].sort((a, b) => {
-                  const parseDate = (str) => {
-                    const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
-                    if (!match) return new Date(str);
-                    const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-                    return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
-                  };
-                  return parseDate(a.date) - parseDate(b.date);
-                });
-                setTimeseriesData(sorted);
-            }
-        } catch (err) {
-            if (ignore) return;
-            console.error("Failed to fetch timeseries:", err);
-            setTimeseriesData([]);
-        } finally {
-            if (!ignore) setLoadingData(false);
-        }
-    };
-
-    fetchData();
-
-    return () => { ignore = true; };
-  }, [currentSymbol]);
 
   // --- Filtering Logic ---
   
