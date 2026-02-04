@@ -18,3 +18,4 @@
 
 - [ ] Refactor API calls to use a dedicated service layer.
 - [ ] Add unit tests for financial calculations.
+- [ ] Type Safety: Missing Type System: Major. No TypeScript or PropTypes used, creating "Scalability Debt" as the team grows and interfaces evolve invisibly.
