@@ -263,18 +263,18 @@ function getAlerts(email) {
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     // [Email, Symbol, Target, Condition, Token, Status, Created]
-    if (row[5] === "ACTIVE") {
-      if (!email || row[0] === email) {
-        alerts.push({
-          email: row[0],
-          symbol: row[1],
-          targetPrice: row[2],
-          condition: row[3],
-          fcmToken: row[4],
-          status: row[5],
-          created: row[6],
-        });
-      }
+    // [Email, Symbol, Target, Condition, Token, Status, Created]
+    // Return ALL alerts for the user (Active & History)
+    if (!email || row[0] === email) {
+      alerts.push({
+        email: row[0],
+        symbol: row[1],
+        targetPrice: row[2],
+        condition: row[3],
+        fcmToken: row[4],
+        status: row[5],
+        created: row[6],
+      });
     }
   }
   return alerts;
