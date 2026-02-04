@@ -9,6 +9,7 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
+import { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
 ChartJS.register(
@@ -56,7 +57,9 @@ export const PriceChangeChart = ({ data }) => {
     const options = getChartOptions(settings.theme);
 
     // Top 10 by absolute change
-    const chartData = [...data].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10);
+    const chartData = useMemo(() => {
+        return [...data].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10);
+    }, [data]);
 
     const config = {
         labels: chartData.map(d => d.symbol),
@@ -84,7 +87,9 @@ export const PriceChangeChart = ({ data }) => {
 
 export const TurnoverChart = ({ data }) => {
     // Top 5 by Turnover
-    const chartData = [...data].sort((a, b) => b.turnover - a.turnover).slice(0, 5);
+    const chartData = useMemo(() => {
+        return [...data].sort((a, b) => b.turnover - a.turnover).slice(0, 5);
+    }, [data]);
     
     const config = {
         labels: chartData.map(d => d.symbol),

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useNavigate, Link } from "react-router-dom";
 import { useSettings } from '../contexts/SettingsContext';
@@ -8,15 +8,17 @@ export const MarketTable = ({ data }) => {
     const { settings } = useSettings();
     const [sortConfig, setSortConfig] = useState({ key: 'change', direction: 'desc' });
 
-    const sortedData = [...data].sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-            return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-            return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-    });
+    const sortedData = useMemo(() => {
+        return [...data].sort((a, b) => {
+            if (a[sortConfig.key] < b[sortConfig.key]) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (a[sortConfig.key] > b[sortConfig.key]) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    }, [data, sortConfig]);
 
     const requestSort = (key) => {
         let direction = 'asc';
