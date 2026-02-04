@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { useSettings } from "./contexts/SettingsContext";
 import { Settings } from "./components/Settings";
 import { useMarketDates, useMarketData } from "./hooks/useMarketQuery";
+import { formatLargeNumber } from "./utils/formatters";
 
 // Route configuration
 const ROUTES = {
@@ -116,17 +117,12 @@ function App() {
     : selectedDate; // Fallback to raw string if no date object or not found
 
   // Helper for large numbers
-  const formatLargeNumber = (num) => {
+  const formatLargeNumberDisplay = (num) => {
     if (!num) return "0";
     if (settings.numberFormat === 'full') {
       return num.toLocaleString();
     }
-    // Abbreviated
-    if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
-    return num.toString();
+    return formatLargeNumber(num);
   };
 
   // Loading State (Initial)
@@ -166,7 +162,7 @@ function App() {
               availableDates={availableDates}
               loadingData={loadingData}
               onDateChange={handleDateChange}
-              formatLargeNumber={formatLargeNumber}
+              formatLargeNumber={formatLargeNumberDisplay}
            />
         } />
         <Route 

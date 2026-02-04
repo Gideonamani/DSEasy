@@ -1,31 +1,10 @@
 import { useMemo } from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-} from "chart.js";
+
 import { Bar, Bubble, Doughnut, Scatter } from "react-chartjs-2";
 import { Activity, TrendingUp, Zap, PieChart, ScatterChart } from "lucide-react";
 import { DatePicker } from "./DatePicker";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-);
+import { formatNumber, formatLargeNumber } from "../utils/formatters";
 
 // Reusable section card component
 const AnalyticsCard = ({ title, icon, children, subtitle }) => {
@@ -454,12 +433,7 @@ export const DerivedAnalytics = ({
             ];
             // Add MCAP if available
             if (ctx.raw.mcap) {
-              const mcapFormatted = ctx.raw.mcap >= 1e12 
-                ? (ctx.raw.mcap / 1e12).toFixed(2) + 'T' 
-                : ctx.raw.mcap >= 1e9 
-                  ? (ctx.raw.mcap / 1e9).toFixed(2) + 'B'
-                  : (ctx.raw.mcap / 1e6).toFixed(2) + 'M';
-              lines.push(`Market Cap: ${mcapFormatted} TZS`);
+              lines.push(`Market Cap: ${formatLargeNumber(ctx.raw.mcap)} TZS`);
             }
             return lines;
           },
@@ -734,11 +708,7 @@ export const DerivedAnalytics = ({
             data={data}
             valueKey="turnoverPerDeal"
             label="TZS/Deal"
-            formatter={(v) =>
-              v >= 1000000
-                ? (v / 1000000).toFixed(2) + "M"
-                : v.toLocaleString(undefined, { maximumFractionDigits: 0 })
-            }
+            formatter={(v) => formatLargeNumber(v)}
           />
         </AnalyticsCard>
       </div>

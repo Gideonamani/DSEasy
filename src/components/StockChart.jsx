@@ -1,26 +1,9 @@
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-} from 'chart.js';
+
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
+
 
 const getChartOptions = (theme) => {
     const isLight = theme === 'light';

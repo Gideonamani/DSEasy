@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useNavigate, Link } from "react-router-dom";
 import { useSettings } from '../contexts/SettingsContext';
+import { formatNumber, formatLargeNumber } from "../utils/formatters";
 
 export const MarketTable = ({ data }) => {
     const navigate = useNavigate();
@@ -33,19 +34,7 @@ export const MarketTable = ({ data }) => {
         return sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
     };
 
-    // Helper for large numbers (consistent with App.jsx)
-    const formatLargeNumber = (num) => {
-        if (!num) return "0";
-        if (settings.numberFormat === 'full') {
-            return num.toLocaleString();
-        }
-         // Abbreviated
-        if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-        if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-        if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-        if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
-        return num.toString();
-    };
+
 
     const thStyle = {
         textAlign: 'left',
@@ -120,7 +109,7 @@ export const MarketTable = ({ data }) => {
                                     </Link>
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right', fontFamily: 'monospace', fontSize: '15px' }}>
-                                    {row.close.toLocaleString()}
+                                    {formatNumber(row.close)}
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>
                                     <span style={{

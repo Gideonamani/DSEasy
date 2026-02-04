@@ -1,39 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { formatNumber } from "../utils/formatters";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useSettings } from "../contexts/SettingsContext"; // Import useSettings
 import { useTickerSymbols, useTickerHistory } from "../hooks/useMarketQuery";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
+
 import { Line, Bar, Chart } from "react-chartjs-2";
 import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, Bell } from "lucide-react";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
-
-// ChartJS registration (TODO: Centralize this later)
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
 
 // Available metrics for visualization
 const METRICS = [
@@ -614,12 +591,11 @@ export const TickerTrends = () => {
           )}
       </div>
 
-      {/* Stats Summary */}
       {stats && (
         <div className="stats-grid" style={{ marginBottom: "24px" }}>
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Latest Close</p>
-            <p style={{ fontSize: "24px", fontWeight: "bold" }}>{stats.latest.toLocaleString()}</p>
+            <p style={{ fontSize: "24px", fontWeight: "bold" }}>{formatNumber(stats.latest)}</p>
           </div>
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Period Change</p>
@@ -629,11 +605,11 @@ export const TickerTrends = () => {
           </div>
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Period High</p>
-            <p style={{ fontSize: "24px", fontWeight: "bold", color: "var(--accent-success)" }}>{stats.high.toLocaleString()}</p>
+            <p style={{ fontSize: "24px", fontWeight: "bold", color: "var(--accent-success)" }}>{formatNumber(stats.high)}</p>
           </div>
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Period Low</p>
-            <p style={{ fontSize: "24px", fontWeight: "bold", color: "var(--accent-danger)" }}>{stats.low.toLocaleString()}</p>
+            <p style={{ fontSize: "24px", fontWeight: "bold", color: "var(--accent-danger)" }}>{formatNumber(stats.low)}</p>
           </div>
         </div>
       )}
@@ -770,7 +746,7 @@ export const TickerTrends = () => {
           <p style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
             Showing <strong style={{ color: "var(--text-primary)" }}>{stats.dataPoints}</strong> data points for{" "}
             <strong style={{ color: "var(--accent-primary)" }}>{currentSymbol}</strong> |{" "}
-            Avg Daily Volume: <strong style={{ color: "var(--text-primary)" }}>{stats.avgVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong>
+            Avg Daily Volume: <strong style={{ color: "var(--text-primary)" }}>{formatNumber(stats.avgVolume)}</strong>
           </p>
         </div>
       )}
