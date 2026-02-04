@@ -1,14 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { StatCard } from "./components/StatCard";
-import { MarketTable } from "./components/MarketTable";
-import { PriceChangeChart, TurnoverChart } from "./components/StockChart";
+import { Dashboard } from "./components/Dashboard";
 import { DerivedAnalytics } from "./components/DerivedAnalytics";
 import { TickerTrends } from "./components/TickerTrends";
-import { DatePicker } from "./components/DatePicker";
-import { Loader2 } from "lucide-react";
 import { NotificationsManager } from "./components/NotificationsManager";
+import { Loader2 } from "lucide-react";
+import { useSettings } from "./contexts/SettingsContext";
+import { Settings } from "./components/Settings";
 
 // API URL
 const API_URL = "https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec";
@@ -29,9 +28,6 @@ const TAB_TO_ROUTE = {
   "Notifications": "/notifications",
   "Settings": "/settings",
 };
-
-import { useSettings } from "./contexts/SettingsContext";
-import { Settings } from "./components/Settings";
 
 function App() {
   const location = useLocation();
@@ -211,6 +207,20 @@ function App() {
       })
     : selectedDate; // Fallback to raw string if no date object or not found
 
+  // Helper for large numbers
+  const formatLargeNumber = (num) => {
+    if (!num) return "0";
+    if (settings.numberFormat === 'full') {
+      return num.toLocaleString();
+    }
+    // Abbreviated
+    if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+    return num.toString();
+  };
+
   // Loading State (Initial)
   if (loadingDates) {
     return (
@@ -229,130 +239,28 @@ function App() {
     );
   }
 
-
-
-  // Helper for large numbers
-  const formatLargeNumber = (num) => {
-    if (!num) return "0";
-    if (settings.numberFormat === 'full') {
-      return num.toLocaleString();
-    }
-    // Abbreviated
-    // For TZS (Turnover/MCap) usually Billions/Trillions
-    // For Volume usually Millions
-    if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
-    return num.toString();
-  };
-
-  const dashboardContent = (
-    <>
-      <div className="dashboard-header">
-        <div>
-          <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
-            Market Overview
-          </h2>
-          <p style={{ color: "var(--text-secondary)" }}>
-            Data for{" "}
-            <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
-              {formattedDate}
-            </span>
-          </p>
-        </div>
-
-        <DatePicker
-          selectedDate={selectedDate}
-          availableDates={availableDates}
-          loadingData={loadingData}
-          onChange={handleDateChange}
-        />
-      </div>
-
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        <StatCard
-          title="Top Gainer"
-          value={topGainer.symbol}
-          change={topGainer.change}
-          subtext={`Price: ${topGainer.close.toLocaleString()}`}
-          type="success"
-          to={`/trends/${topGainer.symbol}`}
-        />
-        <StatCard
-          title="Top Loser"
-          value={topLoser.symbol}
-          change={topLoser.change}
-          subtext={`Price: ${topLoser.close.toLocaleString()}`}
-          type="danger"
-          to={`/trends/${topLoser.symbol}`}
-        />
-        <StatCard
-          title="Total Volume"
-          value={formatLargeNumber(totalVolume)}
-          change={null}
-          subtext="Total Shares Traded"
-          type="primary"
-        />
-        <StatCard
-          title="Total Turnover"
-          value={formatLargeNumber(totalTurnover)}
-          change={null}
-          subtext="TZS Turnover"
-          type="neutral"
-        />
-      </div>
-
-      {/* Stats Grid Row 2 */}
-      <div className="stats-grid" style={{ marginTop: "16px" }}>
-        <StatCard
-          title="Total Deals"
-          value={totalDeals.toLocaleString()}
-          change={null}
-          subtext="Trades Executed"
-          type="neutral"
-        />
-        <StatCard
-          title="Total Market Cap"
-          value={formatLargeNumber(totalMcap)}
-          change={null}
-          subtext="TZS Market Cap"
-          type="primary"
-        />
-        <StatCard
-          title="Symbols Listed"
-          value={activeSymbolsCount}
-          change={null}
-          subtext="Total Listed"
-          type="neutral"
-        />
-        <StatCard
-          title="Active Symbols"
-          value={tradedSymbolsCount}
-          change={null}
-          subtext="Volume > 0"
-          type="neutral"
-        />
-      </div>
-
-      {/* Charts Section */}
-      <div className="charts-grid">
-        <PriceChangeChart data={marketData} />
-        <TurnoverChart data={marketData} />
-      </div>
-
-      <div style={{ marginBottom: "32px" }}>
-        <h3 className="section-title">Detailed Market Data</h3>
-        <MarketTable data={marketData} />
-      </div>
-    </>
-  );
-
   return (
     <Layout activeTab={activeTab} onTabChange={handleTabChange}>
       <Routes>
-        <Route path="/" element={dashboardContent} />
+        <Route path="/" element={
+           <Dashboard 
+              marketData={marketData}
+              topGainer={topGainer}
+              topLoser={topLoser}
+              totalVolume={totalVolume}
+              totalTurnover={totalTurnover}
+              totalDeals={totalDeals}
+              totalMcap={totalMcap}
+              activeSymbolsCount={activeSymbolsCount}
+              tradedSymbolsCount={tradedSymbolsCount}
+              formattedDate={formattedDate}
+              selectedDate={selectedDate}
+              availableDates={availableDates}
+              loadingData={loadingData}
+              onDateChange={handleDateChange}
+              formatLargeNumber={formatLargeNumber}
+           />
+        } />
         <Route 
           path="/analytics" 
           element={
