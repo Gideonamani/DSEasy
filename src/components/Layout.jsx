@@ -230,7 +230,11 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
           ))}
         </div>
 
-        <div style={{ padding: '24px', borderTop: '1px solid var(--glass-border)' }}>
+        <div style={{ 
+          padding: '24px', 
+          paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', // Ensure clearance for mobile toolbars
+          borderTop: '1px solid var(--glass-border)' 
+        }}>
           <UserProfileSection />
         </div>
       </aside>
