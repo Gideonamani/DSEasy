@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useSettings } from '../contexts/SettingsContext';
-import { formatNumber, formatLargeNumber } from "../utils/formatters";
+import { formatLargeNumber } from "../utils/formatters";
 
 export const MarketTable = ({ data }) => {
-    const navigate = useNavigate();
     const { settings } = useSettings();
     const [sortConfig, setSortConfig] = useState({ key: 'change', direction: 'desc' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -110,7 +109,16 @@ export const MarketTable = ({ data }) => {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Low {getSortIcon('low')}</div>
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('change')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Change % {getSortIcon('change')}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Change {getSortIcon('change')}</div>
+                            </th>
+                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('pctChange')}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>% {getSortIcon('pctChange')}</div>
+                            </th>
+                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('outstandingBid')}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Bid {getSortIcon('outstandingBid')}</div>
+                            </th>
+                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('outstandingOffer')}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Offer {getSortIcon('outstandingOffer')}</div>
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('volume')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Volume {getSortIcon('volume')}</div>
@@ -127,17 +135,26 @@ export const MarketTable = ({ data }) => {
                                 <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.close)}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.high)}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.low)}</td>
+                                <td style={{...tdStyle, textAlign: 'right', color: row.change > 0 ? 'var(--accent-success)' : row.change < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)'}}>
+                                    {row.change > 0 ? '+' : ''}{formatLargeNumber(row.change)}
+                                </td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>
                                     <span style={{
-                                        padding: '4px 12px',
-                                        borderRadius: '20px',
-                                        background: row.change > 0 ? 'rgba(16, 185, 129, 0.15)' : row.change < 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.05)',
-                                        color: row.change > 0 ? 'var(--accent-success)' : row.change < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        background: row.pctChange > 0 ? 'rgba(16, 185, 129, 0.1)' : row.pctChange < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
+                                        color: row.pctChange > 0 ? 'var(--accent-success)' : row.pctChange < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
                                         fontWeight: 600,
                                         fontSize: '12px'
                                     }}>
-                                        {row.change > 0 ? '+' : ''}{row.change}%
+                                        {row.pctChange > 0 ? '+' : ''}{row.pctChange.toFixed(2)}%
                                     </span>
+                                </td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>
+                                    {row.outstandingBid > 0 ? formatLargeNumber(row.outstandingBid) : '-'}
+                                </td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>
+                                    {row.outstandingOffer > 0 ? formatLargeNumber(row.outstandingOffer) : '-'}
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-primary)'}}>
                                     {settings.numberFormat === 'full' ? row.volume.toLocaleString() : formatLargeNumber(row.volume)}

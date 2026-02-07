@@ -57,8 +57,28 @@ export const useMarketData = (date) => {
                 const data = doc.data();
                 return {
                     ...data,
-                    change: data.changeValue || 0, // Normalize change to be the numeric value
-                    originalChange: data.change // Keep original text if needed
+                    change: data.changeValue || 0, // Numeric absolute change
+                    originalChange: data.change, // String representation
+                    // Calculate Percentage Change: (Change / (Close - Change)) * 100
+                    pctChange: (data.changeValue && data.close) 
+                        ? ((data.changeValue / (data.close - data.changeValue)) * 100) 
+                        : 0,
+                    // Map Firestore keys to frontend expected keys
+                    outstandingBid: data.outstandingBid || 0,
+                    outstandingOffer: data.outstandingOffer || 0,
+                    // Keys used by TickerTrends (mapped names)
+                    turnoverPct: data.turnoverPercent || 0,
+                    bidOffer: data.bidOfferRatio || 0,
+                    yearHigh: data.yearHigh || 0,
+                    yearLow: data.yearLow || 0,
+                    // Keys used by DerivedAnalytics (raw Firestore names)
+                    highLowSpread: data.highLowSpread || 0,
+                    bidOfferRatio: data.bidOfferRatio || 0,
+                    turnoverPctDaily: data.turnoverPercent || 0,
+                    turnoverMcapRatio: data.turnoverPerMcap || 0,
+                    volPerDeal: data.volPerDeal || 0,
+                    turnoverPerDeal: data.turnoverPerDeal || 0,
+                    changePerVol: data.changePerVol || 0,
                 };
             });
             return stocks;
@@ -102,8 +122,18 @@ export const useTickerHistory = (symbol) => {
                 const data = doc.data();
                 return {
                     ...data,
-                    change: data.changeValue || 0, // Normalize change to be the numeric value
-                    originalChange: data.change // Keep original text if needed
+                    change: data.changeValue || 0, // Numeric absolute change
+                    originalChange: data.change, // String representation
+                    // Map Firestore keys to frontend expected keys
+                    bidOffer: data.bidOfferRatio || 0,
+                    spread: data.highLowSpread || 0,
+                    turnoverPct: data.turnoverPercent || 0,
+                    turnoverMcap: data.turnoverPerMcap || 0,
+                    volDeal: data.volPerDeal || 0,
+                    turnoverDeal: data.turnoverPerDeal || 0,
+                    changeVol: data.changePerVol || 0,
+                    outstandingBid: data.outstandingBid || 0,
+                    outstandingOffer: data.outstandingOffer || 0,
                 };
             });
             return history;
