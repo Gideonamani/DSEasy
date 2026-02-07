@@ -30,5 +30,6 @@ docs/DSE-API.md
 .env.local
 .env.development.local
 .env.test.local
-.env.production.localserviceAccountKey.json
+.env.production.local
+serviceAccountKey.json
 firebase-debug.log

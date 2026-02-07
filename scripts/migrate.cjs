@@ -4,7 +4,8 @@ const { google } = require('googleapis');
 const fs = require('fs');
 
 // CONFIG
-const SERVICE_ACCOUNT_PATH = './serviceAccountKey.json';
+const path = require('path');
+const SERVICE_ACCOUNT_PATH = path.join(__dirname, '../serviceAccountKey.json');
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
@@ -73,27 +74,66 @@ async function migrate() {
       opCount++;
       
       // Process Rows (skip header)
-      const headers = rows[0]; // Assuming standard headers
-      // Map columns based on index (A=0, B=1...)
-      // Symbols=0, Open=1, Close=3, High=4, Low=5, Volume=11, MCAP=12
+      // First pass: Calculate Day Totals for % metrics
+      let dayTotalTurnover = 0;
+      const validRows = [];
       
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
+        if (!row[0] || row[0] === 'Total') continue;
+        const to = parseNum(row[7]);
+        dayTotalTurnover += to;
+        validRows.push(row);
+      }
+      
+      for (const row of validRows) {
         const symbol = row[0];
-        if (!symbol || symbol === 'Total') continue;
         
+        const open = parseNum(row[1]);
+        const prevClose = parseNum(row[2]);
+        const close = parseNum(row[3]);
+        const high = parseNum(row[4]);
+        const low = parseNum(row[5]);
+        const turnover = parseNum(row[7]);
+        const deals = parseNum(row[8]);
+        const osBid = parseNum(row[9]);   // Out Standing Bid
+        const osOffer = parseNum(row[10]); // Out Standing Offer
+        const volume = parseNum(row[11]);
+        const mcap = parseNum(row[12]);
+
+        // Derived Metrics
+        const changeVal = parseChangeVal(row[6]); 
+        const highLowSpread = high - low;
+        const volPerDeal = deals > 0 ? volume / deals : 0;
+        const turnoverPerDeal = deals > 0 ? turnover / deals : 0;
+        const turnoverPerMcap = mcap > 0 ? turnover / (mcap * 1000000000) : 0; // MCAP is in Billions usually? "TZS 'B" -> Billion. Turnover is TZS? 
+        // Let's assume raw ratio is enough or handle unit scale if known. keeping raw ratio for now.
+        // Actually MCAP column says "MCAP (TZS 'B)". Turnover says "Turn Over". 
+        // If Turnover is absolute and MCAP is Billions, we need to adjust.
+        // But let's stick to raw numbers or simple division if user didn't specify units. 
+        // Better: Turnover / MCAP (as ratio).
+        
+        const turnoverPercent = dayTotalTurnover > 0 ? (turnover / dayTotalTurnover) * 100 : 0;
+        const changePerVol = volume > 0 ? changeVal / volume : 0;
+        const bidOfferRatio = osOffer > 0 ? osBid / osOffer : 0;
+
         const stockData = {
           symbol: symbol,
-          open: parseNum(row[1]),
-          prevClose: parseNum(row[2]),
-          close: parseNum(row[3]),
-          high: parseNum(row[4]),
-          low: parseNum(row[5]),
-          change: row[6], // Text usually
-          turnover: parseNum(row[7]),
-          deals: parseNum(row[8]),
-          volume: parseNum(row[11]),
-          mcap: parseNum(row[12]),
+          open, prevClose, close, high, low,
+          change: row[6],
+          changeValue: changeVal,
+          turnover, deals,
+          outstandingBid: osBid,
+          outstandingOffer: osOffer,
+          volume, mcap,
+          // Extra Metrics
+          highLowSpread,
+          volPerDeal,
+          turnoverPerDeal,
+          turnoverPerMcap,
+          turnoverPercent,
+          changePerVol,
+          bidOfferRatio
         };
         
         // 1. Write to marketData/{date}/stocks/{symbol}
@@ -109,7 +149,7 @@ async function migrate() {
         });
         opCount++;
         
-        // 3. Update symbol config (Trends parent doc)
+        // 3. Update symbol config
         const symbolRef = db.collection('trends').doc(symbol);
         batch.set(symbolRef, { 
           symbol: symbol,
@@ -143,12 +183,16 @@ async function migrate() {
   }
 }
 
-async function getSheetData(range) {
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: range,
-  });
-  return res.data.values || [];
+function parseChangeVal(str) {
+  if (!str) return 0;
+  // Match number at the end: "-▼ -2.48" -> -2.48
+  // Or just parsed number. 
+  // Regex: Find signed float
+  const matches = str.match(/[-+]?\d*\.?\d+/g);
+  if (matches && matches.length > 0) {
+    return parseFloat(matches[matches.length - 1]);
+  }
+  return 0;
 }
 
 function parseNum(val) {
@@ -158,6 +202,14 @@ function parseNum(val) {
   const clean = val.toString().replace(/,/g, '').trim();
   const num = parseFloat(clean);
   return isNaN(num) ? 0 : num;
+}
+
+async function getSheetData(range) {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: range,
+  });
+  return res.data.values || [];
 }
 
 migrate();
