@@ -8,57 +8,93 @@ export const MarketTable = ({ data }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const [sortConfig, setSortConfig] = useState({ key: 'change', direction: 'desc' });
+    const [searchTerm, setSearchTerm] = useState('');
 
     const sortedData = useMemo(() => {
-        return [...data].sort((a, b) => {
-            if (a[sortConfig.key] < b[sortConfig.key]) {
+        let sortableData = [...data];
+
+        if (searchTerm) {
+            sortableData = sortableData.filter(item =>
+                item.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        sortableData.sort((a, b) => {
+            const aVal = a[sortConfig.key] || 0;
+            const bVal = b[sortConfig.key] || 0;
+
+            if (aVal < bVal) {
                 return sortConfig.direction === 'asc' ? -1 : 1;
             }
-            if (a[sortConfig.key] > b[sortConfig.key]) {
+            if (aVal > bVal) {
                 return sortConfig.direction === 'asc' ? 1 : -1;
             }
             return 0;
         });
-    }, [data, sortConfig]);
+        return sortableData;
+    }, [data, sortConfig, searchTerm]);
 
     const requestSort = (key) => {
-        let direction = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
+        let direction = 'desc';
+        if (sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
         }
         setSortConfig({ key, direction });
     };
 
-    const getSortIcon = (name) => {
-        if (sortConfig.key !== name) return <ArrowUpDown size={14} style={{ opacity: 0.3 }} />;
-        return sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return <span style={{ opacity: 0.3 }}>⇅</span>;
+        return sortConfig.direction === 'asc' ? <span>↑</span> : <span>↓</span>;
     };
 
-
+    if (data.length === 0) {
+        return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>No market data available</div>;
+    }
 
     const thStyle = {
+        padding: '16px',
         textAlign: 'left',
+        borderBottom: '1px solid var(--glass-border)',
         color: 'var(--text-secondary)',
-        fontSize: '12px',
+        fontSize: '13px',
         fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
+        backgroundColor: 'rgba(15, 23, 42, 0.3)',
         cursor: 'pointer',
         userSelect: 'none',
-        borderBottom: '1px solid var(--glass-border)',
-        padding: settings.density === 'compact' ? '12px 16px' : '16px 24px' // Dynamic padding
+        whiteSpace: 'nowrap'
     };
 
     const tdStyle = {
+        padding: '16px',
         borderBottom: '1px solid var(--glass-border)',
+        color: 'var(--text-primary)',
         fontSize: '14px',
-        padding: settings.density === 'compact' ? '8px 16px' : '16px 24px' // Dynamic padding
+        fontWeight: 500
     };
 
     return (
-        <div className="glass-panel" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+        <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', borderRadius: '16px' }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end' }}>
+                <input
+                    type="text"
+                    placeholder="Search symbol..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        color: 'var(--text-primary)',
+                        outline: 'none',
+                        width: '200px',
+                        fontSize: '13px'
+                    }}
+                />
+            </div>
+            
             <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr>
                             <th style={thStyle} onClick={() => requestSort('symbol')}>
@@ -66,6 +102,12 @@ export const MarketTable = ({ data }) => {
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('close')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Close {getSortIcon('close')}</div>
+                            </th>
+                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('high')}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>High {getSortIcon('high')}</div>
+                            </th>
+                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('low')}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Low {getSortIcon('low')}</div>
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('change')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Change % {getSortIcon('change')}</div>
@@ -76,41 +118,15 @@ export const MarketTable = ({ data }) => {
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('turnover')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Turnover {getSortIcon('turnover')}</div>
                             </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('mcap')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>MCap {getSortIcon('mcap')}</div>
-                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedData.map((row) => (
-                            <tr 
-                                key={row.symbol} 
-                                onClick={() => navigate(`/trends/${row.symbol}`)}
-                                style={{ 
-                                    cursor: 'pointer',
-                                    transition: 'background 0.2s', 
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                            >
-                                <td style={{...tdStyle, fontWeight: 600, color: 'var(--text-primary)'}}>
-                                    <Link 
-                                        to={`/trends/${row.symbol}`}
-                                        onClick={(e) => e.stopPropagation()} // Prevent row click
-                                        style={{ 
-                                            color: 'var(--accent-primary)', // Make it look like a link
-                                            textDecoration: 'none',
-                                            display: 'inline-block' 
-                                        }}
-                                        onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                                        onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                                    >
-                                        {row.symbol}
-                                    </Link>
-                                </td>
-                                <td style={{...tdStyle, textAlign: 'right', fontFamily: 'monospace', fontSize: '15px' }}>
-                                    {formatNumber(row.close)}
-                                </td>
+                            <tr key={row.symbol} style={{ transition: 'background 0.2s', ':hover': { background: 'rgba(255,255,255,0.02)' } }}>
+                                <td style={{...tdStyle, fontWeight: 600, color: 'var(--primary)'}}>{row.symbol}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.close)}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.high)}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.low)}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>
                                     <span style={{
                                         padding: '4px 12px',

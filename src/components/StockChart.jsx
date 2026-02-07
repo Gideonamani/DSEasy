@@ -40,23 +40,25 @@ export const PriceChangeChart = ({ data }) => {
     const options = getChartOptions(settings.theme);
 
     // Top 10 by absolute change
-    const chartData = useMemo(() => {
+    const sortedData = useMemo(() => {
         return [...data].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10);
     }, [data]);
 
-    const config = {
-        labels: chartData.map(d => d.symbol),
-        datasets: [
-            {
-                label: 'Price Change %',
-                data: chartData.map(d => d.change),
-                backgroundColor: chartData.map(d => d.change >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-                borderColor: chartData.map(d => d.change >= 0 ? '#10b981' : '#ef4444'),
-                borderWidth: 1,
-                borderRadius: 4,
-            },
-        ],
-    };
+    const config = useMemo(() => {
+        return {
+            labels: sortedData.map(d => d.symbol),
+            datasets: [
+                {
+                    label: 'Price Change %',
+                    data: sortedData.map(d => d.change),
+                    backgroundColor: sortedData.map(d => d.change >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+                    borderColor: sortedData.map(d => d.change >= 0 ? '#10b981' : '#ef4444'),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                },
+            ],
+        };
+    }, [sortedData]);
 
     return (
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', height: '400px' }}>

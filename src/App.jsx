@@ -47,7 +47,7 @@ function App() {
 
   const { data: marketData = [], isLoading: loadingData, error: dataError } = useMarketData(selectedDate);
   
-  const error = datesError || dataError ? "Failed to load market data" : null;
+  const error = datesError ? `Dates Error: ${datesError.message}` : dataError ? `Data Error: ${dataError.message}` : null;
 
   // Get active tab from current route
   const activeTab = useMemo(() => {

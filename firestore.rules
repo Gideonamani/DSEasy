@@ -33,7 +33,7 @@ service cloud.firestore {
       allow write: if false;
     }
     
-    match /livePrices/{timestamp} {
+    match /livePrices/{ts} {
       allow read: if true;
       allow write: if false;
     }
