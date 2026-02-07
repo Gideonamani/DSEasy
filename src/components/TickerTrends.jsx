@@ -7,10 +7,12 @@ import { useTickerSymbols, useTickerHistory } from "../hooks/useMarketQuery";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-import { Line, Bar, Chart } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, Bell } from "lucide-react";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
+import { getCommonChartOptions } from "../utils/chartTheme";
+import { Chart as ChartJS } from 'chart.js';
 
 // Available metrics for visualization
 const METRICS = [
@@ -40,14 +42,14 @@ const TrendCard = ({ title, icon, children, explanation }) => {
   return (
     <div
       className="glass-panel"
-      style={{ padding: "24px", borderRadius: "16px", position: "relative" }}
+      style={{ padding: "var(--space-6)", borderRadius: "var(--radius-xl)", position: "relative" }}
     >
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: "20px",
+          marginBottom: "var(--space-5)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -55,7 +57,7 @@ const TrendCard = ({ title, icon, children, explanation }) => {
             style={{
               width: "40px",
               height: "40px",
-              borderRadius: "10px",
+              borderRadius: "var(--radius-lg)",
               background: "rgba(99, 102, 241, 0.2)",
               display: "flex",
               alignItems: "center",
@@ -64,7 +66,7 @@ const TrendCard = ({ title, icon, children, explanation }) => {
           >
             <MetricIcon size={20} color="var(--accent-primary)" />
           </div>
-          <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>{title}</h3>
+          <h3 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)" }}>{title}</h3>
         </div>
         
         {explanation && (
@@ -97,15 +99,15 @@ const TrendCard = ({ title, icon, children, explanation }) => {
                   marginTop: "10px", // Added spacing from icon
                   width: "260px",
                   padding: "12px 16px",
-                  background: "rgba(15, 23, 42, 0.95)",
+                  background: "var(--bg-card)",
                   backdropFilter: "blur(12px)",
                   border: "1px solid var(--glass-border)",
                   borderRadius: "12px",
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+                  boxShadow: "var(--shadow-lg)",
                   zIndex: 50,
-                  fontSize: "13px",
+                  fontSize: "var(--text-xs)",
                   lineHeight: "1.5",
-                  color: "#94a3b8",
+                  color: "var(--text-secondary)",
                   pointerEvents: "none",
                 }}
               >
@@ -117,13 +119,13 @@ const TrendCard = ({ title, icon, children, explanation }) => {
                       right: '20px',
                       width: '12px',
                       height: '12px',
-                      background: 'rgba(15, 23, 42, 0.95)',
+                      background: 'var(--bg-card)',
                       transform: 'rotate(45deg)',
                       borderLeft: '1px solid var(--glass-border)', // Changed borders for upward point
                       borderTop: '1px solid var(--glass-border)',
                     }}
                  />
-                 <strong style={{ display: "block", color: "#f8fafc", marginBottom: "4px", fontSize: "12px" }}>Expert Insight</strong>
+                 <strong style={{ display: "block", color: "var(--text-primary)", marginBottom: "4px", fontSize: "12px" }}>Expert Insight</strong>
                  {explanation}
               </div>
             )}
@@ -150,7 +152,8 @@ export const TickerTrends = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { settings } = useSettings(); // Use settings hook
-  const isLight = settings.theme === 'light';
+  const chartTheme = getCommonChartOptions(settings.theme);
+
   
   // Track hidden metrics instead of single selected metric
   const [hiddenMetrics, setHiddenMetrics] = useState(new Set());
@@ -296,34 +299,23 @@ export const TickerTrends = () => {
   }, [timeseriesData, selectedPeriod, customRange]);
 
   const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
+    ...chartTheme,
     plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(15, 23, 42, 0.95)",
-        borderColor: "var(--glass-border)",
-        borderWidth: 1,
-        titleColor: isLight ? "#0f172a" : "#fff",
-        bodyColor: isLight ? "#64748b" : "#94a3b8",
-        padding: 12,
-        cornerRadius: 8,
-      },
+        ...chartTheme.plugins,
+        title: { display: false },
     },
     scales: {
       x: {
-        grid: { display: false },
+        ...chartTheme.scales.x,
         ticks: { 
-          color: isLight ? "#64748b" : "#94a3b8", 
-          font: { size: 10 },
+          ...chartTheme.scales.x.ticks,
           maxTicksLimit: 10,
         },
       },
       y: {
-        grid: { color: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)" },
+        ...chartTheme.scales.y,
         ticks: { 
-          color: isLight ? "#64748b" : "#94a3b8", 
-          font: { size: 11 },
+          ...chartTheme.scales.y.ticks,
           callback: (value) => {
             if (value >= 1000000000) return (value / 1000000000).toFixed(1) + "B";
             if (value >= 1000000) return (value / 1000000).toFixed(1) + "M";
@@ -427,7 +419,7 @@ export const TickerTrends = () => {
       {/* Header */}
       <div className="dashboard-header">
         <div>
-          <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
+          <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
             {currentSymbol ? `${currentSymbol} Trends` : "Ticker Trends"}
           </h2>
           <p style={{ color: "var(--text-secondary)" }}>
@@ -450,7 +442,7 @@ export const TickerTrends = () => {
                 onChange={(e) => handleSymbolChange(e.target.value)}
                 className="date-select"
                 disabled={loadingData}
-                style={{ minWidth: "120px" }}
+                style={{ minWidth: "120px", background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none' }}
               >
                 {/* If the current selected symbol isn't in the list yet (optimistic), show it anyway */}
                 {currentSymbol && !symbols.includes(currentSymbol) && (
@@ -561,20 +553,20 @@ export const TickerTrends = () => {
                         cursor: pointer;
                     }
                     .react-datepicker {
-                        background-color: #1e293b !important;
+                        background-color: var(--bg-card) !important;
                         border: 1px solid var(--glass-border) !important;
                         font-family: inherit !important;
                         z-index: 9999 !important;
                     }
                     .react-datepicker__header {
-                        background-color: #0f172a !important;
+                        background-color: var(--bg-surface) !important;
                         border-bottom: 1px solid var(--glass-border) !important;
                     }
                     .react-datepicker__current-month, .react-datepicker__day-name {
-                        color: #f8fafc !important;
+                        color: var(--text-primary) !important;
                     }
                     .react-datepicker__day {
-                        color: #cbd5e1 !important;
+                        color: var(--text-secondary) !important;
                     }
                     .react-datepicker__day:hover {
                          background-color: var(--accent-primary) !important;
@@ -680,8 +672,7 @@ export const TickerTrends = () => {
             explanation="Visualizes the daily volatility range. The gray bars show the High-Low range, while the purple line shows the Close price. Long bars indicate high volatility."
           >
             <div style={{ height: "400px" }}>
-              <Chart 
-                type='bar'
+              <Bar 
                 data={{
                   labels: filteredData.map(d => d.date),
                   datasets: [

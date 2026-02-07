@@ -1,43 +1,11 @@
-
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-
-
-
-const getChartOptions = (theme) => {
-    const isLight = theme === 'light';
-    const gridColor = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)';
-    const textColor = isLight ? '#64748b' : '#94a3b8';
-
-    return {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'top',
-                labels: { color: textColor }
-            },
-            title: {
-                display: false,
-            },
-        },
-        scales: {
-            x: {
-                ticks: { color: textColor },
-                grid: { color: gridColor }
-            },
-            y: {
-                ticks: { color: textColor },
-                grid: { color: gridColor }
-            }
-        }
-    };
-};
+import { getCommonChartOptions, getChartTheme } from '../utils/chartTheme';
 
 export const PriceChangeChart = ({ data }) => {
     const { settings } = useSettings();
-    const options = getChartOptions(settings.theme);
+    const options = getCommonChartOptions(settings.theme);
 
     // Top 10 by absolute change
     const sortedData = useMemo(() => {
@@ -61,8 +29,8 @@ export const PriceChangeChart = ({ data }) => {
     }, [sortedData]);
 
     return (
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', height: '400px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--text-secondary)' }}>Top Price Changes (%)</h3>
+        <div className="glass-panel" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-xl)', height: '400px' }}>
+            <h3 style={{ margin: '0 0 var(--space-4) 0', fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Top Price Changes (%)</h3>
             <div style={{ position: 'relative', height: '320px' }}>
                 <Bar options={options} data={config} />
             </div>
@@ -96,24 +64,24 @@ export const TurnoverChart = ({ data }) => {
     };
 
     const { settings } = useSettings();
-    const isLight = settings.theme === 'light';
-    const textColor = isLight ? '#64748b' : '#94a3b8';
+    const { textColorHex } = getChartTheme(settings.theme);
 
     const doughnutOptions = {
-        ...getChartOptions(settings.theme),
+        ...getCommonChartOptions(settings.theme),
         scales: {}, // No scales for doughnut
         cutout: '70%',
         plugins: {
             legend: {
                 position: 'right',
-                labels: { color: textColor, padding: 20 }
-            }
+                labels: { color: textColorHex, padding: 20, font: { family: "'Inter', sans-serif", size: 12 } }
+            },
+            tooltip: getCommonChartOptions(settings.theme).plugins.tooltip
         }
     };
 
     return (
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', height: '400px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--text-secondary)' }}>Turnover Distribution (Top 5)</h3>
+        <div className="glass-panel" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-xl)', height: '400px' }}>
+            <h3 style={{ margin: '0 0 var(--space-4) 0', fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Turnover Distribution (Top 5)</h3>
             <div style={{ position: 'relative', height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Doughnut options={doughnutOptions} data={config} />
             </div>

@@ -59,14 +59,14 @@ export const DatePicker = ({
     .map(d => new Date(d.date));
 
   // Ensure z-index is higher than everything else (Sidebar is 60, Header is 50)
-  const POFFER_Z_INDEX = { zIndex: 99999, position: 'relative' };
+
 
   return (
     <div className="glass-panel" style={{ 
       display: 'flex', 
       alignItems: 'center', 
       padding: '4px 8px', 
-      borderRadius: '8px',
+      borderRadius: 'var(--radius-lg)',
       gap: '8px',
       background: 'var(--bg-elevated)' // Use elevated background for the bar itself (solid)
     }}>
@@ -91,10 +91,7 @@ export const DatePicker = ({
           placeholderText={loadingData ? "Loading..." : "Select Date"}
           disabled={loadingData}
           popperPlacement="bottom-end"
-          popperContainer={({ children }) => createPortal(
-            <div style={POFFER_Z_INDEX}>{children}</div>,
-            document.body
-          )}
+          popperContainer={({ children }) => createPortal(children, document.body)}
         />
       </div>
 
@@ -112,12 +109,12 @@ export const DatePicker = ({
       <style>{`
         .date-picker-input {
           background: var(--bg-input);
-          border: 1px solid var(--border-subtle);
-          border-radius: 6px;
+          border: 1px solid var(--glass-border);
+          border-radius: var(--radius-md);
           padding: 6px 12px 6px 32px;
           color: var(--text-primary);
           font-family: inherit;
-          font-size: 14px;
+          font-size: var(--text-sm);
           width: 140px;
           cursor: pointer;
           outline: none;
@@ -127,17 +124,18 @@ export const DatePicker = ({
         }
         .react-datepicker {
           background-color: var(--bg-elevated) !important;
-          border: 1px solid var(--border-subtle) !important;
+          border: 1px solid var(--glass-border) !important;
           font-family: inherit !important;
           color: var(--text-primary) !important;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+          border-radius: var(--radius-lg) !important;
         }
         .react-datepicker__header {
-          background-color: var(--bg-elevated) !important;
-          border-bottom: 1px solid var(--border-subtle) !important;
+          background-color: var(--bg-surface) !important;
+          border-bottom: 1px solid var(--glass-border) !important;
         }
         .react-datepicker__month-container {
-           background-color: var(--bg-elevated) !important;
+           background-color: transparent !important;
         }
         .react-datepicker__current-month, .react-datepicker__day-name {
           color: var(--text-primary) !important;
@@ -164,10 +162,11 @@ export const DatePicker = ({
           color: var(--text-primary);
           cursor: pointer;
           padding: 4px;
-          border-radius: 4px;
+          border-radius: var(--radius-md);
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: background 0.2s;
         }
         .icon-btn:hover:not(:disabled) {
           background: var(--bg-hover);

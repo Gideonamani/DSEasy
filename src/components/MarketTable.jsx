@@ -47,47 +47,47 @@ export const MarketTable = ({ data }) => {
     };
 
     if (data.length === 0) {
-        return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>No market data available</div>;
+        return <div style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-secondary)' }}>No market data available</div>;
     }
 
     const thStyle = {
-        padding: '16px',
+        padding: 'var(--space-4)',
         textAlign: 'left',
         borderBottom: '1px solid var(--glass-border)',
         color: 'var(--text-secondary)',
-        fontSize: '13px',
-        fontWeight: 600,
-        backgroundColor: 'rgba(15, 23, 42, 0.3)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--font-semibold)',
+        backgroundColor: 'var(--bg-surface)', // Matches design system
         cursor: 'pointer',
         userSelect: 'none',
         whiteSpace: 'nowrap'
     };
 
     const tdStyle = {
-        padding: '16px',
+        padding: 'var(--space-4)',
         borderBottom: '1px solid var(--glass-border)',
         color: 'var(--text-primary)',
-        fontSize: '14px',
-        fontWeight: 500
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)'
     };
 
     return (
-        <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', borderRadius: '16px' }}>
-            <div style={{ padding: '16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', borderRadius: 'var(--radius-xl)' }}>
+            <div style={{ padding: 'var(--space-4)', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end' }}>
                 <input
                     type="text"
                     placeholder="Search symbol..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{
-                        background: 'rgba(255,255,255,0.05)',
+                        background: 'var(--bg-input)',
                         border: '1px solid var(--glass-border)',
-                        borderRadius: '8px',
-                        padding: '8px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        padding: 'var(--space-2) var(--space-3)',
                         color: 'var(--text-primary)',
                         outline: 'none',
                         width: '200px',
-                        fontSize: '13px'
+                        fontSize: 'var(--text-sm)'
                     }}
                 />
             </div>
@@ -126,12 +126,20 @@ export const MarketTable = ({ data }) => {
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('turnover')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Turnover {getSortIcon('turnover')}</div>
                             </th>
+                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('mcap')}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>MCap (B) {getSortIcon('mcap')}</div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedData.map((row) => (
-                            <tr key={row.symbol} style={{ transition: 'background 0.2s', ':hover': { background: 'rgba(255,255,255,0.02)' } }}>
-                                <td style={{...tdStyle, fontWeight: 600, color: 'var(--primary)'}}>{row.symbol}</td>
+                            <tr key={row.symbol} 
+                                className="market-table-row"
+                                style={{ transition: 'background-color 0.2s' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                                <td style={{...tdStyle, fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)'}}>{row.symbol}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.close)}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.high)}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.low)}</td>
@@ -141,11 +149,11 @@ export const MarketTable = ({ data }) => {
                                 <td style={{...tdStyle, textAlign: 'right'}}>
                                     <span style={{
                                         padding: '4px 8px',
-                                        borderRadius: '6px',
+                                        borderRadius: 'var(--radius-sm)',
                                         background: row.pctChange > 0 ? 'rgba(16, 185, 129, 0.1)' : row.pctChange < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
                                         color: row.pctChange > 0 ? 'var(--accent-success)' : row.pctChange < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
-                                        fontWeight: 600,
-                                        fontSize: '12px'
+                                        fontWeight: 'var(--font-semibold)',
+                                        fontSize: 'var(--text-xs)'
                                     }}>
                                         {row.pctChange > 0 ? '+' : ''}{row.pctChange.toFixed(2)}%
                                     </span>
@@ -173,4 +181,3 @@ export const MarketTable = ({ data }) => {
         </div>
     );
 };
-

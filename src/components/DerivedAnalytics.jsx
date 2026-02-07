@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-
 import { Bar, Bubble, Doughnut, Scatter } from "react-chartjs-2";
 import { Activity, TrendingUp, Zap, PieChart, ScatterChart } from "lucide-react";
+import { Link } from "react-router-dom";
 import { DatePicker } from "./DatePicker";
-
 import { formatLargeNumber } from "../utils/formatters";
+import { useSettings } from "../contexts/SettingsContext";
+import { getCommonChartOptions, getChartTheme } from "../utils/chartTheme";
 
 // Reusable section card component
 const AnalyticsCard = ({ title, icon, children, subtitle }) => {
@@ -12,21 +13,21 @@ const AnalyticsCard = ({ title, icon, children, subtitle }) => {
   return (
     <div
       className="glass-panel"
-      style={{ padding: "24px", borderRadius: "16px" }}
+      style={{ padding: "var(--space-6)", borderRadius: "var(--radius-xl)" }}
     >
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          marginBottom: subtitle ? "8px" : "20px",
-          gap: "12px",
+          marginBottom: subtitle ? "var(--space-2)" : "var(--space-5)",
+          gap: "var(--space-3)",
         }}
       >
         <div
           style={{
             width: "40px",
             height: "40px",
-            borderRadius: "10px",
+            borderRadius: "var(--radius-lg)",
             background: "rgba(99, 102, 241, 0.2)",
             display: "flex",
             alignItems: "center",
@@ -35,10 +36,10 @@ const AnalyticsCard = ({ title, icon, children, subtitle }) => {
         >
           <Icon size={20} color="var(--accent-primary)" />
         </div>
-        <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>{title}</h3>
+        <h3 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)" }}>{title}</h3>
       </div>
       {subtitle && (
-        <p style={{ color: "var(--text-secondary)", fontSize: "12px", marginBottom: "16px", marginLeft: "52px" }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-xs)", marginBottom: "var(--space-4)", marginLeft: "52px" }}>
           {subtitle}
         </p>
       )}
@@ -46,8 +47,6 @@ const AnalyticsCard = ({ title, icon, children, subtitle }) => {
     </div>
   );
 };
-
-import { Link } from "react-router-dom";
 
 // Ranking table component for derived metrics
 const RankingTable = ({
@@ -74,7 +73,7 @@ const RankingTable = ({
   return (
     <div style={{ maxHeight: "300px", overflowY: "auto" }}>
       <table
-        style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}
+        style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}
       >
         <thead>
           <tr style={{ borderBottom: "1px solid var(--glass-border)" }}>
@@ -83,7 +82,7 @@ const RankingTable = ({
                 textAlign: "left",
                 padding: "8px 12px",
                 color: "var(--text-secondary)",
-                fontWeight: 500,
+                fontWeight: "var(--font-medium)",
               }}
             >
               #
@@ -93,7 +92,7 @@ const RankingTable = ({
                 textAlign: "left",
                 padding: "8px 12px",
                 color: "var(--text-secondary)",
-                fontWeight: 500,
+                fontWeight: "var(--font-medium)",
               }}
             >
               Symbol
@@ -103,7 +102,7 @@ const RankingTable = ({
                 textAlign: "right",
                 padding: "8px 12px",
                 color: "var(--text-secondary)",
-                fontWeight: 500,
+                fontWeight: "var(--font-medium)",
               }}
             >
               {label}
@@ -114,14 +113,16 @@ const RankingTable = ({
           {sorted.map((item, idx) => (
             <tr
               key={item.symbol}
-              style={{ borderBottom: "1px solid var(--glass-border)" }}
+              style={{ borderBottom: "1px solid var(--glass-border)", transition: "background-color 0.2s" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--bg-hover)"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
             >
               <td
                 style={{ padding: "10px 12px", color: "var(--text-secondary)" }}
               >
                 {idx + 1}
               </td>
-              <td style={{ padding: "10px 12px", fontWeight: 500 }}>
+              <td style={{ padding: "10px 12px", fontWeight: "var(--font-medium)" }}>
                 <Link 
                     to={`/trends/${item.symbol}`}
                     style={{ 
@@ -160,6 +161,10 @@ export const DerivedAnalytics = ({
   loadingData, 
   onDateChange 
 }) => {
+  const { settings } = useSettings();
+  const themeOptions = getCommonChartOptions(settings.theme);
+  const { textColorHex } = getChartTheme(settings.theme);
+  
   // Volatility Chart: High/Low Spread
   const volatilityData = useMemo(() => {
     const sorted = [...data]
@@ -360,70 +365,39 @@ export const DerivedAnalytics = ({
     };
   }, [data]);
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
-        borderColor: "var(--glass-border)",
-        borderWidth: 1,
-        titleColor: "#fff",
-        bodyColor: "#94a3b8",
-        padding: 12,
-        cornerRadius: 8,
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: "#64748b", font: { size: 11 } },
-      },
-      y: {
-        grid: { color: "rgba(255,255,255,0.05)" },
-        ticks: { color: "#64748b", font: { size: 11 } },
-      },
-    },
-  };
-
   const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "right",
-        labels: {
-          color: "#94a3b8",
-          font: { size: 11 },
-          padding: 12,
-          usePointStyle: true,
-        },
-      },
-      tooltip: {
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
-        callbacks: {
-          label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)}%`,
-        },
-      },
-    },
+    ...themeOptions,
+    scales: {},
     cutout: "65%",
+    plugins: {
+        ...themeOptions.plugins,
+        legend: {
+            ...themeOptions.plugins.legend,
+            position: "right",
+            labels: {
+              color: textColorHex,
+              padding: 12,
+              usePointStyle: true,
+              font: { family: "'Inter', sans-serif", size: 11 }
+            },
+        },
+        tooltip: {
+            ...themeOptions.plugins.tooltip,
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)}%`,
+            },
+        }
+    }
   };
 
   // Scatter plot options with symbol tooltip
   const scatterOptions = (xLabel, yLabel) => ({
-    responsive: true,
-    maintainAspectRatio: false,
+    ...themeOptions,
     plugins: {
+      ...themeOptions.plugins,
       legend: { display: false },
       tooltip: {
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
-        borderColor: "rgba(99, 102, 241, 0.5)",
-        borderWidth: 1,
-        titleColor: "#fff",
-        bodyColor: "#94a3b8",
-        padding: 12,
-        cornerRadius: 8,
+        ...themeOptions.plugins.tooltip,
         callbacks: {
           title: (ctx) => ctx[0]?.raw?.symbol || '',
           label: (ctx) => {
@@ -442,14 +416,12 @@ export const DerivedAnalytics = ({
     },
     scales: {
       x: {
-        grid: { color: "rgba(255,255,255,0.05)" },
-        ticks: { color: "#64748b", font: { size: 11 } },
-        title: { display: true, text: xLabel, color: "#94a3b8", font: { size: 12 } },
+        ...themeOptions.scales.x,
+        title: { display: true, text: xLabel, color: textColorHex, font: { size: 12, family: "'Inter', sans-serif" } },
       },
       y: {
-        grid: { color: "rgba(255,255,255,0.05)" },
-        ticks: { color: "#64748b", font: { size: 11 } },
-        title: { display: true, text: yLabel, color: "#94a3b8", font: { size: 12 } },
+        ...themeOptions.scales.y,
+        title: { display: true, text: yLabel, color: textColorHex, font: { size: 12, family: "'Inter', sans-serif" } },
       },
     },
   });
@@ -460,16 +432,16 @@ export const DerivedAnalytics = ({
         <div>
           <h2
             style={{
-              fontSize: "24px",
-              fontWeight: "bold",
-              marginBottom: "8px",
+              fontSize: "var(--text-2xl)",
+              fontWeight: "var(--font-bold)",
+              marginBottom: "var(--space-2)",
             }}
           >
             Derived Analytics
           </h2>
           <p style={{ color: "var(--text-secondary)" }}>
             Data for{" "}
-            <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: "var(--font-semibold)" }}>
               {formattedDate || "..."}
             </span>
             {" "}&bull; Advanced metrics for liquidity, volatility, and trade patterns
@@ -489,7 +461,7 @@ export const DerivedAnalytics = ({
         <AnalyticsCard title="Volatility: High/Low Spread" icon={Activity}>
           <div style={{ height: "280px" }}>
             {volatilityData.labels.length > 0 ? (
-              <Bar data={volatilityData} options={chartOptions} />
+              <Bar data={volatilityData} options={themeOptions} />
             ) : (
               <p
                 style={{
@@ -510,12 +482,12 @@ export const DerivedAnalytics = ({
               <Bar
                 data={bidOfferData}
                 options={{
-                  ...chartOptions,
+                  ...themeOptions,
                   indexAxis: "y",
                   scales: {
-                    ...chartOptions.scales,
+                    ...themeOptions.scales,
                     x: {
-                      ...chartOptions.scales.x,
+                      ...themeOptions.scales.x,
                       min: 0,
                     },
                   },
@@ -535,9 +507,9 @@ export const DerivedAnalytics = ({
           </div>
           <p
             style={{
-              fontSize: "12px",
+              fontSize: "var(--text-xs)",
               color: "var(--text-secondary)",
-              marginTop: "12px",
+              marginTop: "var(--space-3)",
             }}
           >
             <span style={{ color: "var(--accent-success)" }}>Green</span> = More
@@ -578,7 +550,7 @@ export const DerivedAnalytics = ({
       </div>
 
       {/* ========== CORRELATION SCATTER PLOTS ========== */}
-      <h3 className="section-title" style={{ marginTop: "32px", marginBottom: "24px" }}>
+      <h3 className="section-title" style={{ marginTop: "var(--space-8)", marginBottom: "var(--space-6)" }}>
         Correlation Analysis
       </h3>
 
@@ -624,7 +596,7 @@ export const DerivedAnalytics = ({
       </div>
 
       {/* Row 2: Trade Patterns & Pressure */}
-      <div className="charts-grid" style={{ marginTop: "8px" }}>
+      <div className="charts-grid" style={{ marginTop: "var(--space-2)" }}>
         <AnalyticsCard 
           title="Trade Patterns" 
           icon={ScatterChart}
@@ -665,7 +637,7 @@ export const DerivedAnalytics = ({
       </div>
 
       {/* Row 3: Volatility vs Activity */}
-      <div className="charts-grid" style={{ marginTop: "8px" }}>
+      <div className="charts-grid" style={{ marginTop: "var(--space-2)" }}>
         <AnalyticsCard 
           title="Volatility vs Activity" 
           icon={ScatterChart}
@@ -687,7 +659,7 @@ export const DerivedAnalytics = ({
       </div>
 
       {/* Rankings Row */}
-      <h3 className="section-title" style={{ marginTop: "32px", marginBottom: "24px" }}>
+      <h3 className="section-title" style={{ marginTop: "var(--space-8)", marginBottom: "var(--space-6)" }}>
         Rankings
       </h3>
       
@@ -716,7 +688,7 @@ export const DerivedAnalytics = ({
       {/* Momentum Row */}
       <div
         className="stats-grid"
-        style={{ marginTop: "8px", gridTemplateColumns: "1fr" }}
+        style={{ marginTop: "var(--space-2)", gridTemplateColumns: "1fr" }}
       >
         <AnalyticsCard title="Momentum: Price Change / Volume" icon={Zap}>
           <RankingTable

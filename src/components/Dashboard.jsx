@@ -25,12 +25,12 @@ export const Dashboard = memo(({
     <>
       <div className="dashboard-header">
         <div>
-          <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
+          <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
             Market Overview
           </h2>
           <p style={{ color: "var(--text-secondary)" }}>
             Data for{" "}
-            <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
+            <span style={{ color: "var(--text-primary)", fontWeight: "var(--font-semibold)" }}>
               {formattedDate}
             </span>
           </p>
@@ -79,7 +79,7 @@ export const Dashboard = memo(({
       </div>
 
       {/* Stats Grid Row 2 */}
-      <div className="stats-grid" style={{ marginTop: "16px" }}>
+      <div className="stats-grid" style={{ marginTop: "var(--space-4)" }}>
         <StatCard
           title="Total Deals"
           value={totalDeals.toLocaleString()}
@@ -116,7 +116,7 @@ export const Dashboard = memo(({
         <TurnoverChart data={marketData} />
       </div>
 
-      <div style={{ marginBottom: "32px" }}>
+      <div style={{ marginBottom: "var(--space-8)" }}>
         <h3 className="section-title">Detailed Market Data</h3>
         <MarketTable data={marketData} />
       </div>

@@ -12,7 +12,7 @@ const SidebarItem = ({ icon, label, active, onClick }) => {
         alignItems: 'center',
         padding: '12px 16px',
         margin: '4px 8px',
-        borderRadius: '8px',
+        borderRadius: 'var(--radius-md)',
         cursor: 'pointer',
         backgroundColor: active ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
         color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
@@ -34,7 +34,7 @@ const SidebarItem = ({ icon, label, active, onClick }) => {
         }} />
       )}
       <Icon size={20} style={{ marginRight: '12px', zIndex: 1 }} />
-      <span style={{ fontSize: '14px', fontWeight: 500, zIndex: 1 }}>{label}</span>
+      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', zIndex: 1 }}>{label}</span>
     </div>
   );
 };
@@ -79,10 +79,10 @@ const UserProfileSection = () => {
                 </div>
              )}
             <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                 {currentUser.displayName || "User"}
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                 {currentUser.email}
               </div>
             </div>
@@ -95,13 +95,13 @@ const UserProfileSection = () => {
                 padding: '8px', 
                 background: 'var(--bg-input)', 
                 border: '1px solid var(--border-subtle)', 
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 color: 'var(--text-secondary)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '13px',
+                fontSize: 'var(--text-sm)',
                 transition: 'all 0.2s'
             }}
             className="hover-bg"
@@ -122,13 +122,13 @@ const UserProfileSection = () => {
             padding: '10px', 
             background: 'var(--accent-primary)', 
             border: 'none', 
-            borderRadius: '8px',
+            borderRadius: 'var(--radius-md)',
             color: 'white',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 500,
+            fontWeight: 'var(--font-medium)',
             opacity: loading ? 0.7 : 1,
             transition: 'opacity 0.2s'
         }}
@@ -164,28 +164,29 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', position: 'relative' }}>
-      {/* Mobile Sidebar Overlay */}
-      {isMobile && isSidebarOpen && (
+        {/* Mobile Sidebar Overlay */}
         <div 
-          onClick={() => setIsSidebarOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 35,
-            backdropFilter: 'blur(4px)'
-          }}
+            onClick={() => setIsSidebarOpen(false)}
+            style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                zIndex: 'var(--z-overlay)',
+                backdropFilter: 'blur(4px)',
+                opacity: isMobile && isSidebarOpen ? 1 : 0,
+                pointerEvents: isMobile && isSidebarOpen ? 'auto' : 'none',
+                transition: 'opacity 0.3s ease'
+            }}
         />
-      )}
 
       {/* Sidebar */}
       <aside 
         className="glass-panel"
         style={{
-          width: '260px',
+          width: 'var(--sidebar-width)',
           height: '100vh',
           position: 'fixed',
-          left: isSidebarOpen ? 0 : '-280px',
+          left: isSidebarOpen ? 0 : 'calc(var(--sidebar-width) * -1)',
           top: 0,
           borderRight: '1px solid var(--glass-border)',
           borderTop: 'none',
@@ -193,15 +194,15 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
           borderLeft: 'none',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 60,
+          zIndex: 'var(--z-sidebar)',
           transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          background: 'var(--bg-sidebar)' // Use themed sidebar background
+          background: 'var(--bg-sidebar)' 
         }}
       >
         <div style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <img src="/icons/icon-48x48.png" alt="DSEasy Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '12px', border: '1px solid var(--glass-border)' }} />
-            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, letterSpacing: '-0.5px' }}>DSEasy</h1>
+            <h1 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', margin: 0, letterSpacing: '-0.5px' }}>DSEasy</h1>
           </div>
           {isMobile && (
             <button onClick={toggleSidebar} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -241,7 +242,7 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
 
       {/* Main Content Wrapper */}
       <div style={{ 
-        marginLeft: (!isMobile && isSidebarOpen) ? '260px' : '0', 
+        marginLeft: (!isMobile && isSidebarOpen) ? 'var(--sidebar-width)' : '0', 
         flex: 1, 
         display: 'flex', 
         flexDirection: 'column',
@@ -249,7 +250,7 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
         width: '100%'
       }}>
         {/* Header */}
-        <header className="glass-header" style={{ padding: '0 24px', height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <header className="glass-header" style={{ padding: '0 24px', height: 'var(--header-height)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <button 
                 onClick={toggleSidebar}
@@ -265,7 +266,7 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
                 <Menu size={24} />
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
                   <span style={{ marginRight: '8px', display: isMobile ? 'none' : 'block' }}>Overview</span>
                   <span style={{ display: isMobile ? 'none' : 'block' }}>/</span>
                   <span style={{ marginLeft: isMobile ? '0' : '8px', color: 'var(--text-primary)' }}>{activeTab}</span>
@@ -286,7 +287,7 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
                             color: 'var(--text-primary)',
                             outline: 'none',
                             width: '200px',
-                            fontSize: '14px'
+                            fontSize: 'var(--text-sm)'
                         }} 
                     />
                 </div>

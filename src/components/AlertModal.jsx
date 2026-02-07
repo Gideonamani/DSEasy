@@ -68,54 +68,56 @@ export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
     <div style={{
       position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
       background: "rgba(0,0,0,0.7)", backdropFilter: "blur(5px)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: "var(--z-modal)"
     }}>
-      <div className="glass-panel" style={{ width: "400px", padding: "24px", borderRadius: "16px", position: "relative" }}>
+      <div className="glass-panel" style={{ width: "400px", padding: "var(--space-6)", borderRadius: "var(--radius-xl)", position: "relative" }}>
         <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer" }}>
           <X size={20} />
         </button>
         
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "var(--space-6)" }}>
           <div style={{ padding: "10px", borderRadius: "12px", background: "var(--accent-primary)", display: "flex" }}>
             <Bell size={24} color="#fff" />
           </div>
           <div>
-            <h3 style={{ margin: 0 }}>Set Price Alert</h3>
-            <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "14px" }}>for {symbol}</p>
+            <h3 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: "var(--font-bold)" }}>Set Price Alert</h3>
+            <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>for {symbol}</p>
           </div>
         </div>
 
         {status === "success" ? (
           <div style={{ textAlign: "center", padding: "32px 0" }}>
             <CheckCircle size={48} color="var(--accent-success)" style={{ marginBottom: "16px" }} />
-            <p>Alert Set Successfully!</p>
+            <p style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-medium)" }}>Alert Set Successfully!</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "13px", marginBottom: "8px" }}>Target Price (TZS)</label>
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "var(--text-xs)", marginBottom: "8px" }}>Target Price (TZS)</label>
               <input 
                 type="number" 
                 value={targetPrice} 
                 onChange={e => setTargetPrice(e.target.value)}
                 style={{ 
-                  width: "100%", padding: "12px", borderRadius: "8px", 
-                  border: "1px solid var(--glass-border)", background: "rgba(255,255,255,0.05)",
-                  color: "white", fontSize: "16px"
+                  width: "100%", padding: "12px", borderRadius: "var(--radius-lg)", 
+                  border: "1px solid var(--glass-border)", background: "var(--bg-input)",
+                  color: "var(--text-primary)", fontSize: "var(--text-base)", outline: "none"
                 }}
               />
             </div>
 
-            <div style={{ marginBottom: "24px" }}>
-              <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "13px", marginBottom: "8px" }}>Condition</label>
+            <div style={{ marginBottom: "var(--space-6)" }}>
+              <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "var(--text-xs)", marginBottom: "8px" }}>Condition</label>
               <div style={{ display: "flex", gap: "8px" }}>
                 <button 
                   type="button"
                   onClick={() => setCondition("ABOVE")}
                   style={{ 
-                    flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer",
-                    background: condition === "ABOVE" ? "var(--accent-success)" : "rgba(255,255,255,0.05)",
-                    color: condition === "ABOVE" ? "white" : "var(--text-secondary)"
+                    flex: 1, padding: "10px", borderRadius: "var(--radius-lg)", cursor: "pointer",
+                    background: condition === "ABOVE" ? "rgba(34, 197, 94, 0.2)" : "var(--bg-input)",
+                    color: condition === "ABOVE" ? "var(--accent-success)" : "var(--text-secondary)",
+                    border: condition === "ABOVE" ? "1px solid var(--accent-success)" : "1px solid transparent",
+                    fontWeight: "var(--font-medium)"
                   }}
                 >
                   Goes Above
@@ -124,9 +126,11 @@ export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
                   type="button"
                   onClick={() => setCondition("BELOW")}
                   style={{ 
-                    flex: 1, padding: "10px", borderRadius: "8px", border: "none", cursor: "pointer",
-                    background: condition === "BELOW" ? "var(--accent-danger)" : "rgba(255,255,255,0.05)",
-                    color: condition === "BELOW" ? "white" : "var(--text-secondary)"
+                    flex: 1, padding: "10px", borderRadius: "var(--radius-lg)", cursor: "pointer",
+                    background: condition === "BELOW" ? "rgba(239, 68, 68, 0.2)" : "var(--bg-input)",
+                    color: condition === "BELOW" ? "var(--accent-danger)" : "var(--text-secondary)",
+                    border: condition === "BELOW" ? "1px solid var(--accent-danger)" : "1px solid transparent",
+                     fontWeight: "var(--font-medium)"
                   }}
                 >
                   Goes Below
@@ -138,16 +142,17 @@ export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
               type="submit" 
               disabled={loading}
               style={{ 
-                width: "100%", padding: "14px", borderRadius: "12px", border: "none", 
-                background: "var(--accent-primary)", color: "white", fontWeight: "bold",
+                width: "100%", padding: "14px", borderRadius: "var(--radius-lg)", border: "none", 
+                background: "var(--accent-primary)", color: "white", fontWeight: "var(--font-bold)",
                 cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                transition: "opacity 0.2s"
               }}
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
               {loading ? "Activating..." : "Create Alert"}
             </button>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", textAlign: "center", marginTop: "12px" }}>
+            <p style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textAlign: "center", marginTop: "12px" }}>
               Needs Notification Permission
             </p>
           </form>

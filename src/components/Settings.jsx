@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useSettings } from "../contexts/SettingsContext";
+import { CustomSelect } from "./CustomSelect";
 
 export function Settings() {
   const { settings, updateSetting, resetSettings } = useSettings();
@@ -118,18 +119,18 @@ export function Settings() {
 
   return (
     <div className="settings-container" style={{ maxWidth: "800px", margin: "0 auto", paddingBottom: "48px" }}>
-      <h2 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>
+      <h2 style={{ fontSize: "var(--text-3xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
         Settings
       </h2>
-      <p style={{ color: "var(--text-secondary)", marginBottom: "32px" }}>
+      <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-8)" }}>
         Customize your DSEasy experience.
       </p>
 
       <div className="settings-sections" style={{ display: 'flex', flexDirection: 'column', gap: '32px'}}>
         {sections.map((section) => (
-          <section key={section.title} className="glass-panel" style={{ borderRadius: "16px", overflow: "hidden" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--glass-border)", background: "var(--bg-input)" }}>
-                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "var(--text-primary)" }}>{section.title}</h3>
+          <section key={section.title} className="glass-panel" style={{ borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--glass-border)", background: "var(--bg-elevated)" }}>
+                <h3 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>{section.title}</h3>
             </div>
             <div className="settings-list">
               {section.items.map((item) => (
@@ -155,9 +156,9 @@ export function Settings() {
                       <item.icon size={20} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 500 }}>{item.label}</div>
+                      <div style={{ fontWeight: "var(--font-medium)" }}>{item.label}</div>
                       {item.description && (
-                        <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginTop: "4px" }}>
                           {item.description}
                         </div>
                       )}
@@ -167,29 +168,17 @@ export function Settings() {
                   {/* Controls */}
                   <div>
                     {item.type === "select" && (
-                      <select
-                        value={settings[item.id]}
-                        onChange={(e) => updateSetting(item.id, e.target.value)}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: "8px",
-                          background: "var(--bg-main)",
-                          border: "1px solid var(--glass-border)",
-                          color: "var(--text-primary)",
-                          outline: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {item.options.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                      <div style={{ width: "200px" }}>
+                        <CustomSelect
+                            value={settings[item.id]}
+                            options={item.options}
+                            onChange={(newValue) => updateSetting(item.id, newValue)}
+                        />
+                      </div>
                     )}
 
                     {item.type === "toggle_group" && (
-                        <div style={{ display: "flex", gap: "4px", background: "var(--bg-main)", padding: "4px", borderRadius: "8px" }}>
+                        <div style={{ display: "flex", gap: "4px", background: "var(--bg-elevated)", padding: "4px", borderRadius: "8px" }}>
                             {item.options.map(opt => (
                                 <button
                                     key={opt.value}
@@ -236,7 +225,7 @@ export function Settings() {
                             background: "#fff",
                             borderRadius: "50%",
                             transition: "left 0.3s",
-                            boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                            boxShadow: "var(--shadow-sm)"
                           }}
                         />
                       </button>
@@ -248,7 +237,7 @@ export function Settings() {
                             style={{
                                 padding: "8px 16px",
                                 borderRadius: "8px",
-                                background: item.danger ? "rgba(239, 68, 68, 0.1)" : "var(--bg-main)",
+                                background: item.danger ? "rgba(239, 68, 68, 0.1)" : "var(--bg-elevated)",
                                 color: item.danger ? "var(--accent-danger)" : "var(--text-primary)",
                                 border: "1px solid transparent",
                                 cursor: "pointer",
@@ -270,6 +259,11 @@ export function Settings() {
       
       <div style={{ textAlign: "center", marginTop: "32px", color: "var(--text-secondary)", fontSize: "14px" }}>
         <p>DSEasy v1.2.0 • Built with ❤️</p>
+        <p style={{ marginTop: "8px", fontSize: "12px", opacity: 0.7 }}>
+             <a href="https://github.com/Gideonamani/DSEasy" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+                 GitHub
+             </a>
+        </p>
       </div>
     </div>
   );

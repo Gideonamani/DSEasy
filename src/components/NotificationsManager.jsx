@@ -74,7 +74,7 @@ export function NotificationsManager() {
   if (loading) {
     return (
         <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
-            <Loader2 className="animate-spin" color="#6366f1" size={32} />
+            <Loader2 className="animate-spin" color="var(--accent-primary)" size={32} />
         </div>
     );
   }
@@ -88,26 +88,29 @@ export function NotificationsManager() {
   const displayedAlerts = activeTab === 'active' ? activeAlerts : historyAlerts;
 
   return (
-    <div className="glass-panel" style={{ padding: "32px", borderRadius: "16px", maxWidth: "800px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: "bold" }}>Price Alerts</h2>
+    <div className="glass-panel" style={{ padding: "var(--space-6)", borderRadius: "var(--radius-xl)", maxWidth: "800px", margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-5)" }}>
+        <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)" }}>Price Alerts</h2>
         <button 
             onClick={fetchAlerts}
             style={{ 
-                background: "rgba(255,255,255,0.05)", 
+                background: "var(--bg-elevated)", 
                 border: "none", 
                 padding: "8px 16px", 
-                borderRadius: "8px",
+                borderRadius: "var(--radius-lg)",
                 color: "var(--text-secondary)",
-                cursor: "pointer"
+                cursor: "pointer",
+                transition: "all 0.2s"
             }}
+            onMouseOver={(e) => e.target.style.color = "var(--text-primary)"}
+            onMouseOut={(e) => e.target.style.color = "var(--text-secondary)"}
         >
             Refresh
         </button>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', padding: '4px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: 'var(--space-5)', padding: '4px', background: "var(--bg-surface)", borderRadius: "var(--radius-lg)", width: 'fit-content' }}>
         <button
           onClick={() => setActiveTab('active')}
           style={{
@@ -115,7 +118,7 @@ export function NotificationsManager() {
             alignItems: 'center',
             gap: '8px',
             padding: '8px 16px',
-            borderRadius: '8px',
+            borderRadius: "var(--radius-md)",
             border: 'none',
             background: activeTab === 'active' ? 'var(--accent-primary)' : 'transparent',
             color: activeTab === 'active' ? 'white' : 'var(--text-secondary)',
@@ -133,9 +136,9 @@ export function NotificationsManager() {
             alignItems: 'center',
             gap: '8px',
             padding: '8px 16px',
-            borderRadius: '8px',
+            borderRadius: "var(--radius-md)",
             border: 'none',
-            background: activeTab === 'history' ? 'rgba(255,255,255,0.1)' : 'transparent',
+            background: activeTab === 'history' ? 'var(--bg-elevated)' : 'transparent',
             color: activeTab === 'history' ? 'var(--text-primary)' : 'var(--text-secondary)',
             cursor: 'pointer',
             transition: 'all 0.2s'
@@ -151,9 +154,9 @@ export function NotificationsManager() {
             textAlign: "center", 
             color: "var(--text-secondary)", 
             padding: "48px 32px",
-            background: 'rgba(255,255,255,0.02)',
-            borderRadius: '12px',
-            border: '1px dashed rgba(255,255,255,0.1)'
+            background: 'var(--bg-surface)',
+            borderRadius: "var(--radius-lg)",
+            border: '1px dashed var(--glass-border)'
           }}>
             <p>{activeTab === 'active' ? 'No active price alerts.' : 'No alert history available.'}</p>
           </div>
@@ -165,20 +168,20 @@ export function NotificationsManager() {
                 alignItems: "center", 
                 justifyContent: "space-between",
                 padding: "16px",
-                backgroundColor: activeTab === 'active' ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.01)",
-                borderRadius: "12px",
-                border: "1px solid rgba(255,255,255,0.05)",
+                backgroundColor: activeTab === 'active' ? "var(--bg-surface)" : "transparent",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--glass-border)",
                 opacity: activeTab === 'history' ? 0.7 : 1
              }}>
                <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{ fontWeight: "bold", fontSize: "16px" }}>{alert.symbol}</span>
+                    <span style={{ fontWeight: "var(--font-bold)", fontSize: "var(--text-base)" }}>{alert.symbol}</span>
                     <span style={{ 
                         padding: "2px 8px", 
                         borderRadius: "4px", 
-                        fontSize: "12px",
+                        fontSize: "var(--text-xs)",
                         backgroundColor: alert.condition === 'ABOVE' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        color: alert.condition === 'ABOVE' ? '#4ade80' : '#f87171'
+                        color: alert.condition === 'ABOVE' ? 'var(--accent-success)' : 'var(--accent-danger)'
                     }}>
                       {alert.condition} {alert.targetPrice.toLocaleString()}
                     </span>
@@ -187,7 +190,7 @@ export function NotificationsManager() {
                             padding: "2px 6px", 
                             borderRadius: "4px", 
                             fontSize: "10px",
-                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            backgroundColor: 'var(--bg-elevated)',
                             color: 'var(--text-secondary)',
                             textTransform: 'uppercase'
                         }}>
@@ -195,7 +198,7 @@ export function NotificationsManager() {
                         </span>
                     )}
                   </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", marginTop: "4px" }}>
                     {activeTab === 'active' ? 'Created: ' : 'Triggered: '} 
                     {new Date(alert.created).toLocaleDateString()} {new Date(alert.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
@@ -210,9 +213,12 @@ export function NotificationsManager() {
                     cursor: "pointer",
                     padding: "8px",
                     color: "var(--text-secondary)",
-                    opacity: deleting === alert.created ? 0.5 : 1
+                    opacity: deleting === alert.created ? 0.5 : 1,
+                    transition: "color 0.2s"
                  }}
                  title="Delete Alert"
+                 onMouseOver={(e) => e.target.style.color = "var(--accent-danger)"}
+                 onMouseOut={(e) => e.target.style.color = "var(--text-secondary)"}
                >
                  {deleting === alert.created ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                </button>

@@ -22,14 +22,14 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral', onCl
             background: accentColor,
             filter: 'blur(50px)',
             opacity: 0.15,
-            borderRadius: '50%'
+            borderRadius: 'var(--radius-full)'
         }} />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: 500 }}>{title}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>{title}</span>
             <div style={{ 
                 padding: '8px', 
-                borderRadius: '12px', 
+                borderRadius: 'var(--radius-lg)', 
                 background: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
                 color: accentColor
             }}>
@@ -37,16 +37,16 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral', onCl
             </div>
         </div>
 
-        <div style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px', textDecoration: to ? "none" : "inherit" }}>
+        <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-bold)', marginBottom: 'var(--space-2)', textDecoration: to ? "none" : "inherit" }}>
             {value}
         </div>
 
         {(change || subtext) && (
-            <div style={{ display: 'flex', alignItems: 'center', fontSize: '13px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--text-xs)' }}>
                 {!!change && (
                     <span style={{ 
                         color: accentColor, 
-                        fontWeight: 600, 
+                        fontWeight: 'var(--font-semibold)', 
                         marginRight: '8px',
                         display: 'flex', 
                         alignItems: 'center'
@@ -61,8 +61,8 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral', onCl
   );
 
   const cardStyles = { 
-    padding: '24px', 
-    borderRadius: '16px', 
+    padding: 'var(--space-6)', 
+    borderRadius: 'var(--radius-xl)', 
     position: 'relative', 
     overflow: 'hidden',
     cursor: (onClick || to) ? 'pointer' : 'default',

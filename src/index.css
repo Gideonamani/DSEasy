@@ -1,60 +1,161 @@
 :root {
-  /* Default (Dark Mode) Variables */
-  --bg-dark: #0f172a; /* Slate 900 */
-  --bg-card: rgba(30, 41, 59, 0.7); /* Slate 800 with opacity */
-  --text-primary: #f8fafc; /* Slate 50 */
-  --text-secondary: #94a3b8; /* Slate 400 */
-  --accent-primary: #6366f1; /* Indigo 500 */
-  --accent-success: #10b981; /* Emerald 500 */
-  --accent-danger: #ef4444; /* Red 500 */
+  /* =========================================
+     1. PALETTE (Raw Colors)
+     ========================================= */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+
+  /* =========================================
+     2. SEMANTIC THEME VARIABLES (Dark Default)
+     ========================================= */
+  --bg-main: var(--color-slate-900);
+  --bg-card: rgba(30, 41, 59, 0.7); /* Slate 800 + opacity */
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-sidebar: var(--bg-card);
+  --bg-elevated: var(--color-slate-800);
+
+  --text-primary: var(--color-slate-50);
+  --text-secondary: var(--color-slate-400);
+  --text-muted: var(--color-slate-500);
+
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-shine: rgba(255, 255, 255, 0.05);
+  --glass-bg: rgba(30, 41, 59, 0.7);
 
-  /* Semantic names for easier switching */
-  --bg-main: var(--bg-dark);
-  --bg-surface: var(--bg-card);
+  --accent-primary: var(--color-indigo-500);
+  --accent-success: var(--color-emerald-500);
+  --accent-danger: var(--color-red-500);
+
+  /* =========================================
+     3. TYPOGRAPHY
+     ========================================= */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* =========================================
+     4. SPACING & SIZING
+     ========================================= */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+
+  --radius-sm: 0.375rem; /* 6px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
+  --radius-full: 9999px;
+
+  --sidebar-width: 260px;
+  --header-height: 70px;
+
+  /* =========================================
+     5. SHADOWS
+     ========================================= */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* =========================================
+     6. Z-INDEX
+     ========================================= */
+  --z-background: 0;
+  --z-card: 10;
+  --z-header: 50;
+  --z-sidebar: 60;
+  --z-overlay: 70;
+  --z-modal: 100;
+  --z-tooltip: 110;
 }
 
+/* =========================================
+   6. LIGHT MODE OVERRIDES
+   ========================================= */
 [data-theme="light"] {
-  --bg-main: #f8fafc; /* Slate 50 */
-  --bg-surface: rgba(255, 255, 255, 0.7); /* White with opacity */
-  --bg-card: #ffffff; /* Solid White for cards */
-  --text-primary: #0f172a; /* Slate 900 */
-  --text-secondary: #64748b; /* Slate 500 */
-  --accent-primary: #4f46e5; /* Indigo 600 (slightly darker for contrast) */
-  --accent-success: #059669; /* Emerald 600 */
-  --accent-danger: #dc2626; /* Red 600 */
-  --glass-border: rgba(0, 0, 0, 0.15); /* Darker for better visibility */
-  --glass-shine: rgba(0, 0, 0, 0.05);
-  
-  /* Light Mode Component Overrides */
+  --bg-main: var(--color-slate-50);
+  --bg-card: #ffffff;
+  --bg-input: var(--color-slate-100);
+  --bg-hover: var(--color-slate-100);
   --bg-sidebar: #ffffff;
-  --bg-input: #f1f5f9; /* Slate 100 */
   --bg-elevated: #ffffff;
-  --bg-hover: #f1f5f9;
-  --border-subtle: #e2e8f0; /* Slate 200 */
+
+  --text-primary: var(--color-slate-900);
+  --text-secondary: var(--color-slate-500);
+  --text-muted: var(--color-slate-400);
+
+  --border-subtle: var(--color-slate-200);
+  --border-strong: var(--color-slate-300);
+
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.4); /* Subtle highlight in light mode */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+
+  --accent-primary: var(--color-indigo-600);
+  --accent-success: var(--color-emerald-600);
+  --accent-danger: var(--color-red-600);
+}
+
+/* =========================================
+   7. GLOBAL RESET & BASE STYLES
+   ========================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family:
-    "Inter",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    "Open Sans",
-    "Helvetica Neue",
-    sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--bg-main);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
-  /* Subtle gradient background */
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+
+  /* Subtle adaptive gradient */
   background-image:
     radial-gradient(
       circle at 15% 50%,
@@ -68,45 +169,54 @@ body {
     );
 }
 
-/* Glassmorphism Utilities */
+/* =========================================
+   8. UTILITIES
+   ========================================= */
+
+/* Glassmorphism */
 .glass-panel {
-  background: var(--bg-surface);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .glass-header {
-  background: var(--bg-surface);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--glass-border);
-  z-index: 50; /* Ensure header stays above content but below modals */
+  z-index: var(--z-header);
 }
 
-/* Scrollbar Styling */
+/* Scrollbar Styling - Cross Browser */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-main);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--text-secondary);
 }
 
-/* Dashboard Utilities */
+/* Layout Utilities */
 .loading-container {
   height: 100vh;
   width: 100vw;
@@ -116,7 +226,7 @@ body {
   justify-content: center;
   background: var(--bg-main);
   color: var(--text-primary);
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .error-container {
@@ -124,89 +234,86 @@ body {
   width: 100vw;
   display: flex;
   align-items: center;
-  align-items: center;
   justify-content: center;
   background: var(--bg-main);
   color: var(--accent-danger);
+  font-weight: var(--font-medium);
 }
 
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Interactive Elements */
+button,
+a {
+  transition: all 0.2s ease;
+}
+
+.hover-bg:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+/* Dashboard Grid Layouts */
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
   flex-wrap: wrap;
-  gap: 16px;
-}
-
-.date-picker-container {
-  padding: 8px 16px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.date-select {
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: 14px;
-  outline: none;
-  cursor: pointer;
-  font-family: inherit;
+  gap: var(--space-4);
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.section-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
 }
 
 @media (max-width: 640px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
   }
 
-  .date-picker-container {
-    width: 100%;
-    justify-content: space-between;
+  .stats-grid,
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
   }
 }
 
+/* Market Table Specifics */
 .market-table-cell {
-  padding: 16px 24px;
+  padding: var(--space-4) var(--space-6);
 }
 
 @media (max-width: 640px) {
   .market-table-cell {
-    padding: 12px 10px;
-    font-size: 13px; /* Slightly smaller font for mobile tables */
+    padding: var(--space-3) var(--space-2);
+    font-size: var(--text-xs);
   }
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 16px;
 }
