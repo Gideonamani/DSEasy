@@ -64,9 +64,9 @@ async function migrate() {
       
       validDates.push(sheetName);
       
-      // Create MarketData Document
-      const marketDocRef = db.collection('marketData').doc(sheetName);
-      batch.set(marketDocRef, {
+      // Create dailyClosing Document
+      const dailyDocRef = db.collection('dailyClosing').doc(sheetName);
+      batch.set(dailyDocRef, {
         date: sheetName,
         importedAt: admin.firestore.FieldValue.serverTimestamp(),
         stockCount: rows.length - 1
@@ -106,12 +106,7 @@ async function migrate() {
         const highLowSpread = high - low;
         const volPerDeal = deals > 0 ? volume / deals : 0;
         const turnoverPerDeal = deals > 0 ? turnover / deals : 0;
-        const turnoverPerMcap = mcap > 0 ? turnover / (mcap * 1000000000) : 0; // MCAP is in Billions usually? "TZS 'B" -> Billion. Turnover is TZS? 
-        // Let's assume raw ratio is enough or handle unit scale if known. keeping raw ratio for now.
-        // Actually MCAP column says "MCAP (TZS 'B)". Turnover says "Turn Over". 
-        // If Turnover is absolute and MCAP is Billions, we need to adjust.
-        // But let's stick to raw numbers or simple division if user didn't specify units. 
-        // Better: Turnover / MCAP (as ratio).
+        const turnoverPerMcap = mcap > 0 ? turnover / (mcap * 1000000000) : 0; 
         
         const turnoverPercent = dayTotalTurnover > 0 ? (turnover / dayTotalTurnover) * 100 : 0;
         const changePerVol = volume > 0 ? changeVal / volume : 0;
@@ -136,8 +131,8 @@ async function migrate() {
           bidOfferRatio
         };
         
-        // 1. Write to marketData/{date}/stocks/{symbol}
-        const stockRef = marketDocRef.collection('stocks').doc(symbol);
+        // 1. Write to dailyClosing/{date}/stocks/{symbol}
+        const stockRef = dailyDocRef.collection('stocks').doc(symbol);
         batch.set(stockRef, stockData);
         opCount++;
         
@@ -212,4 +207,107 @@ async function getSheetData(range) {
   return res.data.values || [];
 }
 
-migrate();
+// ... (existing migrate code)
+
+async function migrateLivePrices() {
+  console.log("\n🚀 Starting Live Prices Migration...");
+  const sheetName = "_live_prices";
+  
+  try {
+    const rows = await getSheetData(sheetName);
+    if (rows.length < 2) {
+      console.log("No live price data found.");
+      return;
+    }
+    
+    const headers = rows[0];
+    const headerMap = {}; // "CRDB Open" -> { symbol: "CRDB", type: "price" }
+    
+    // Parse Headers
+    headers.forEach((h, index) => {
+      if (index === 0) return; // Timestamp
+      const parts = h.split(' ');
+      if (parts.length < 2) return;
+      
+      const type = parts.pop(); // "Open" or "Change"
+      const symbol = parts.join(' '); // "CRDB" or "VODA COM"
+      
+      if (!headerMap[symbol]) headerMap[symbol] = {};
+      headerMap[symbol][type.toLowerCase()] = index;
+    });
+    
+    console.log(`Found ${Object.keys(headerMap).length} symbols in live history.`);
+    
+    let batch = db.batch();
+    let opCount = 0;
+    const batchSize = 400;
+    
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const tsStr = row[0];
+      if (!tsStr) continue;
+      
+      let dateObj;
+      try {
+        dateObj = new Date(tsStr);
+        if (isNaN(dateObj)) continue;
+      } catch (e) { continue; }
+      
+      const docId = dateObj.toISOString();
+      // Firestore timestamps
+      const timestamp = admin.firestore.Timestamp.fromDate(dateObj);
+      
+      const snapshot = {
+        timestamp: timestamp,
+        prices: {}
+      };
+      
+      Object.keys(headerMap).forEach(symbol => {
+        const idxs = headerMap[symbol];
+        const priceIdx = idxs.open || idxs.Open; // Case sensitive in split? "Open" -> lowercase="open"
+        const changeIdx = idxs.change || idxs.Change;
+        
+        // map stores parsed indices: headerMap[symbol]["open"] = index
+        const pIdx = headerMap[symbol]["open"];
+        const cIdx = headerMap[symbol]["change"];
+        
+        const price = parseNum(row[pIdx]);
+        const change = parseNum(row[cIdx]);
+        
+        if (price !== 0 || change !== 0) {
+           snapshot.prices[symbol] = { price, change };
+        }
+      });
+      
+      if (Object.keys(snapshot.prices).length > 0) {
+        const docRef = db.collection('livePrices').doc(docId);
+        batch.set(docRef, snapshot);
+        opCount++;
+      }
+      
+      if (opCount >= batchSize) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+        process.stdout.write('+');
+      }
+    }
+    
+    if (opCount > 0) await batch.commit();
+    console.log("\n✅ Live Prices Migration Complete!");
+    
+  } catch (err) {
+    if (err.message.includes("Unable to parse range")) {
+      console.log("Sheet _live_prices not found or empty (expected if fresh project).");
+    } else {
+      console.error("Live Price Migration Failed:", err);
+    }
+  }
+}
+
+async function main() {
+  await migrate(); // Daily Data
+  await migrateLivePrices(); // Live Data
+}
+
+main();
