@@ -4,7 +4,7 @@ import { Bar, Bubble, Doughnut, Scatter } from "react-chartjs-2";
 import { Activity, TrendingUp, Zap, PieChart, ScatterChart } from "lucide-react";
 import { DatePicker } from "./DatePicker";
 
-import { formatNumber, formatLargeNumber } from "../utils/formatters";
+import { formatLargeNumber } from "../utils/formatters";
 
 // Reusable section card component
 const AnalyticsCard = ({ title, icon, children, subtitle }) => {

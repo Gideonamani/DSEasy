@@ -41,6 +41,7 @@ function App() {
   // Auto-select latest date when loaded
   useEffect(() => {
     if (availableDates.length > 0 && !selectedDate) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedDate(availableDates[0].sheetName);
     }
   }, [availableDates, selectedDate]);

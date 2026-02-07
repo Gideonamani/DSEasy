@@ -227,7 +227,7 @@ export const TickerTrends = () => {
     }
     
     setSearchParams(params, { replace: true });
-  }, [selectedPeriod, customRange]);
+  }, [selectedPeriod, customRange, searchParams, setSearchParams]);
 
   // Filter Data
   const filteredData = useMemo(() => {

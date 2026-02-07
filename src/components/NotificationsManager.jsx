@@ -35,6 +35,7 @@ export function NotificationsManager() {
 
   useEffect(() => {
     if (currentUser) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchAlerts();
     } else {
         setLoading(false);
