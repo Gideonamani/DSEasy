@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public read for market data
+    match /marketData/{date} {
+      allow read: if true;
+      allow write: if false; // Only backend/triggers can write
+
+      match /stocks/{symbol} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    match /trends/{symbol} {
+      allow read: if true;
+      allow write: if false;
+
+      match /history/{date} {
+        allow read: if true;
+        allow write: if false;
+      }
+      
+      match /symbolHistory/{entry} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    // Config: Public read
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /livePrices/{timestamp} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Alerts: User can only read/write their own
+    match /alerts/{alertId} {
+      allow read, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // User profiles: User can only access their own
+    match /users/{userId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == userId;
+      
+      // User settings
+      match /settings/{settingDoc} {
+        allow read, write: if request.auth != null 
+          && request.auth.uid == userId;
+      }
+      
+      // User portfolio/watchlist
+      match /portfolio/{symbol} {
+        allow read, write: if request.auth != null 
+          && request.auth.uid == userId;
+      }
+    }
+    
+    // Notification history: User can only access their own
+    match /notifications/{userId} {
+      allow read: if request.auth != null 
+        && request.auth.uid == userId;
+      
+      match /history/{notificationId} {
+        allow read: if request.auth != null 
+          && request.auth.uid == userId;
+        allow update: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+      }
+    }
+  }
+}
