@@ -84,7 +84,12 @@ async function scrapeDSEAndWriteToFirestore() {
         const dailyDocRef = db.collection("dailyClosing").doc(formattedDate);
         const existingDoc = await dailyDocRef.get();
         if (existingDoc.exists) {
-            console.log(`Data for ${formattedDate} already exists. Skipping.`);
+            console.log(JSON.stringify({
+                event: "DAILY_CLOSING_SKIP",
+                reason: "ALREADY_EXISTS",
+                date: formattedDate,
+                message: `Data for ${formattedDate} already exists. Skipping.`
+            }));
             return { success: true, message: "Already exists", date: formattedDate };
         }
         // 3. EXTRACT TABLE DATA
@@ -210,7 +215,12 @@ async function scrapeDSEAndWriteToFirestore() {
             availableDates: admin.firestore.FieldValue.arrayUnion(formattedDate),
             lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
-        console.log(`Successfully imported ${stocksData.length} stocks for ${formattedDate}`);
+        console.log(JSON.stringify({
+            event: "DAILY_CLOSING_SUCCESS",
+            date: formattedDate,
+            stockCount: stocksData.length,
+            message: `Successfully imported ${stocksData.length} stocks for ${formattedDate}`
+        }));
         return {
             success: true,
             message: `Imported ${stocksData.length} stocks`,
