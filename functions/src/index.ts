@@ -2,6 +2,8 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError, onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import axios from "axios";
+import * as nodemailer from "nodemailer";
+import * as moment from "moment-timezone";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -639,15 +641,85 @@ export const createAlert = onCall({ region: "africa-south1" }, async (request) =
 
 // ------------------------------------------------------------------
 // 3. Scheduled Function: Scrape Daily Closing Data
-// Runs daily at 17:00 EAT (after market close at 16:00)
+// Runs hourly from 17:00 to 23:00 EAT Mon-Fri
 // ------------------------------------------------------------------
+async function sendScraperAlert(subject: string, body: string) {
+    const email = process.env.SMTP_EMAIL;
+    const password = process.env.SMTP_PASSWORD;
+    const recipient = process.env.ALERT_RECIPIENT;
+
+    if (!email || !password || !recipient) {
+        console.warn("Skipping email alert: SMTP credentials missing in env.");
+        return;
+    }
+
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: email,
+            pass: password,
+        },
+    });
+
+    try {
+        await transporter.sendMail({
+            from: `"DSE Scraper" <${email}>`,
+            to: recipient,
+            subject: subject,
+            text: body,
+        });
+        console.log("Alert email sent successfully.");
+    } catch (error) {
+        console.error("Failed to send alert email:", error);
+    }
+}
+
 export const scrapeDailyClosing = onSchedule({
-  schedule: "0 17 * * 1-5", // 17:00 Mon-Fri
+  schedule: "0 17-23 * * 1-5", // Every hour from 17:00 to 23:00 Mon-Fri
   timeZone: "Africa/Dar_es_Salaam",
   region: "europe-west1",
-}, async () => {
-  const result = await scrapeDSEAndWriteToFirestore();
-  console.log("scrapeDailyClosing result:", result);
+}, async (event) => {
+    // 1. Check if data for TODAY already exists
+    const now = moment().tz("Africa/Dar_es_Salaam");
+    const todayFormatted = now.format("DMMMYYYY"); // e.g., "9Feb2026"
+    
+    // Check Firestore directly first to avoid unnecessary scraping
+    const docRef = db.collection("dailyClosing").doc(todayFormatted);
+    const doc = await docRef.get();
+
+    if (doc.exists) {
+        console.log(`Data for ${todayFormatted} already exists. Skipping scrape.`);
+        return;
+    }
+
+    console.log(`Data for ${todayFormatted} missing. Attempting scrape...`);
+
+    // 2. Attempt Scrape
+    const result = await scrapeDSEAndWriteToFirestore();
+    console.log("scrapeDailyClosing result:", result);
+
+    // 3. Check for Failure / Stale Data
+    // Logic: If the scraped date is NOT today, it means DSE hasn't updated yet.
+    if (result.success && result.date === todayFormatted) {
+        console.log("Scrape successful and data matches today.");
+        return;
+    }
+
+    // 4. Send Alert if Last Run (23:00)
+    // event.scheduleTime is ISO string, but we can verify current hour
+    const currentHour = now.hour();
+    console.log(`Scrape finished but data is old or failed. Current hour: ${currentHour}`);
+
+    if (currentHour >= 23) {
+        console.log("Last attempt of the day failed. Sending alert...");
+        const subject = `⚠️ DSE Data Missing for ${todayFormatted}`;
+        const body = `The scraper ran at ${now.format("HH:mm")} and could not find data for today.\n\n` +
+                     `Scraper Result: ${result.message}\n` +
+                     `Last Scraped Date: ${result.date || "Unknown"}\n\n` +
+                     `Please check https://dse.co.tz manually.`;
+        
+        await sendScraperAlert(subject, body);
+    }
 });
 
 
