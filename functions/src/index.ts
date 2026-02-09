@@ -364,7 +364,35 @@ export const checkPriceAlerts = onSchedule({
 
       console.log(`Fetched prices for ${Object.keys(priceMap).length} symbols.`);
 
-      // C. Fetch Active Alerts
+      // Initialize batch early
+      const batch = db.batch();
+
+      // C. Save Live Prices to Firestore (Fix for missing updates)
+      const timestamp = new Date().toISOString();
+      // Use clean timestamp for document ID to avoid special chars if any, but ISO is fine usually. 
+      // Actually, let's use a simpler ID for readability if we want, but ISO is standard.
+      const livePricesRef = db.collection("livePrices").doc(timestamp);
+      
+      const pricesPayload: { [symbol: string]: { price: number, change: number } } = {};
+      
+      marketData.forEach(item => {
+          const symbol = item.company.trim();
+          const price = item.price ? parseFloat(item.price.replace(/,/g, "")) : 0;
+          const change = item.change ? parseFloat(item.change.replace(/,/g, "")) : 0;
+          
+          if (symbol) {
+              pricesPayload[symbol] = { price, change };
+          }
+      });
+      
+      batch.set(livePricesRef, {
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          prices: pricesPayload
+      });
+      
+      console.log(`Queued write to livePrices/${timestamp}`);
+
+      // D. Fetch Active Alerts
       const alertsSnap = await db
         .collection("alerts")
         .where("status", "==", "ACTIVE")
@@ -372,11 +400,16 @@ export const checkPriceAlerts = onSchedule({
 
       if (alertsSnap.empty) {
         console.log("No active alerts found.");
+        // Commit live prices even if no alerts
+        if (Object.keys(pricesPayload).length > 0) {
+             await batch.commit();
+             console.log("Committed live prices (no alerts checked).");
+        }
         return;
       }
 
-      // D. Check Conditions
-      const batch = db.batch();
+      // E. Check Conditions
+      // Batch already initialized
       const notifications: admin.messaging.Message[] = [];
       let triggeredCount = 0;
 
@@ -440,21 +473,114 @@ export const checkPriceAlerts = onSchedule({
         }
       });
 
-      // E. Execute Batch Updates & Send Notifications
-      if (triggeredCount > 0) {
-        await batch.commit();
-        console.log(`Updated ${triggeredCount} alerts in Firestore.`);
+      // F. Execute Batch Updates & Send Notifications
+      await batch.commit();
+      console.log(`Batch committed. Triggered ${triggeredCount} alerts.`);
 
-        if (notifications.length > 0) {
+      if (triggeredCount > 0 && notifications.length > 0) {
             const response = await admin.messaging().sendEach(notifications);
             console.log(`Sent ${response.successCount} push notifications. Failed: ${response.failureCount}`);
-        }
-      } else {
-        console.log("No alerts triggered this run.");
       }
 
     } catch (error) {
       console.error("Error in checkPriceAlerts:", error);
+    }
+});
+
+// ------------------------------------------------------------------
+// 1.1 HTTP Wrapper for checkPriceAlerts (Testing Only)
+// ------------------------------------------------------------------
+export const checkPriceAlertsHttp = onRequest({
+    region: "europe-west1",
+}, async (req, res) => {
+    // Only allow in emulator
+    if (process.env.FUNCTIONS_EMULATOR !== "true") {
+        res.status(403).json({ error: "This endpoint is only available in the emulator." });
+        return;
+    }
+
+    try {
+      console.log("Manually triggering checkPriceAlerts logic...");
+
+      // A. Fetch Live Prices from DSE API
+      const dseUrl = "https://dse.co.tz/api/get/live/market/prices";
+      const { data: apiResponse } = await axios.get(dseUrl);
+      const marketData: DSEMarketData[] = apiResponse.data || [];
+
+      if (!marketData || marketData.length === 0) {
+        console.error("No market data received from DSE API.");
+        res.json({ success: false, message: "No market data" });
+        return;
+      }
+
+      // B. Create Price Map
+      const priceMap: { [symbol: string]: number } = {};
+      marketData.forEach((item) => {
+        const rawPrice = item.price ? parseFloat(item.price.replace(/,/g, "")) : 0;
+        const symbol = item.company.trim();
+        if (symbol && rawPrice > 0) {
+            priceMap[symbol] = rawPrice;
+        }
+      });
+
+      // C. Save Live Prices to Firestore
+      const db = admin.firestore();
+      const batch = db.batch();
+      
+      const timestamp = new Date().toISOString();
+      const livePricesRef = db.collection("livePrices").doc(timestamp);
+      
+      const pricesPayload: { [symbol: string]: { price: number, change: number } } = {};
+      marketData.forEach(item => {
+          const symbol = item.company.trim();
+          const price = item.price ? parseFloat(item.price.replace(/,/g, "")) : 0;
+          const change = item.change ? parseFloat(item.change.replace(/,/g, "")) : 0;
+          if (symbol) pricesPayload[symbol] = { price, change };
+      });
+      
+      batch.set(livePricesRef, {
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          prices: pricesPayload
+      });
+
+      // D. Check Alerts (Simplified for HTTP test - just check, don't necessarily send push if we want to avoid spam, but let's keep consistency)
+      const alertsSnap = await db.collection("alerts").where("status", "==", "ACTIVE").get();
+      
+      let triggeredCount = 0;
+      if (!alertsSnap.empty) {
+          alertsSnap.forEach((doc) => {
+            const alert = doc.data();
+            const currentPrice = priceMap[alert.symbol];
+            if (currentPrice === undefined) return;
+            
+            let triggered = false;
+            if (alert.condition === "ABOVE" && currentPrice >= alert.targetPrice) triggered = true;
+            else if (alert.condition === "BELOW" && currentPrice <= alert.targetPrice) triggered = true;
+            
+            if (triggered) {
+                triggeredCount++;
+                batch.update(doc.ref, {
+                    status: "TRIGGERED",
+                    triggeredAt: admin.firestore.FieldValue.serverTimestamp(),
+                    triggeredPrice: currentPrice,
+                });
+                // Skip push for HTTP test to avoid noise, or keep it. Let's keep it minimal.
+                console.log(`(HTTP Test) Alert triggered: ${alert.symbol}`);
+            }
+          });
+      }
+
+      await batch.commit();
+      res.json({ 
+          success: true, 
+          message: "Executed checkPriceAlerts logic", 
+          pricesSaved: Object.keys(pricesPayload).length,
+          alertsTriggered: triggeredCount 
+      });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: String(error) });
     }
 });
 
