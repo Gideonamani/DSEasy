@@ -108,7 +108,7 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
     const { data: html } = await axios.get(url, { timeout: 30000 });
 
     // 1. EXTRACT DATE
-    const dateRegex = /Market Summary\s*:<\/h5>\s*<h5[^>]*>\s*([A-Za-z]+\s+\d{1,2},\s+\d{4})\s*<\/h5>/i;
+    const dateRegex = /Market Summary\s*:\s*<\/h5>\s*<h5[^>]*>\s*([A-Za-z]+\s+\d{1,2},\s+\d{4})\s*<\/h5>/i;
     const dateMatch = html.match(dateRegex);
 
     if (!dateMatch) {
