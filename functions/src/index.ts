@@ -341,10 +341,11 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
 }
 
 // ------------------------------------------------------------------
-// 1. Scheduled Function: Check Price Alerts
+// 1. Scheduled Function: Monitor Intraday Market
 // Runs every 15 minutes Mon-Fri during market hours (09:30 - 16:15)
+// Scrapes live prices, saves to Firestore, and checks alerts.
 // ------------------------------------------------------------------
-export const checkPriceAlerts = onSchedule(
+export const monitorIntradayMarket = onSchedule(
   {
     schedule: "every 15 minutes",
     timeZone: "Africa/Dar_es_Salaam",
@@ -396,7 +397,7 @@ export const checkPriceAlerts = onSchedule(
 
       marketData.forEach((item) => {
         const rawPrice = item.price
-          ? parseFloat(item.price.replace(/,/g, ""))
+          ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
         const symbol = item.company.trim();
 
@@ -424,9 +425,9 @@ export const checkPriceAlerts = onSchedule(
 
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price ? parseFloat(item.price.replace(/,/g, "")) : 0;
+        const price = item.price ? parseFloat(String(item.price).replace(/,/g, "")) : 0;
         const change = item.change
-          ? parseFloat(item.change.replace(/,/g, ""))
+          ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
 
         if (symbol) {
@@ -538,15 +539,15 @@ export const checkPriceAlerts = onSchedule(
         );
       }
     } catch (error) {
-      console.error("Error in checkPriceAlerts:", error);
+      console.error("Error in monitorIntradayMarket:", error);
     }
   },
 );
 
 // ------------------------------------------------------------------
-// 1.1 HTTP Wrapper for checkPriceAlerts (Testing Only)
+// 1.1 HTTP Wrapper for monitorIntradayMarket (Testing Only)
 // ------------------------------------------------------------------
-export const checkPriceAlertsHttp = onRequest(
+export const monitorIntradayMarketHttp = onRequest(
   {
     region: "europe-west1",
   },
@@ -560,7 +561,7 @@ export const checkPriceAlertsHttp = onRequest(
     }
 
     try {
-      console.log("Manually triggering checkPriceAlerts logic...");
+      console.log("Manually triggering monitorIntradayMarket logic...");
 
       // A. Fetch Live Prices from DSE API
       const dseUrl = "https://dse.co.tz/api/get/live/market/prices";
@@ -577,7 +578,7 @@ export const checkPriceAlertsHttp = onRequest(
       const priceMap: { [symbol: string]: number } = {};
       marketData.forEach((item) => {
         const rawPrice = item.price
-          ? parseFloat(item.price.replace(/,/g, ""))
+          ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
         const symbol = item.company.trim();
         if (symbol && rawPrice > 0) {
@@ -597,9 +598,9 @@ export const checkPriceAlertsHttp = onRequest(
       } = {};
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price ? parseFloat(item.price.replace(/,/g, "")) : 0;
+        const price = item.price ? parseFloat(String(item.price).replace(/,/g, "")) : 0;
         const change = item.change
-          ? parseFloat(item.change.replace(/,/g, ""))
+          ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
         if (symbol) pricesPayload[symbol] = { price, change };
       });
@@ -647,7 +648,7 @@ export const checkPriceAlertsHttp = onRequest(
       await batch.commit();
       res.json({
         success: true,
-        message: "Executed checkPriceAlerts logic",
+        message: "Executed monitorIntradayMarket logic",
         pricesSaved: Object.keys(pricesPayload).length,
         alertsTriggered: triggeredCount,
       });
