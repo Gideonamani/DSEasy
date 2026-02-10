@@ -2,7 +2,6 @@ import { useState } from "react";
 import { X, Bell, Loader2, CheckCircle } from "lucide-react";
 import { messaging } from "../firebase";
 import { getToken } from "firebase/messaging";
-import { useAuth } from "../contexts/AuthContext";
 
 // Token retrieval uses the default configuration from firebase.js
 
@@ -10,7 +9,6 @@ import { functions } from "../firebase";
 import { httpsCallable } from "firebase/functions";
 
 export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
-  const { currentUser } = useAuth();
   const [targetPrice, setTargetPrice] = useState(currentPrice || 0);
   const [condition, setCondition] = useState("ABOVE"); // or BELOW
   const [loading, setLoading] = useState(false);
