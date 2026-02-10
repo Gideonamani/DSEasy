@@ -1,25 +1,19 @@
 {
   "indexes": [
     {
-      "collectionGroup": "stocks",
+      "collectionGroup": "alerts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "changePercent", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "history",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "date", "order": "DESCENDING" }
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "alerts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "userId", "order": "ASCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],
