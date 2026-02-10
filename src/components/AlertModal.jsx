@@ -6,7 +6,8 @@ import { useAuth } from "../contexts/AuthContext";
 
 // Token retrieval uses the default configuration from firebase.js
 
-const API_URL = "https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec"; // Same as App.jsx
+import { functions } from "../firebase";
+import { httpsCallable } from "firebase/functions";
 
 export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
   const { currentUser } = useAuth();
@@ -38,16 +39,16 @@ export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
 
       if (!fcmToken) throw new Error("No FCM Token received");
 
-      // 3. Send to API
-      // We reusing the same Web App URL, but different action
-      const userEmail = currentUser ? currentUser.email : "anonymous";
-      
-      const url = `${API_URL}?action=createAlert&email=${encodeURIComponent(userEmail)}&symbol=${encodeURIComponent(symbol)}&targetPrice=${targetPrice}&condition=${condition}&fcmToken=${encodeURIComponent(fcmToken)}`;
-      
-      const res = await fetch(url);
-      const data = await res.json();
-      
-      if (data.error) throw new Error(data.error);
+      // 3. Call Cloud Function
+      const createAlert = httpsCallable(functions, 'createAlert');
+      const result = await createAlert({
+        symbol,
+        targetPrice: parseFloat(targetPrice),
+        condition,
+        fcmToken,
+      });
+
+      if (!result.data.success) throw new Error(result.data.error || "Unknown error");
       
       setStatus("success");
       setTimeout(() => {

@@ -664,7 +664,7 @@ export const monitorIntradayMarketHttp = onRequest(
 // Secure way for frontend to create alerts with validation
 // ------------------------------------------------------------------
 export const createAlert = onCall(
-  { region: "africa-south1", cors: true },
+  { region: "europe-west1", cors: true },
   async (request) => {
     // A. Auth Check
     if (!request.auth) {

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Loader2, Trash2, History, BellRing } from "lucide-react";
 
 // API URL (Same as App.jsx)
-const API_URL = "https://script.google.com/macros/s/AKfycbw5vvHP7mC6UCQ8Dm8Z_Xiwp_PM-diBGMPbPY8euN5utNZu-9ysrgV6kk_tupcx0rxAJg/exec";
+import { db } from "../firebase";
+import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 
 export function NotificationsManager() {
   const { currentUser } = useAuth();
@@ -12,63 +13,59 @@ export function NotificationsManager() {
   const [deleting, setDeleting] = useState(null);
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
 
-  const fetchAlerts = useCallback(() => {
-    setLoading(true);
-    if (!currentUser?.email) {
+  useEffect(() => {
+    if (!currentUser?.uid) {
        setAlerts([]);
        setLoading(false);
        return;
     }
 
-    const url = `${API_URL}?action=getAlerts&email=${encodeURIComponent(currentUser.email)}`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-         setAlerts(Array.isArray(data) ? data : []);
-         setLoading(false);
-      })
-      .catch(err => {
-         console.error(err);
-         setLoading(false);
-      });
-  }, [currentUser]);
+    setLoading(true);
+    const q = query(
+      collection(db, "alerts"),
+      where("userId", "==", currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
 
-  useEffect(() => {
-    if (currentUser) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        fetchAlerts();
-    } else {
-        setLoading(false);
-    }
-  }, [currentUser, fetchAlerts]);
-
-  const handleDelete = (alert) => {
-    if (!confirm(`Using Delete API for ${alert.symbol}... Are you sure?`)) return;
-
-    setDeleting(alert.created);
-    
-    const params = new URLSearchParams({
-       action: "deleteAlert",
-       email: alert.email,
-       symbol: alert.symbol,
-       targetPrice: alert.targetPrice,
-       condition: alert.condition
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newAlerts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        // Convert timestamp to number for existing UI compatibility if needed, 
+        // or just use valid date objects. 
+        // The UI uses new Date(alert.created), so we need to map createdAt to created or update UI.
+        // Let's map createdAt (Firestore Timestamp) to 'created' (ISO string or number)
+        created: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate().toISOString() : new Date().toISOString()
+      }));
+      setAlerts(newAlerts);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching alerts:", error);
+      setLoading(false);
     });
 
-    fetch(`${API_URL}?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
-         if (data.success) {
-            fetchAlerts();
-         } else {
-            alert("Delete failed: " + (data.error || "Unknown error"));
-         }
-         setDeleting(null);
-      })
-      .catch(err => {
-         console.error(err);
-         setDeleting(null);
-      });
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  const handleDelete = async (alert) => {
+    if (!confirm(`Delete alert for ${alert.symbol}?`)) return;
+
+    // Use alert.id (Firestore Doc ID) or fallback to created if using old data (but we are moving to new data)
+    // The new logic uses alert.id from snapshot.
+    const alertId = alert.id;
+    if (!alertId) return;
+
+    setDeleting(alertId);
+    
+    try {
+      await deleteDoc(doc(db, "alerts", alertId));
+      // No need to fetchAlerts(), onSnapshot handles it
+    } catch (error) {
+      console.error("Error deleting alert:", error);
+      alert("Delete failed: " + error.message);
+    } finally {
+      setDeleting(null);
+    }
   };
 
   if (loading) {
@@ -91,22 +88,7 @@ export function NotificationsManager() {
     <div className="glass-panel" style={{ padding: "var(--space-6)", borderRadius: "var(--radius-xl)", maxWidth: "800px", margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-5)" }}>
         <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)" }}>Price Alerts</h2>
-        <button 
-            onClick={fetchAlerts}
-            style={{ 
-                background: "var(--bg-elevated)", 
-                border: "none", 
-                padding: "8px 16px", 
-                borderRadius: "var(--radius-lg)",
-                color: "var(--text-secondary)",
-                cursor: "pointer",
-                transition: "all 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.color = "var(--text-primary)"}
-            onMouseOut={(e) => e.target.style.color = "var(--text-secondary)"}
-        >
-            Refresh
-        </button>
+        {/* Manual refresh button removed since we use real-time updates */}
       </div>
 
       {/* Tabs */}
@@ -206,21 +188,21 @@ export function NotificationsManager() {
                
                <button 
                  onClick={() => handleDelete(alert)}
-                 disabled={deleting === alert.created}
+                 disabled={deleting === alert.id}
                  style={{
                     background: "none",
                     border: "none",
                     cursor: "pointer",
                     padding: "8px",
                     color: "var(--text-secondary)",
-                    opacity: deleting === alert.created ? 0.5 : 1,
+                    opacity: deleting === alert.id ? 0.5 : 1,
                     transition: "color 0.2s"
                  }}
                  title="Delete Alert"
                  onMouseOver={(e) => e.target.style.color = "var(--accent-danger)"}
                  onMouseOut={(e) => e.target.style.color = "var(--text-secondary)"}
                >
-                 {deleting === alert.created ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                 {deleting === alert.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                </button>
              </div>
            ))}

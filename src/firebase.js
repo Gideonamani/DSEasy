@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getMessaging } from "firebase/messaging";
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,6 +18,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const messaging = getMessaging(app);
 const db = getFirestore(app);
+const functions = getFunctions(app, "europe-west1"); // Specify region if different from default us-central1
 
-export { auth, messaging, db };
+export { auth, messaging, db, functions };
 export default app;
