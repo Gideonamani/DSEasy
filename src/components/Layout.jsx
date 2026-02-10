@@ -236,6 +236,25 @@ export const Layout = ({ children, activeTab, onTabChange }) => {
           paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', // Ensure clearance for mobile toolbars
           borderTop: '1px solid var(--glass-border)' 
         }}>
+          {/* Version Badge */}
+          <div style={{ 
+            marginBottom: '16px', 
+            padding: '0 8px',
+            fontSize: '11px',
+            color: 'var(--text-tertiary)',
+            fontWeight: 500,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span>DSEasy</span>
+            <span style={{ 
+              background: 'var(--bg-elevated)', 
+              padding: '2px 6px', 
+              borderRadius: '4px',
+              border: '1px solid var(--glass-border)'
+            }}>v{__APP_VERSION__}</span>
+          </div>
           <UserProfileSection />
         </div>
       </aside>
