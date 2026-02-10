@@ -1,10 +1,5 @@
 import { useState } from "react";
 import { X, Bell, Loader2, CheckCircle } from "lucide-react";
-import { messaging } from "../firebase";
-import { getToken } from "firebase/messaging";
-
-// Token retrieval uses the default configuration from firebase.js
-
 import { functions } from "../firebase";
 import { httpsCallable } from "firebase/functions";
 
@@ -22,28 +17,13 @@ export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
     setStatus("idle");
 
     try {
-      // 1. Request Permission & Get Token
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        throw new Error("Notification permission denied");
-      }
-
-      // 2. Get FCM Token
-      // Try to get token without VAPID key first (uses default if configured)
-      const fcmToken = await getToken(messaging).catch(err => {
-         console.error("FCM Token Error", err);
-         throw new Error("Failed to get push token. Ensure you have notification permissions and a valid VAPID key if required.");
-      });
-
-      if (!fcmToken) throw new Error("No FCM Token received");
-
-      // 3. Call Cloud Function
+      // FCM tokens are now registered centrally in AuthContext on login,
+      // so alerts no longer need to carry a token.
       const createAlert = httpsCallable(functions, 'createAlert');
       const result = await createAlert({
         symbol,
         targetPrice: parseFloat(targetPrice),
         condition,
-        fcmToken,
       });
 
       if (!result.data.success) throw new Error(result.data.error || "Unknown error");

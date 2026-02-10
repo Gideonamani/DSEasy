@@ -460,8 +460,15 @@ export const monitorIntradayMarket = onSchedule(
 
       // E. Check Conditions
       // Batch already initialized
-      const notifications: admin.messaging.Message[] = [];
+      // Track triggered alerts and the userIds that need notifications
       let triggeredCount = 0;
+      const triggeredAlerts: {
+        userId: string;
+        symbol: string;
+        currentPrice: number;
+        targetPrice: number;
+        alertId: string;
+      }[] = [];
 
       alertsSnap.forEach((doc) => {
         const alert = doc.data();
@@ -493,22 +500,14 @@ export const monitorIntradayMarket = onSchedule(
             triggeredPrice: currentPrice,
           });
 
-          // 2. Prepare Push Notification
-          if (alert.fcmToken) {
-            notifications.push({
-              token: alert.fcmToken,
-              notification: {
-                title: `Price Alert: ${alert.symbol}`,
-                body: `${alert.symbol} is now ${currentPrice} TZS (Target: ${alert.targetPrice})`,
-              },
-              data: {
-                type: "PRICE_ALERT",
-                symbol: alert.symbol,
-                alertId: doc.id,
-                price: String(currentPrice),
-              },
-            });
-          }
+          // 2. Track for multi-device notification lookup
+          triggeredAlerts.push({
+            userId: alert.userId,
+            symbol: alert.symbol,
+            currentPrice,
+            targetPrice: alert.targetPrice,
+            alertId: doc.id,
+          });
 
           // 3. Log to History
           const notifRef = db.collection("notifications").doc();
@@ -528,15 +527,84 @@ export const monitorIntradayMarket = onSchedule(
         }
       });
 
-      // F. Execute Batch Updates & Send Notifications
+      // F. Execute Batch Updates
       await batch.commit();
       console.log(`Batch committed. Triggered ${triggeredCount} alerts.`);
 
-      if (triggeredCount > 0 && notifications.length > 0) {
-        const response = await admin.messaging().sendEach(notifications);
-        console.log(
-          `Sent ${response.successCount} push notifications. Failed: ${response.failureCount}`,
-        );
+      // G. Send Multi-Device Push Notifications
+      if (triggeredAlerts.length > 0) {
+        // Collect unique userIds to look up tokens
+        const uniqueUserIds = [...new Set(triggeredAlerts.map((a) => a.userId))];
+
+        // Fetch all FCM tokens for each user
+        const userTokensMap: { [userId: string]: string[] } = {};
+        for (const userId of uniqueUserIds) {
+          const tokensSnap = await db
+            .collection("users")
+            .doc(userId)
+            .collection("fcmTokens")
+            .get();
+          userTokensMap[userId] = tokensSnap.docs.map(
+            (d) => d.data().token as string,
+          );
+        }
+
+        // Build notification messages for ALL devices of each triggered alert
+        const notifications: admin.messaging.Message[] = [];
+        // Track which token corresponds to which index for stale cleanup
+        const tokenRefs: { userId: string; token: string }[] = [];
+
+        for (const alert of triggeredAlerts) {
+          const tokens = userTokensMap[alert.userId] || [];
+          for (const token of tokens) {
+            notifications.push({
+              token,
+              notification: {
+                title: `Price Alert: ${alert.symbol}`,
+                body: `${alert.symbol} is now ${alert.currentPrice} TZS (Target: ${alert.targetPrice})`,
+              },
+              data: {
+                type: "PRICE_ALERT",
+                symbol: alert.symbol,
+                alertId: alert.alertId,
+                price: String(alert.currentPrice),
+              },
+            });
+            tokenRefs.push({ userId: alert.userId, token });
+          }
+        }
+
+        if (notifications.length > 0) {
+          const response = await admin.messaging().sendEach(notifications);
+          console.log(
+            `Sent ${response.successCount} push notifications to ${notifications.length} devices. Failed: ${response.failureCount}`,
+          );
+
+          // Clean up stale/unregistered tokens
+          const staleDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
+          response.responses.forEach((resp, idx) => {
+            if (
+              resp.error &&
+              (resp.error.code === "messaging/registration-token-not-registered" ||
+                resp.error.code === "messaging/invalid-registration-token")
+            ) {
+              const { userId, token } = tokenRefs[idx];
+              console.log(`Removing stale FCM token for user ${userId}`);
+              staleDeletes.push(
+                db
+                  .collection("users")
+                  .doc(userId)
+                  .collection("fcmTokens")
+                  .doc(token)
+                  .delete(),
+              );
+            }
+          });
+          if (staleDeletes.length > 0) {
+            await Promise.all(staleDeletes);
+            console.log(`Cleaned up ${staleDeletes.length} stale FCM tokens.`);
+          }
+        }
       }
     } catch (error) {
       console.error("Error in monitorIntradayMarket:", error);
@@ -674,7 +742,7 @@ export const createAlert = onCall(
       );
     }
 
-    const { symbol, targetPrice, condition, fcmToken } = request.data;
+    const { symbol, targetPrice, condition } = request.data;
     const userId = request.auth.uid;
 
     // B. Validation
@@ -695,6 +763,7 @@ export const createAlert = onCall(
     }
 
     // C. Write to Firestore
+    // FCM tokens are now stored in users/{uid}/fcmTokens, not on individual alerts
     try {
       const docRef = await db.collection("alerts").add({
         userId,
@@ -702,7 +771,6 @@ export const createAlert = onCall(
         symbol: symbol.toUpperCase(),
         targetPrice,
         condition,
-        fcmToken, // Store token to target device later
         status: "ACTIVE",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         // Initial check metadata

@@ -51,6 +51,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null 
         && request.auth.uid == userId;
       
+      // FCM tokens for multi-device notifications
+      match /fcmTokens/{tokenId} {
+        allow read, write: if request.auth != null 
+          && request.auth.uid == userId;
+      }
+      
       // User settings
       match /settings/{settingDoc} {
         allow read, write: if request.auth != null 
