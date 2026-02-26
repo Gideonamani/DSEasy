@@ -1,16 +1,28 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
 
-export const CustomSelect = ({ value, options, onChange, placeholder = "Select..." }) => {
+export interface SelectOption {
+  label: string;
+  value: string | number;
+}
+
+export interface CustomSelectProps {
+  value: string | number;
+  options: SelectOption[];
+  onChange: (value: string | number) => void;
+  placeholder?: string;
+}
+
+export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onChange, placeholder = "Select..." }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -19,7 +31,7 @@ export const CustomSelect = ({ value, options, onChange, placeholder = "Select..
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelect = (optionValue) => {
+  const handleSelect = (optionValue: string | number) => {
     onChange(optionValue);
     setIsOpen(false);
   };
