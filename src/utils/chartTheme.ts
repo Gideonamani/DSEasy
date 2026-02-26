@@ -1,8 +1,20 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, ChartOptions } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
 
-export const getChartTheme = (theme) => {
+export interface ChartTheme {
+    isLight: boolean;
+    textColor: string;
+    textColorHex: string;
+    gridColor: string;
+    tooltipBg: string;
+    tooltipBorder: string;
+    tooltipTitle: string;
+    tooltipBody: string;
+    fontFamily: string;
+}
+
+export const getChartTheme = (theme: 'light' | 'dark' | string): ChartTheme => {
     const isLight = theme === 'light';
     
     return {
@@ -19,7 +31,7 @@ export const getChartTheme = (theme) => {
     };
 };
 
-export const getCommonChartOptions = (theme) => {
+export const getCommonChartOptions = (theme: 'light' | 'dark' | string): ChartOptions<any> => {
     const { textColorHex, gridColor, tooltipBg, tooltipBorder, tooltipTitle, tooltipBody, fontFamily } = getChartTheme(theme);
 
     return {
