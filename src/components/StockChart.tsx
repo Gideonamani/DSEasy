@@ -15,7 +15,7 @@ export const PriceChangeChart: React.FC<StockChartProps> = ({ data }) => {
 
     // Top 10 by absolute change
     const sortedData = useMemo(() => {
-        return [...data].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10);
+        return [...data].sort((a, b) => Math.abs(b.pctChange ?? 0) - Math.abs(a.pctChange ?? 0)).slice(0, 10);
     }, [data]);
 
     const config = useMemo(() => {
@@ -24,9 +24,9 @@ export const PriceChangeChart: React.FC<StockChartProps> = ({ data }) => {
             datasets: [
                 {
                     label: 'Price Change %',
-                    data: sortedData.map(d => d.change),
-                    backgroundColor: sortedData.map(d => d.change >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-                    borderColor: sortedData.map(d => d.change >= 0 ? '#10b981' : '#ef4444'),
+                    data: sortedData.map(d => d.pctChange ?? 0),
+                    backgroundColor: sortedData.map(d => (d.pctChange ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+                    borderColor: sortedData.map(d => (d.pctChange ?? 0) >= 0 ? '#10b981' : '#ef4444'),
                     borderWidth: 1,
                     borderRadius: 4,
                 },

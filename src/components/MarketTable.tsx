@@ -116,7 +116,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Change {getSortIcon('change')}</div>
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('pctChange')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>% {getSortIcon('pctChange')}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>% Change {getSortIcon('pctChange')}</div>
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('outstandingBid')}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Bid {getSortIcon('outstandingBid')}</div>
@@ -144,9 +144,9 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
                                 <td style={{...tdStyle, fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)'}}>{row.symbol}</td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.close)}</td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.high)}</td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{formatLargeNumber(row.low)}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{row.close.toLocaleString()}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{row.high.toLocaleString()}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{row.low.toLocaleString()}</td>
                                 <td style={{...tdStyle, textAlign: 'right', color: row.change > 0 ? 'var(--accent-success)' : row.change < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)'}}>
                                     {row.change > 0 ? '+' : ''}{formatLargeNumber(row.change)}
                                 </td>

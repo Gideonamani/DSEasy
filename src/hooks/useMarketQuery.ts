@@ -11,10 +11,12 @@ export interface MarketDate {
 
 export interface StockData {
     symbol: string;
+    open?: number;
     close: number;
     change: number;
     originalChange?: string;
     pctChange?: number;
+    prevClose?: number;
     outstandingBid?: number;
     outstandingOffer?: number;
     turnoverPct?: number;
@@ -101,12 +103,11 @@ export const useMarketData = (date: string) => {
                 return {
                     ...data,
                     symbol: doc.id,
-                    change: data.changeValue || 0, // Numeric absolute change
+                    open: data.open ?? 0,
+                    prevClose: data.prevClose ?? 0,
+                    change: data.ChangeAbs ?? ((data.close ?? 0) - (data.open ?? 0)), // Absolute change
                     originalChange: data.change, // String representation
-                    // Calculate Percentage Change: (Change / (Close - Change)) * 100
-                    pctChange: (data.changeValue && data.close) 
-                        ? ((data.changeValue / (data.close - data.changeValue)) * 100) 
-                        : 0,
+                    pctChange: data.ChangePer ?? data.changeValue ?? 0, // Scraper originally stored % in changeValue
                     // Map Firestore keys to frontend expected keys
                     outstandingBid: data.outstandingBid || 0,
                     outstandingOffer: data.outstandingOffer || 0,
@@ -168,9 +169,11 @@ export const useTickerHistory = (symbol: string) => {
                     ...data,
                     // doc.id might be date, keep symbol as prop
                     symbol: symbol, 
+                    open: data.open ?? 0,
                     close: data.close || 0, // Ensure 'close' exists as per interface
-                    change: data.changeValue || 0, // Numeric absolute change
+                    change: data.ChangeAbs ?? ((data.close ?? 0) - (data.open ?? 0)), // Absolute change
                     originalChange: data.change, // String representation
+                    pctChange: data.ChangePer ?? data.changeValue ?? 0, // Scraper originally stored % in changeValue
                     // Map Firestore keys to frontend expected keys
                     bidOffer: data.bidOfferRatio || 0,
                     spread: data.highLowSpread || 0,
