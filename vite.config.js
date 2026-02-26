@@ -8,4 +8,16 @@ export default defineConfig({
   define: {
     '__APP_VERSION__': JSON.stringify(packageJson.version),
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/auth'],
+          'vendor-charts': ['chart.js', 'react-chartjs-2'],
+          'vendor-ui': ['lucide-react', 'react-datepicker']
+        }
+      }
+    }
+  }
 })
