@@ -1,14 +1,22 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Bar, Bubble, Doughnut, Scatter } from "react-chartjs-2";
-import { Activity, TrendingUp, Zap, PieChart, ScatterChart } from "lucide-react";
+import { Activity, TrendingUp, Zap, PieChart, ScatterChart, LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DatePicker } from "./DatePicker";
 import { formatLargeNumber } from "../utils/formatters";
 import { useSettings } from "../contexts/SettingsContext";
 import { getCommonChartOptions, getChartTheme } from "../utils/chartTheme";
+import { StockData, MarketDate } from "../hooks/useMarketQuery";
+
+interface AnalyticsCardProps {
+  title: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+  subtitle?: string;
+}
 
 // Reusable section card component
-const AnalyticsCard = ({ title, icon, children, subtitle }) => {
+const AnalyticsCard: React.FC<AnalyticsCardProps> = ({ title, icon, children, subtitle }) => {
   const Icon = icon;
   return (
     <div
@@ -48,17 +56,24 @@ const AnalyticsCard = ({ title, icon, children, subtitle }) => {
   );
 };
 
+interface RankingTableProps {
+  data: StockData[];
+  valueKey: string;
+  label: string;
+  formatter?: (v: number) => string;
+}
+
 // Ranking table component for derived metrics
-const RankingTable = ({
+const RankingTable: React.FC<RankingTableProps> = ({
   data,
   valueKey,
   label,
-  formatter = (v) => v.toFixed(2),
+  formatter = (v: number) => v.toFixed(2),
 }) => {
   const sorted = useMemo(() => {
     return [...data]
-      .filter((d) => d[valueKey] && d[valueKey] !== 0)
-      .sort((a, b) => b[valueKey] - a[valueKey])
+      .filter((d) => (d as any)[valueKey] && (d as any)[valueKey] !== 0)
+      .sort((a, b) => (b as any)[valueKey] - (a as any)[valueKey])
       .slice(0, 10);
   }, [data, valueKey]);
 
@@ -130,8 +145,8 @@ const RankingTable = ({
                         textDecoration: 'none',
                         display: 'inline-block'
                     }}
-                    onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                    onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                    onMouseEnter={(e) => (e.target as HTMLElement).style.textDecoration = 'underline'}
+                    onMouseLeave={(e) => (e.target as HTMLElement).style.textDecoration = 'none'}
                 >
                     {item.symbol}
                 </Link>
@@ -143,7 +158,7 @@ const RankingTable = ({
                   color: "var(--accent-primary)",
                 }}
               >
-                {formatter(item[valueKey])}
+                {formatter((item as any)[valueKey])}
               </td>
             </tr>
           ))}
@@ -153,7 +168,16 @@ const RankingTable = ({
   );
 };
 
-export const DerivedAnalytics = ({ 
+export interface DerivedAnalyticsProps {
+  data: StockData[];
+  selectedDate: string | null;
+  formattedDate: string;
+  availableDates: MarketDate[];
+  loadingData: boolean;
+  onDateChange: (date: string) => void;
+}
+
+export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({ 
   data, 
   selectedDate, 
   formattedDate, 
@@ -169,7 +193,7 @@ export const DerivedAnalytics = ({
   const volatilityData = useMemo(() => {
     const sorted = [...data]
       .filter((d) => d.highLowSpread && d.highLowSpread > 0)
-      .sort((a, b) => b.highLowSpread - a.highLowSpread)
+      .sort((a, b) => b.highLowSpread! - a.highLowSpread!)
       .slice(0, 10);
 
     return {
@@ -177,7 +201,7 @@ export const DerivedAnalytics = ({
       datasets: [
         {
           label: "High/Low Spread (%)",
-          data: sorted.map((d) => d.highLowSpread * 100),
+          data: sorted.map((d) => d.highLowSpread! * 100),
           backgroundColor: sorted.map(
             (_, i) => `hsla(${280 - i * 20}, 70%, 60%, 0.8)`,
           ),
@@ -192,7 +216,7 @@ export const DerivedAnalytics = ({
     const filtered = [...data]
       .filter((d) => d.bidOfferRatio && d.bidOfferRatio !== 0)
       .sort(
-        (a, b) => Math.abs(b.bidOfferRatio - 1) - Math.abs(a.bidOfferRatio - 1),
+        (a, b) => Math.abs(b.bidOfferRatio! - 1) - Math.abs(a.bidOfferRatio! - 1),
       )
       .slice(0, 10);
 
@@ -203,7 +227,7 @@ export const DerivedAnalytics = ({
           label: "Bid/Offer Ratio",
           data: filtered.map((d) => d.bidOfferRatio),
           backgroundColor: filtered.map((d) =>
-            d.bidOfferRatio > 1
+            d.bidOfferRatio! > 1
               ? "rgba(16, 185, 129, 0.8)"
               : "rgba(239, 68, 68, 0.8)",
           ),
@@ -217,16 +241,16 @@ export const DerivedAnalytics = ({
   const marketShareData = useMemo(() => {
     const sorted = [...data]
       .filter((d) => d.turnoverPctDaily && d.turnoverPctDaily > 0)
-      .sort((a, b) => b.turnoverPctDaily - a.turnoverPctDaily)
+      .sort((a, b) => b.turnoverPctDaily! - a.turnoverPctDaily!)
       .slice(0, 8);
 
     const othersTotal = data
       .filter((d) => !sorted.includes(d) && d.turnoverPctDaily)
-      .reduce((sum, d) => sum + d.turnoverPctDaily, 0);
+      .reduce((sum, d) => sum + (d.turnoverPctDaily ?? 0), 0);
 
     const labels = [...sorted.map((d) => d.symbol), "Others"];
     const values = [
-      ...sorted.map((d) => d.turnoverPctDaily * 100),
+      ...sorted.map((d) => d.turnoverPctDaily! * 100),
       othersTotal * 100,
     ];
 
@@ -256,9 +280,9 @@ export const DerivedAnalytics = ({
 
   // 1. Risk vs Return (Bubble plot) - Volatility vs Change, sized by MCAP
   const riskReturnBubbleData = useMemo(() => {
-    const filtered = data.filter(d => d.highLowSpread && d.mcap > 0);
+    const filtered = data.filter(d => d.highLowSpread && (d.mcap ?? 0) > 0);
     // Calculate min/max for better scaling
-    const mcaps = filtered.map(d => d.mcap);
+    const mcaps = filtered.map(d => d.mcap ?? 0);
     const minMcap = Math.min(...mcaps);
     const maxMcap = Math.max(...mcaps);
     
@@ -267,10 +291,10 @@ export const DerivedAnalytics = ({
         label: 'Stocks',
         data: filtered.map(d => {
           // Normalize MCAP to 0-1 range, then apply power function for more variance
-          const normalized = (d.mcap - minMcap) / (maxMcap - minMcap || 1);
+          const normalized = ((d.mcap ?? 0) - minMcap) / (maxMcap - minMcap || 1);
           const bubbleSize = 8 + Math.pow(normalized, 0.5) * 40; // Range: 8-48px
           return {
-            x: d.highLowSpread * 100, // Volatility as percentage
+            x: d.highLowSpread! * 100, // Volatility as percentage
             y: d.change, // Price change in TZS
             r: bubbleSize,
             symbol: d.symbol,
@@ -293,7 +317,7 @@ export const DerivedAnalytics = ({
 
   // 2. Volume vs Change
   const volumeChangeData = useMemo(() => {
-    const filtered = data.filter(d => d.volume > 0);
+    const filtered = data.filter(d => (d.volume ?? 0) > 0);
     return {
       datasets: [{
         label: 'Stocks',
@@ -313,13 +337,13 @@ export const DerivedAnalytics = ({
 
   // 3. Vol/Deal vs Turnover/Deal
   const tradePatternData = useMemo(() => {
-    const filtered = data.filter(d => d.volPerDeal > 0 && d.turnoverPerDeal > 0);
+    const filtered = data.filter(d => (d.volPerDeal ?? 0) > 0 && (d.turnoverPerDeal ?? 0) > 0);
     return {
       datasets: [{
         label: 'Stocks',
         data: filtered.map(d => ({
           x: d.volPerDeal,
-          y: d.turnoverPerDeal / 1000000, // In millions
+          y: (d.turnoverPerDeal ?? 0) / 1000000, // In millions
           symbol: d.symbol,
         })),
         backgroundColor: 'rgba(99, 102, 241, 0.7)',
@@ -350,13 +374,13 @@ export const DerivedAnalytics = ({
 
   // 5. High/Low Spread vs Turnover
   const volatilityActivityData = useMemo(() => {
-    const filtered = data.filter(d => d.highLowSpread && d.turnover > 0);
+    const filtered = data.filter(d => d.highLowSpread && (d.turnover ?? 0) > 0);
     return {
       datasets: [{
         label: 'Stocks',
         data: filtered.map(d => ({
-          x: d.highLowSpread * 100, // Percentage
-          y: d.turnover / 1000000, // In millions
+          x: d.highLowSpread! * 100, // Percentage
+          y: (d.turnover ?? 0) / 1000000, // In millions
           symbol: d.symbol,
         })),
         backgroundColor: 'rgba(168, 85, 247, 0.7)',
@@ -384,14 +408,14 @@ export const DerivedAnalytics = ({
         tooltip: {
             ...themeOptions.plugins.tooltip,
             callbacks: {
-              label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)}%`,
+              label: (ctx: any) => `${ctx.label}: ${ctx.raw.toFixed(2)}%`,
             },
         }
     }
   };
 
   // Scatter plot options with symbol tooltip
-  const scatterOptions = (xLabel, yLabel) => ({
+  const scatterOptions = (xLabel: string, yLabel: string) => ({
     ...themeOptions,
     plugins: {
       ...themeOptions.plugins,
@@ -399,8 +423,8 @@ export const DerivedAnalytics = ({
       tooltip: {
         ...themeOptions.plugins.tooltip,
         callbacks: {
-          title: (ctx) => ctx[0]?.raw?.symbol || '',
-          label: (ctx) => {
+          title: (ctx: any) => ctx[0]?.raw?.symbol || '',
+          label: (ctx: any) => {
             const lines = [
               `${xLabel}: ${typeof ctx.raw.x === 'number' ? ctx.raw.x.toLocaleString(undefined, {maximumFractionDigits: 2}) : ctx.raw.x}`,
               `${yLabel}: ${typeof ctx.raw.y === 'number' ? ctx.raw.y.toLocaleString(undefined, {maximumFractionDigits: 2}) : ctx.raw.y}`,

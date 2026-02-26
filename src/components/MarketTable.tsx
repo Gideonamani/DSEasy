@@ -1,12 +1,16 @@
-import { useState, useMemo } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { Link } from "react-router-dom";
+import React, { useState, useMemo } from 'react';
+// lucide-react icons removed - not used directly in this component
 import { useSettings } from '../contexts/SettingsContext';
 import { formatLargeNumber } from "../utils/formatters";
+import { StockData } from '../hooks/useMarketQuery';
 
-export const MarketTable = ({ data }) => {
+export interface MarketTableProps {
+  data: StockData[];
+}
+
+export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
     const { settings } = useSettings();
-    const [sortConfig, setSortConfig] = useState({ key: 'change', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: string }>({ key: 'change', direction: 'desc' });
     const [searchTerm, setSearchTerm] = useState('');
 
     const sortedData = useMemo(() => {
@@ -19,8 +23,8 @@ export const MarketTable = ({ data }) => {
         }
 
         sortableData.sort((a, b) => {
-            const aVal = a[sortConfig.key] || 0;
-            const bVal = b[sortConfig.key] || 0;
+            const aVal = (a as any)[sortConfig.key] || 0;
+            const bVal = (b as any)[sortConfig.key] || 0;
 
             if (aVal < bVal) {
                 return sortConfig.direction === 'asc' ? -1 : 1;
@@ -33,7 +37,7 @@ export const MarketTable = ({ data }) => {
         return sortableData;
     }, [data, sortConfig, searchTerm]);
 
-    const requestSort = (key) => {
+    const requestSort = (key: string): void => {
         let direction = 'desc';
         if (sortConfig.key === key && sortConfig.direction === 'desc') {
             direction = 'asc';
@@ -41,7 +45,7 @@ export const MarketTable = ({ data }) => {
         setSortConfig({ key, direction });
     };
 
-    const getSortIcon = (key) => {
+    const getSortIcon = (key: string): React.ReactElement => {
         if (sortConfig.key !== key) return <span style={{ opacity: 0.3 }}>⇅</span>;
         return sortConfig.direction === 'asc' ? <span>↑</span> : <span>↓</span>;
     };
@@ -50,20 +54,20 @@ export const MarketTable = ({ data }) => {
         return <div style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-secondary)' }}>No market data available</div>;
     }
 
-    const thStyle = {
+    const thStyle: React.CSSProperties = {
         padding: 'var(--space-4)',
-        textAlign: 'left',
+        textAlign: 'left' as const,
         borderBottom: '1px solid var(--glass-border)',
         color: 'var(--text-secondary)',
         fontSize: 'var(--text-xs)',
         fontWeight: 'var(--font-semibold)',
-        backgroundColor: 'var(--bg-surface)', // Matches design system
+        backgroundColor: 'var(--bg-surface)',
         cursor: 'pointer',
-        userSelect: 'none',
-        whiteSpace: 'nowrap'
+        userSelect: 'none' as const,
+        whiteSpace: 'nowrap' as const
     };
 
-    const tdStyle = {
+    const tdStyle: React.CSSProperties = {
         padding: 'var(--space-4)',
         borderBottom: '1px solid var(--glass-border)',
         color: 'var(--text-primary)',
@@ -150,22 +154,22 @@ export const MarketTable = ({ data }) => {
                                     <span style={{
                                         padding: '4px 8px',
                                         borderRadius: 'var(--radius-sm)',
-                                        background: row.pctChange > 0 ? 'rgba(16, 185, 129, 0.1)' : row.pctChange < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
-                                        color: row.pctChange > 0 ? 'var(--accent-success)' : row.pctChange < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
+                                        background: (row.pctChange ?? 0) > 0 ? 'rgba(16, 185, 129, 0.1)' : (row.pctChange ?? 0) < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
+                                        color: (row.pctChange ?? 0) > 0 ? 'var(--accent-success)' : (row.pctChange ?? 0) < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
                                         fontWeight: 'var(--font-semibold)',
                                         fontSize: 'var(--text-xs)'
                                     }}>
-                                        {row.pctChange > 0 ? '+' : ''}{row.pctChange.toFixed(2)}%
+                                        {(row.pctChange ?? 0) > 0 ? '+' : ''}{(row.pctChange ?? 0).toFixed(2)}%
                                     </span>
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>
-                                    {row.outstandingBid > 0 ? formatLargeNumber(row.outstandingBid) : '-'}
+                                    {(row.outstandingBid ?? 0) > 0 ? formatLargeNumber(row.outstandingBid!) : '-'}
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>
-                                    {row.outstandingOffer > 0 ? formatLargeNumber(row.outstandingOffer) : '-'}
+                                    {(row.outstandingOffer ?? 0) > 0 ? formatLargeNumber(row.outstandingOffer!) : '-'}
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-primary)'}}>
-                                    {settings.numberFormat === 'full' ? row.volume.toLocaleString() : formatLargeNumber(row.volume)}
+                                    {settings.numberFormat === 'full' ? (row.volume ?? 0).toLocaleString() : formatLargeNumber(row.volume ?? 0)}
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-secondary)'}}>
                                     {settings.showCurrency ? 'TZS ' : ''}{formatLargeNumber(row.turnover)}

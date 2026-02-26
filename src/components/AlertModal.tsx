@@ -1,17 +1,24 @@
-import { useState } from "react";
+import React, { useState, FormEvent } from "react";
 import { X, Bell, Loader2, CheckCircle } from "lucide-react";
 import { functions } from "../firebase";
 import { httpsCallable } from "firebase/functions";
 
-export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
-  const [targetPrice, setTargetPrice] = useState(currentPrice || 0);
-  const [condition, setCondition] = useState("ABOVE"); // or BELOW
+export interface AlertModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  symbol: string;
+  currentPrice: number;
+}
+
+export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol, currentPrice }) => {
+  const [targetPrice, setTargetPrice] = useState<string | number>(currentPrice || 0);
+  const [condition, setCondition] = useState<"ABOVE" | "BELOW">("ABOVE");
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState("idle"); // idle, success, error
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setStatus("idle");
@@ -22,11 +29,11 @@ export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
       const createAlert = httpsCallable(functions, 'createAlert');
       const result = await createAlert({
         symbol,
-        targetPrice: parseFloat(targetPrice),
+        targetPrice: parseFloat(targetPrice as string),
         condition,
       });
 
-      if (!result.data.success) throw new Error(result.data.error || "Unknown error");
+      if (!(result.data as any).success) throw new Error((result.data as any).error || "Unknown error");
       
       setStatus("success");
       setTimeout(() => {
@@ -34,7 +41,7 @@ export const AlertModal = ({ isOpen, onClose, symbol, currentPrice }) => {
         setStatus("idle");
       }, 2000);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       alert("Error: " + err.message);
       setStatus("error");

@@ -1,9 +1,15 @@
+import React from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { getCommonChartOptions, getChartTheme } from '../utils/chartTheme';
+import { StockData } from '../hooks/useMarketQuery';
 
-export const PriceChangeChart = ({ data }) => {
+export interface StockChartProps {
+  data: StockData[];
+}
+
+export const PriceChangeChart: React.FC<StockChartProps> = ({ data }) => {
     const { settings } = useSettings();
     const options = getCommonChartOptions(settings.theme);
 
@@ -38,10 +44,10 @@ export const PriceChangeChart = ({ data }) => {
     );
 };
 
-export const TurnoverChart = ({ data }) => {
+export const TurnoverChart: React.FC<StockChartProps> = ({ data }) => {
     // Top 5 by Turnover
     const chartData = useMemo(() => {
-        return [...data].sort((a, b) => b.turnover - a.turnover).slice(0, 5);
+        return [...data].sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0)).slice(0, 5);
     }, [data]);
     
     const config = {

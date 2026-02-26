@@ -1,9 +1,18 @@
+import React from "react";
 import { createPortal } from "react-dom";
 import ReactDatePicker from "react-datepicker";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import "react-datepicker/dist/react-datepicker.css";
+import { MarketDate } from "../hooks/useMarketQuery";
 
-export const DatePicker = ({ 
+export interface DatePickerProps {
+  selectedDate: string | null;
+  availableDates: MarketDate[];
+  loadingData: boolean;
+  onChange: (date: string) => void;
+}
+
+export const DatePicker: React.FC<DatePickerProps> = ({ 
   selectedDate, 
   availableDates, 
   loadingData, 
@@ -35,7 +44,7 @@ export const DatePicker = ({
     }
   };
 
-  const handleCalendarChange = (date) => {
+  const handleCalendarChange = (date: Date | null) => {
     if (!date) return;
     // Find matching sheet for this date
     // We compare ISO strings YYYY-MM-DD to be safe or just time value (ignoring time)
@@ -56,7 +65,7 @@ export const DatePicker = ({
   // Extract enabled dates for the calendar
   const includeDates = availableDates
     .filter(d => d.date)
-    .map(d => new Date(d.date));
+    .map(d => new Date(d.date as Date));
 
   // Ensure z-index is higher than everything else (Sidebar is 60, Header is 50)
 

@@ -1,22 +1,61 @@
+import React from "react";
 import {
   Moon,
-  Sun,
-  Monitor,
   Layout,
   Maximize,
   Hash,
   DollarSign,
   Info,
   Trash2,
-  ChevronRight,
+  LucideIcon,
 } from "lucide-react";
-import { useSettings } from "../contexts/SettingsContext";
+import { useSettings, Settings as SettingsType } from "../contexts/SettingsContext";
 import { CustomSelect } from "./CustomSelect";
 
-export function Settings() {
+// Global declaration for Vite injects
+declare global {
+  const __APP_VERSION__: string;
+}
+
+interface SettingOption {
+  value: string;
+  label: string;
+}
+
+interface SettingItemBase {
+  id: keyof SettingsType | string;
+  label: string;
+  icon: LucideIcon;
+  description?: string;
+}
+
+interface SettingItemSelect extends SettingItemBase {
+  type: "select" | "toggle_group";
+  options: SettingOption[];
+}
+
+interface SettingItemSwitch extends SettingItemBase {
+  type: "switch";
+}
+
+interface SettingItemAction extends SettingItemBase {
+  type: "action";
+  actionLabel: string;
+  onClick: () => void;
+  danger?: boolean;
+}
+
+type SettingItem = SettingItemSelect | SettingItemSwitch | SettingItemAction;
+
+interface SettingSection {
+  title: string;
+  items: SettingItem[];
+}
+
+export function Settings(): React.ReactElement {
   const { settings, updateSetting, resetSettings } = useSettings();
 
-  const sections = [
+  const sections: SettingSection[] = [
     {
       title: "Appearance",
       items: [
@@ -108,7 +147,7 @@ export function Settings() {
             type: "action",
             actionLabel: "Reset",
             onClick: () => {
-                if(confirm("Are you sure you want to reset all settings to default?")) {
+                if(window.confirm("Are you sure you want to reset all settings to default?")) {
                     resetSettings();
                 }
             }
@@ -170,9 +209,9 @@ export function Settings() {
                     {item.type === "select" && (
                       <div style={{ width: "200px" }}>
                         <CustomSelect
-                            value={settings[item.id]}
+                            value={String(settings[item.id as keyof SettingsType])}
                             options={item.options}
-                            onChange={(newValue) => updateSetting(item.id, newValue)}
+                            onChange={(newValue) => updateSetting(item.id as keyof SettingsType, newValue as any)}
                         />
                       </div>
                     )}
@@ -182,13 +221,13 @@ export function Settings() {
                             {item.options.map(opt => (
                                 <button
                                     key={opt.value}
-                                    onClick={() => updateSetting(item.id, opt.value)}
+                                    onClick={() => updateSetting(item.id as keyof SettingsType, opt.value as any)}
                                     style={{
                                         padding: "6px 12px",
                                         borderRadius: "6px",
                                         border: "none",
-                                        background: settings[item.id] === opt.value ? "var(--accent-primary)" : "transparent",
-                                        color: settings[item.id] === opt.value ? "#fff" : "var(--text-secondary)",
+                                        background: settings[item.id as keyof SettingsType] === opt.value ? "var(--accent-primary)" : "transparent",
+                                        color: settings[item.id as keyof SettingsType] === opt.value ? "#fff" : "var(--text-secondary)",
                                         cursor: "pointer",
                                         fontSize: "13px",
                                         fontWeight: 500,
@@ -203,12 +242,12 @@ export function Settings() {
 
                     {item.type === "switch" && (
                       <button
-                        onClick={() => updateSetting(item.id, !settings[item.id])}
+                        onClick={() => updateSetting(item.id as keyof SettingsType, !settings[item.id as keyof SettingsType] as any)}
                         style={{
                           width: "48px",
                           height: "28px",
                           borderRadius: "14px",
-                          background: settings[item.id] ? "var(--accent-success)" : "var(--bg-main)",
+                          background: settings[item.id as keyof SettingsType] ? "var(--accent-success)" : "var(--bg-main)",
                           position: "relative",
                           border: "none",
                           cursor: "pointer",
@@ -219,7 +258,7 @@ export function Settings() {
                           style={{
                             position: "absolute",
                             top: "4px",
-                            left: settings[item.id] ? "24px" : "4px",
+                            left: settings[item.id as keyof SettingsType] ? "24px" : "4px",
                             width: "20px",
                             height: "20px",
                             background: "#fff",

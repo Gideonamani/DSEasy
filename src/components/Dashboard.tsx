@@ -1,10 +1,30 @@
-import { memo } from 'react';
+import React, { memo } from 'react';
 import { StatCard } from "./StatCard";
 import { MarketTable } from "./MarketTable";
 import { PriceChangeChart, TurnoverChart } from "./StockChart";
 import { DatePicker } from "./DatePicker";
+import { StockData, MarketDate, MarketIndex } from "../hooks/useMarketQuery";
 
-export const Dashboard = memo(({ 
+export interface DashboardProps {
+  marketData: StockData[];
+  marketIndices: MarketIndex[] | null;
+  topGainer: StockData;
+  topLoser: StockData;
+  totalVolume: number;
+  totalTurnover: number;
+  totalDeals: number;
+  totalMcap: number;
+  activeSymbolsCount: number;
+  tradedSymbolsCount: number;
+  formattedDate: string;
+  selectedDate: string | null;
+  availableDates: MarketDate[];
+  loadingData: boolean;
+  onDateChange: (date: string) => void;
+  formatLargeNumber: (num: number) => string;
+}
+
+export const Dashboard: React.FC<DashboardProps> = memo(({ 
   marketData, 
   marketIndices,
   topGainer, 
@@ -54,9 +74,9 @@ export const Dashboard = memo(({
                 key={idx.Code}
                 title={idx.IndexDescription}
                 value={idx.ClosingPrice}
-                change={idx.Change?.toString()} // Ensure change is string for component
+                change={idx.Change?.toString() ?? null}
                 subtext={idx.Code}
-                type={idx.Change > 0 ? "success" : idx.Change < 0 ? "danger" : "neutral"}
+                type={(idx.Change ?? 0) > 0 ? "success" : (idx.Change ?? 0) < 0 ? "danger" : "neutral"}
                 to={`/trends`} // No specific symbol view for index yet, linking to trends generally
               />
             ))}

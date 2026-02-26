@@ -1,8 +1,19 @@
-import { useState, useEffect } from 'react';
-import { LayoutDashboard, BarChart3, TrendingUp, LineChart, Settings, Bell, Search, Menu, X, LogIn, LogOut, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LayoutDashboard, TrendingUp, LineChart, Settings, Bell, Search, Menu, X, LogIn, LogOut, User, LucideIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-const SidebarItem = ({ icon, label, active, onClick }) => {
+declare global {
+  // Already declared in Settings.tsx, but harmless to redeclare
+}
+
+interface SidebarItemProps {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, active, onClick }) => {
   const Icon = icon;
   return (
     <div 
@@ -69,7 +80,7 @@ const UserProfileSection = () => {
              {currentUser.photoURL ? (
                 <img 
                     src={currentUser.photoURL} 
-                    alt={currentUser.displayName} 
+                    alt={currentUser.displayName || 'User'} 
                     referrerPolicy="no-referrer"
                     style={{ width: '36px', height: '36px', borderRadius: '50%', marginRight: '12px', border: '1px solid var(--glass-border)' }}
                 />
@@ -139,7 +150,13 @@ const UserProfileSection = () => {
     );
   };
 
-export const Layout = ({ children, activeTab, onTabChange }) => {
+export interface LayoutProps {
+  children: React.ReactNode;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 

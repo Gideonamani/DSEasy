@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Loader2, Trash2, History, BellRing } from "lucide-react";
 
@@ -6,12 +6,22 @@ import { Loader2, Trash2, History, BellRing } from "lucide-react";
 import { db } from "../firebase";
 import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 
-export function NotificationsManager() {
+interface Alert {
+  id: string;
+  symbol: string;
+  condition: "ABOVE" | "BELOW";
+  targetPrice: number;
+  status: string;
+  created: string;
+  [key: string]: any;
+}
+
+export function NotificationsManager(): React.ReactElement {
   const { currentUser } = useAuth();
-  const [alerts, setAlerts] = useState([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(null);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -28,15 +38,15 @@ export function NotificationsManager() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newAlerts = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
+      const newAlerts: Alert[] = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
         // Convert timestamp to number for existing UI compatibility if needed, 
         // or just use valid date objects. 
         // The UI uses new Date(alert.created), so we need to map createdAt to created or update UI.
         // Let's map createdAt (Firestore Timestamp) to 'created' (ISO string or number)
-        created: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate().toISOString() : new Date().toISOString()
-      }));
+        created: d.data().createdAt?.toDate ? d.data().createdAt.toDate().toISOString() : new Date().toISOString()
+      } as Alert));
       setAlerts(newAlerts);
       setLoading(false);
     }, (error) => {
@@ -47,12 +57,12 @@ export function NotificationsManager() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  const handleDelete = async (alert) => {
-    if (!confirm(`Delete alert for ${alert.symbol}?`)) return;
+  const handleDelete = async (alertItem: Alert) => {
+    if (!window.confirm(`Delete alert for ${alertItem.symbol}?`)) return;
 
     // Use alert.id (Firestore Doc ID) or fallback to created if using old data (but we are moving to new data)
     // The new logic uses alert.id from snapshot.
-    const alertId = alert.id;
+    const alertId = alertItem.id;
     if (!alertId) return;
 
     setDeleting(alertId);
@@ -60,9 +70,9 @@ export function NotificationsManager() {
     try {
       await deleteDoc(doc(db, "alerts", alertId));
       // No need to fetchAlerts(), onSnapshot handles it
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting alert:", error);
-      alert("Delete failed: " + error.message);
+      window.alert("Delete failed: " + error.message);
     } finally {
       setDeleting(null);
     }
@@ -199,8 +209,8 @@ export function NotificationsManager() {
                     transition: "color 0.2s"
                  }}
                  title="Delete Alert"
-                 onMouseOver={(e) => e.target.style.color = "var(--accent-danger)"}
-                 onMouseOut={(e) => e.target.style.color = "var(--text-secondary)"}
+                 onMouseOver={(e) => (e.currentTarget as HTMLButtonElement).style.color = "var(--accent-danger)"}
+                 onMouseOut={(e) => (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"}
                >
                  {deleting === alert.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                </button>
