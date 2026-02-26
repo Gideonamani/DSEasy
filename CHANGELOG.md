@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-02-26
+
+### Added
+
+- Added quick-select preset price pills (-10%, -5%, +5%, +10%) in `AlertModal` for faster target price setting.
+- Implemented a summary message in the success state of `AlertModal` to confirm alert details.
+- Added a direct link to the Notifications page from the success modal.
+
+### Changed
+
+- Enhanced `AlertModal` to automatically set the initial target price to the current ticker price on open.
+- Improved loading state feedback with dynamic button text and a descriptive sub-text during alert creation.
+- Added input validation to prevent creating alerts with a target price of zero or less.
+
 ## [1.0.3] - 2026-02-26
 
 ### Fixed

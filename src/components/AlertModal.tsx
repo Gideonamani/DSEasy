@@ -1,4 +1,5 @@
-import React, { useState, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { X, Bell, Loader2, CheckCircle } from "lucide-react";
 import { functions } from "../firebase";
 import { httpsCallable } from "firebase/functions";
@@ -15,6 +16,14 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
   const [condition, setCondition] = useState<"ABOVE" | "BELOW">("ABOVE");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+
+  useEffect(() => {
+    if (isOpen) {
+      setTargetPrice(currentPrice || 0);
+      setCondition("ABOVE");
+      setStatus("idle");
+    }
+  }, [isOpen, currentPrice]);
 
   if (!isOpen) return null;
 
@@ -36,10 +45,10 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
       if (!(result.data as any).success) throw new Error((result.data as any).error || "Unknown error");
       
       setStatus("success");
-      setTimeout(() => {
-        onClose();
-        setStatus("idle");
-      }, 2000);
+      // setTimeout(() => {
+      //   onClose();
+      //   setStatus("idle");
+      // }, 2000);
 
     } catch (err: any) {
       console.error(err);
@@ -74,7 +83,22 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
         {status === "success" ? (
           <div style={{ textAlign: "center", padding: "32px 0" }}>
             <CheckCircle size={48} color="var(--accent-success)" style={{ marginBottom: "16px" }} />
-            <p style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-medium)" }}>Alert Set Successfully!</p>
+            <p style={{ fontSize: "var(--text-lg)", fontWeight: "var(--font-medium)", marginBottom: "8px" }}>Alert Set Successfully!</p>
+            <p style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginBottom: "24px" }}>
+              We'll notify you when <strong style={{color: "var(--text-primary)"}}>{symbol}</strong> goes <strong style={{color: condition === "ABOVE" ? "var(--accent-success)" : "var(--accent-danger)"}}>{condition.toLowerCase()}</strong> <strong style={{color: "var(--text-primary)"}}>{targetPrice}</strong> TZS.
+            </p>
+            <Link 
+              to="/notifications" 
+              onClick={onClose}
+              style={{ 
+                display: "inline-block", padding: "10px 20px", borderRadius: "var(--radius-lg)", 
+                background: "var(--bg-elevated)", color: "var(--accent-primary)", 
+                textDecoration: "none", fontWeight: "var(--font-medium)", fontSize: "var(--text-sm)",
+                border: "1px solid var(--glass-border)", transition: "all 0.2s"
+              }}
+            >
+              View in Notifications
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -90,6 +114,34 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
                   color: "var(--text-primary)", fontSize: "var(--text-base)", outline: "none"
                 }}
               />
+              <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+                {[
+                  { label: "-10%", value: 0.9 },
+                  { label: "-5%", value: 0.95 },
+                  { label: "+5%", value: 1.05 },
+                  { label: "+10%", value: 1.10 }
+                ].map(preset => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      if (currentPrice) {
+                        setTargetPrice(Math.round(currentPrice * preset.value));
+                        setCondition(preset.value > 1 ? "ABOVE" : "BELOW");
+                      }
+                    }}
+                    style={{
+                      padding: "4px 10px", borderRadius: "12px", border: "1px solid var(--glass-border)",
+                      background: "var(--bg-elevated)", color: "var(--text-secondary)", fontSize: "var(--text-xs)",
+                      cursor: "pointer", transition: "all 0.2s"
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--text-primary)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--text-secondary)"}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div style={{ marginBottom: "var(--space-6)" }}>
@@ -126,21 +178,28 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
 
             <button 
               type="submit" 
-              disabled={loading}
+              disabled={loading || Number(targetPrice) <= 0}
               style={{ 
                 width: "100%", padding: "14px", borderRadius: "var(--radius-lg)", border: "none", 
                 background: "var(--accent-primary)", color: "white", fontWeight: "var(--font-bold)",
-                cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
+                cursor: loading || Number(targetPrice) <= 0 ? "not-allowed" : "pointer", 
+                opacity: loading || Number(targetPrice) <= 0 ? 0.5 : 1,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                transition: "opacity 0.2s"
+                transition: "all 0.2s"
               }}
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? "Activating..." : "Create Alert"}
+              {loading ? "Creating alert..." : "Create Alert"}
             </button>
-            <p style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textAlign: "center", marginTop: "12px" }}>
-              Needs Notification Permission
-            </p>
+            {loading ? (
+               <p style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textAlign: "center", marginTop: "12px" }}>
+                 This may take a few seconds while we secure your connection...
+               </p>
+            ) : (
+               <p style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textAlign: "center", marginTop: "12px" }}>
+                 Needs Notification Permission
+               </p>
+            )}
           </form>
         )}
       </div>
