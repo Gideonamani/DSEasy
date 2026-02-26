@@ -90,7 +90,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
           title="Top Gainer"
           value={topGainer.symbol}
           change={topGainer.change}
-          subtext={`Price: ${topGainer.close.toLocaleString()}`}
+          subtext={`Change: ${topGainer.pctChange !== undefined && topGainer.pctChange !== null ? topGainer.pctChange.toFixed(2) + "%" : "N/A"}`}
           type="success"
           to={`/trends/${topGainer.symbol}`}
         />
@@ -98,7 +98,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
           title="Top Loser"
           value={topLoser.symbol}
           change={topLoser.change}
-          subtext={`Price: ${topLoser.close.toLocaleString()}`}
+          subtext={`Change: ${topLoser.pctChange !== undefined && topLoser.pctChange !== null ? topLoser.pctChange.toFixed(2) + "%" : "N/A"}`}
           type="danger"
           to={`/trends/${topLoser.symbol}`}
         />
@@ -106,14 +106,14 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
           title="Total Volume"
           value={formatLargeNumber(totalVolume)}
           change={null}
-          subtext="Total Shares Traded"
+          subtext="Total number of shares traded"
           type="primary"
         />
         <StatCard
           title="Total Turnover"
           value={formatLargeNumber(totalTurnover)}
           change={null}
-          subtext="TZS Turnover"
+          subtext="Total value of trades in TZS"
           type="neutral"
         />
       </div>
@@ -124,28 +124,28 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
           title="Total Deals"
           value={totalDeals.toLocaleString()}
           change={null}
-          subtext="Trades Executed"
+          subtext="Total number of executed trades"
           type="neutral"
         />
         <StatCard
           title="Total Market Cap"
           value={formatLargeNumber(totalMcap)}
           change={null}
-          subtext="TZS Market Cap"
+          subtext="Total market capitalization (TZS)"
           type="primary"
         />
         <StatCard
           title="Symbols Listed"
           value={activeSymbolsCount}
           change={null}
-          subtext="Total Listed"
+          subtext="Total number of listed symbols"
           type="neutral"
         />
         <StatCard
           title="Active Symbols"
           value={tradedSymbolsCount}
           change={null}
-          subtext="Volume > 0"
+          subtext="Symbols with trading activity"
           type="neutral"
         />
       </div>

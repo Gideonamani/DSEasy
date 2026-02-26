@@ -6,13 +6,14 @@ export interface StatCardProps {
   title: string;
   value: React.ReactNode;
   change: string | number | null;
+  changeSuffix?: string;
   subtext?: string;
   type?: 'neutral' | 'success' | 'danger' | 'primary';
   onClick?: () => void;
   to?: string;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, change, subtext, type = 'neutral', onClick, to }) => {
+export const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeSuffix = "", subtext, type = 'neutral', onClick, to }) => {
   const isPositive = type === 'success' || (change !== null && parseFloat(change as string) > 0 && type !== 'danger');
   const isNegative = type === 'danger' || (change !== null && parseFloat(change as string) < 0 && type !== 'success');
 
@@ -62,7 +63,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, subtex
                         display: 'flex', 
                         alignItems: 'center'
                     }}>
-                        {parseFloat(change as string) > 0 ? '+' : ''}{change}%
+                        {parseFloat(change as string) > 0 ? '+' : ''}{change}{changeSuffix}
                     </span>
                 )}
                 <span style={{ color: 'var(--text-secondary)' }}>{subtext || 'vs last close'}</span>
