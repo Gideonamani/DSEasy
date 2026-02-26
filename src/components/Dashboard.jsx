@@ -6,6 +6,7 @@ import { DatePicker } from "./DatePicker";
 
 export const Dashboard = memo(({ 
   marketData, 
+  marketIndices,
   topGainer, 
   topLoser, 
   totalVolume, 
@@ -43,6 +44,25 @@ export const Dashboard = memo(({
           onChange={onDateChange}
         />
       </div>
+
+      {marketIndices && marketIndices.length > 0 && (
+        <>
+          <h3 className="section-title">Market Indices</h3>
+          <div className="stats-grid" style={{ marginBottom: "var(--space-6)" }}>
+            {marketIndices.map((idx) => (
+              <StatCard
+                key={idx.Code}
+                title={idx.IndexDescription}
+                value={idx.ClosingPrice}
+                change={idx.Change?.toString()} // Ensure change is string for component
+                subtext={idx.Code}
+                type={idx.Change > 0 ? "success" : idx.Change < 0 ? "danger" : "neutral"}
+                to={`/trends`} // No specific symbol view for index yet, linking to trends generally
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Stats Grid */}
       <div className="stats-grid">

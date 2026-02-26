@@ -8,8 +8,10 @@ import { NotificationsManager } from "./components/NotificationsManager";
 import { Loader2 } from "lucide-react";
 import { useSettings } from "./contexts/SettingsContext";
 import { Settings } from "./components/Settings";
-import { useMarketDates, useMarketData } from "./hooks/useMarketQuery";
+import { useMarketDates, useMarketData, useMarketIndices } from "./hooks/useMarketQuery";
 import { formatLargeNumber } from "./utils/formatters";
+
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Route configuration
 const ROUTES = {
@@ -47,6 +49,7 @@ function App() {
   }, [availableDates, selectedDate]);
 
   const { data: marketData = [], isLoading: loadingData, error: dataError } = useMarketData(selectedDate);
+  const { data: marketIndices = null } = useMarketIndices();
   
   const error = datesError ? `Dates Error: ${datesError.message}` : dataError ? `Data Error: ${dataError.message}` : null;
 
@@ -146,10 +149,12 @@ function App() {
 
   return (
     <Layout activeTab={activeTab} onTabChange={handleTabChange}>
-      <Routes>
+      <ErrorBoundary>
+        <Routes>
         <Route path="/" element={
            <Dashboard 
               marketData={marketData}
+              marketIndices={marketIndices}
               topGainer={topGainer}
               topLoser={topLoser}
               totalVolume={totalVolume}
@@ -183,6 +188,7 @@ function App() {
         <Route path="/notifications" element={<NotificationsManager />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
+      </ErrorBoundary>
     </Layout>
   );
 }

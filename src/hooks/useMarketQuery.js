@@ -150,3 +150,19 @@ export const useTickerHistory = (symbol) => {
         }
     });
 };
+
+// Fetch current market indices
+export const useMarketIndices = () => {
+    return useQuery({
+        queryKey: ['marketIndices'],
+        queryFn: async () => {
+            const docRef = doc(db, 'marketIndices', 'current');
+            const snapshot = await getDoc(docRef);
+            
+            if (!snapshot.exists()) return null;
+            return snapshot.data().data || []; // indicesResponse.data
+        },
+        // Refetch often since it's intraday data
+        refetchInterval: 1000 * 60 * 15 // 15 minutes
+    });
+};

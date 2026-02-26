@@ -38,6 +38,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /marketIndices/{doc} {
+      allow read: if true;
+      allow write: if false;
+
+      match /records/{recordId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
     // Alerts: User can only read/write their own
     match /alerts/{alertId} {
       allow read, delete: if request.auth != null

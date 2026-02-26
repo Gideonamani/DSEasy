@@ -425,7 +425,9 @@ export const monitorIntradayMarket = onSchedule(
 
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price ? parseFloat(String(item.price).replace(/,/g, "")) : 0;
+        const price = item.price
+          ? parseFloat(String(item.price).replace(/,/g, ""))
+          : 0;
         const change = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
@@ -441,6 +443,40 @@ export const monitorIntradayMarket = onSchedule(
       });
 
       console.log(`Queued write to livePrices/${timestamp}`);
+
+      // C.2 Fetch Market Indices (TSI, DSEI)
+      try {
+        const indicesUrl = "https://dse.co.tz/get/last/traded/indices";
+        const { data: indicesResponse } = await axios.get(indicesUrl);
+        if (
+          indicesResponse &&
+          indicesResponse.success &&
+          indicesResponse.data
+        ) {
+          const currentIndicesRef = db
+            .collection("marketIndices")
+            .doc("current");
+          const historyIndicesRef = db
+            .collection("marketIndices")
+            .doc("history")
+            .collection("records")
+            .doc(timestamp);
+
+          const indicesPayload = {
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            data: indicesResponse.data,
+          };
+
+          batch.set(currentIndicesRef, indicesPayload);
+          batch.set(historyIndicesRef, indicesPayload);
+          console.log(
+            `Queued write to marketIndices/current and history for ${indicesResponse.data.length} indices.`,
+          );
+        }
+      } catch (indicesError) {
+        console.error("Failed to fetch market indices:", indicesError);
+        // Continue execution, we still want to process alerts
+      }
 
       // D. Fetch Active Alerts
       const alertsSnap = await db
@@ -534,7 +570,9 @@ export const monitorIntradayMarket = onSchedule(
       // G. Send Multi-Device Push Notifications
       if (triggeredAlerts.length > 0) {
         // Collect unique userIds to look up tokens
-        const uniqueUserIds = [...new Set(triggeredAlerts.map((a) => a.userId))];
+        const uniqueUserIds = [
+          ...new Set(triggeredAlerts.map((a) => a.userId)),
+        ];
 
         // Fetch all FCM tokens for each user
         const userTokensMap: { [userId: string]: string[] } = {};
@@ -585,7 +623,8 @@ export const monitorIntradayMarket = onSchedule(
           response.responses.forEach((resp, idx) => {
             if (
               resp.error &&
-              (resp.error.code === "messaging/registration-token-not-registered" ||
+              (resp.error.code ===
+                "messaging/registration-token-not-registered" ||
                 resp.error.code === "messaging/invalid-registration-token")
             ) {
               const { userId, token } = tokenRefs[idx];
@@ -666,7 +705,9 @@ export const monitorIntradayMarketHttp = onRequest(
       } = {};
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price ? parseFloat(String(item.price).replace(/,/g, "")) : 0;
+        const price = item.price
+          ? parseFloat(String(item.price).replace(/,/g, ""))
+          : 0;
         const change = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
@@ -677,6 +718,28 @@ export const monitorIntradayMarketHttp = onRequest(
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         prices: pricesPayload,
       });
+
+      // C.2 Fetch Market Indices (TSI, DSEI)
+      try {
+        const indicesUrl = "https://dse.co.tz/get/last/traded/indices";
+        const { data: indicesResponse } = await axios.get(indicesUrl);
+        if (indicesResponse && indicesResponse.success && indicesResponse.data) {
+          const currentIndicesRef = db.collection("marketIndices").doc("current");
+          const historyIndicesRef = db.collection("marketIndices").doc("history").collection("records").doc(timestamp);
+          
+          const indicesPayload = {
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            data: indicesResponse.data
+          };
+
+          batch.set(currentIndicesRef, indicesPayload);
+          batch.set(historyIndicesRef, indicesPayload);
+          console.log(`(HTTP Test) Queued write to marketIndices/current and history for ${indicesResponse.data.length} indices.`);
+        }
+      } catch (indicesError) {
+        console.error("Failed to fetch market indices:", indicesError);
+        // Continue execution, we still want to process alerts
+      }
 
       // D. Check Alerts (Simplified for HTTP test - just check, don't necessarily send push if we want to avoid spam, but let's keep consistency)
       const alertsSnap = await db
