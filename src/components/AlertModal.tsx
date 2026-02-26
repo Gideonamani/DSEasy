@@ -16,6 +16,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
   const [condition, setCondition] = useState<"ABOVE" | "BELOW">("ABOVE");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [roundToFive, setRoundToFive] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -126,7 +127,12 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
                     type="button"
                     onClick={() => {
                       if (currentPrice) {
-                        setTargetPrice(Math.round(currentPrice * preset.value));
+                        const rawTarget = currentPrice * preset.value;
+                        const finalTarget = roundToFive 
+                          ? Math.round(rawTarget / 5) * 5 
+                          : Math.round(rawTarget);
+                        
+                        setTargetPrice(finalTarget);
                         setCondition(preset.value > 1 ? "ABOVE" : "BELOW");
                       }
                     }}
@@ -141,6 +147,18 @@ export const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, symbol,
                     {preset.label}
                   </button>
                 ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px" }}>
+                <input 
+                  type="checkbox" 
+                  id="roundToFive"
+                  checked={roundToFive}
+                  onChange={(e) => setRoundToFive(e.target.checked)}
+                  style={{ cursor: "pointer", width: "16px", height: "16px", accentColor: "var(--accent-primary)" }}
+                />
+                <label htmlFor="roundToFive" style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", cursor: "pointer" }}>
+                  Round to nearest 5 TZS
+                </label>
               </div>
             </div>
 
