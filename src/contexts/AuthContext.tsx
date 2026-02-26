@@ -1,19 +1,31 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { auth, messaging, db } from "../firebase";
 import { 
   onAuthStateChanged, 
   GoogleAuthProvider, 
   signInWithPopup, 
-  signOut 
+  signOut,
+  User,
+  UserCredential
 } from "firebase/auth";
 import { getToken } from "firebase/messaging";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
-const AuthContext = createContext();
+export interface AuthContextType {
+  currentUser: User | null;
+  loginWithGoogle: () => Promise<UserCredential>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useAuth() {
-  return useContext(AuthContext);
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
 
 /**
@@ -21,7 +33,7 @@ export function useAuth() {
  * This enables multi-device push notifications.
  * Fire-and-forget — errors are logged but don't block auth.
  */
-async function registerFcmToken(user) {
+async function registerFcmToken(user: User): Promise<void> {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
@@ -49,21 +61,21 @@ async function registerFcmToken(user) {
   }
 }
 
-export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  function loginWithGoogle() {
+  function loginWithGoogle(): Promise<UserCredential> {
     const provider = new GoogleAuthProvider();
     return signInWithPopup(auth, provider);
   }
 
-  function logout() {
+  function logout(): Promise<void> {
     return signOut(auth);
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
       setCurrentUser(user);
       setLoading(false);
 
@@ -76,7 +88,7 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     loginWithGoogle,
     logout
