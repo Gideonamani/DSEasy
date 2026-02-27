@@ -502,6 +502,7 @@ export const Layout: React.FC<LayoutProps> = ({
               />
             </div>
             <button
+              onClick={() => onTabChange("Notifications")}
               style={{
                 background: "transparent",
                 border: "none",
