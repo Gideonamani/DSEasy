@@ -396,13 +396,18 @@ export const monitorIntradayMarket = onSchedule(
       const priceMap: { [symbol: string]: number } = {};
 
       marketData.forEach((item) => {
-        const rawPrice = item.price
+        const basePrice = item.price
           ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
+        const changeValue = item.change
+          ? parseFloat(String(item.change).replace(/,/g, ""))
+          : 0;
+          
+        const currentPrice = basePrice + changeValue;
         const symbol = item.company.trim();
 
-        if (symbol && rawPrice > 0) {
-          priceMap[symbol] = rawPrice;
+        if (symbol && currentPrice > 0) {
+          priceMap[symbol] = currentPrice;
         }
       });
 
@@ -425,7 +430,7 @@ export const monitorIntradayMarket = onSchedule(
 
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price
+        const basePrice = item.price
           ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
         const change = item.change
@@ -433,7 +438,7 @@ export const monitorIntradayMarket = onSchedule(
           : 0;
 
         if (symbol) {
-          pricesPayload[symbol] = { price, change };
+          pricesPayload[symbol] = { price: basePrice + change, change };
         }
       });
 
@@ -684,12 +689,17 @@ export const monitorIntradayMarketHttp = onRequest(
       // B. Create Price Map
       const priceMap: { [symbol: string]: number } = {};
       marketData.forEach((item) => {
-        const rawPrice = item.price
+        const basePrice = item.price
           ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
+        const changeValue = item.change
+          ? parseFloat(String(item.change).replace(/,/g, ""))
+          : 0;
+          
+        const currentPrice = basePrice + changeValue;
         const symbol = item.company.trim();
-        if (symbol && rawPrice > 0) {
-          priceMap[symbol] = rawPrice;
+        if (symbol && currentPrice > 0) {
+          priceMap[symbol] = currentPrice;
         }
       });
 
@@ -705,13 +715,13 @@ export const monitorIntradayMarketHttp = onRequest(
       } = {};
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price
+        const basePrice = item.price
           ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
         const change = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
-        if (symbol) pricesPayload[symbol] = { price, change };
+        if (symbol) pricesPayload[symbol] = { price: basePrice + change, change };
       });
 
       batch.set(livePricesRef, {
