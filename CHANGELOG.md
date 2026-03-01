@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-03-01
+
+### Added
+
+- Created `MarketEmptyState` component to gracefully handle weekends and public holidays.
+- Integrated empty state detection in `Dashboard` and `DerivedAnalytics`.
+- Added automatic weekend detection and "Go to Previous Trading Day" navigation.
+- Implemented deep-linking via URL query parameters (`?date=YYYY-MM-DD`).
+
+### Changed
+
+- Enhanced `DatePicker` with Year and Month dropdowns for efficient multi-year navigation.
+- Synchronized selected date with URL as the single source of truth for market data.
+- Improved `DatePicker` dark mode visibility for month/year dropdowns.
+- **Migration**: Refactored `App.jsx` and hooks to support dynamic date selection from URL, moving away from local state for date management.
+- **Migration**: Standardized `dailyClosingHistory` paths across the frontend to align with the database migration.
+
 ## [1.0.8] - 2026-03-01
 
 ### Changed

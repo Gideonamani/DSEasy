@@ -101,6 +101,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           disabled={loadingData}
           popperPlacement="bottom-end"
           popperContainer={({ children }) => createPortal(children, document.body)}
+          showYearDropdown
+          showMonthDropdown
+          dropdownMode="select"
         />
       </div>
 
@@ -182,6 +185,27 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         }
         .react-datepicker-popper {
           z-index: 99999 !important;
+        }
+        .react-datepicker__header__dropdown {
+          margin: 10px 0;
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+        }
+        .react-datepicker__month-select, .react-datepicker__year-select {
+          background-color: var(--bg-hover) !important;
+          color: var(--text-primary) !important;
+          border: 1px solid var(--glass-border) !important;
+          border-radius: var(--radius-sm) !important;
+          padding: 2px 4px !important;
+          font-family: inherit !important;
+          outline: none !important;
+          cursor: pointer !important;
+        }
+        /* Style options for better visibility across different OS browsers */
+        .react-datepicker__month-select option, .react-datepicker__year-select option {
+          background-color: var(--bg-elevated) !important;
+          color: var(--text-primary) !important;
         }
       `}</style>
     </div>

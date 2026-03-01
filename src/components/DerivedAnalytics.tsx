@@ -168,6 +168,8 @@ const RankingTable: React.FC<RankingTableProps> = ({
   );
 };
 
+import { MarketEmptyState } from "./EmptyState";
+
 export interface DerivedAnalyticsProps {
   data: StockData[];
   selectedDate: string | null;
@@ -188,7 +190,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   const { settings } = useSettings();
   const themeOptions = getCommonChartOptions(settings.theme);
   const { textColorHex } = getChartTheme(settings.theme);
+  const isDataEmpty = !loadingData && data.length === 0;
   
+  // ... (useMemo hooks remain unchanged as they check for data validity inside)
   // Volatility Chart: High/Low Spread
   const volatilityData = useMemo(() => {
     const sorted = [...data]
@@ -480,8 +484,11 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         />
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="charts-grid">
+      {isDataEmpty ? (
+        <MarketEmptyState selectedDate={selectedDate} availableDates={availableDates} />
+      ) : (
+        <>
+        <div className="charts-grid">
         <AnalyticsCard title="Volatility: High/Low Spread" icon={Activity}>
           <div style={{ height: "280px" }}>
             {volatilityData.labels.length > 0 ? (
@@ -723,6 +730,8 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
           />
         </AnalyticsCard>
       </div>
+        </>
+      )}
     </div>
   );
 };
