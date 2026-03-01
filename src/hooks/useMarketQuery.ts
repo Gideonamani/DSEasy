@@ -76,7 +76,7 @@ export const useMarketDates = () => {
             if (!snapshot.exists()) return [];
             
             const data = snapshot.data();
-            // data.availableDates is array of strings ["26Jan2026", ...]
+            // data.availableDates is array of ISO strings ["2026-01-26", ...]
             
             const dates: MarketDate[] = (data.availableDates || []).map((d: string) => ({
                 sheetName: d,
