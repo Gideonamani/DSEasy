@@ -136,8 +136,8 @@ async function migrate() {
         batch.set(stockRef, stockData);
         opCount++;
         
-        // 2. Write to trends/{symbol}/history/{date}
-        const trendsRef = db.collection('trends').doc(symbol).collection('history').doc(sheetName);
+        // 2. Write to trends/{symbol}/dailyClosingHistory/{date}
+        const trendsRef = db.collection('trends').doc(symbol).collection('dailyClosingHistory').doc(sheetName);
         batch.set(trendsRef, {
           date: sheetName,
           ...stockData

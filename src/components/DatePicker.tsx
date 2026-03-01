@@ -1,9 +1,18 @@
+import React from "react";
 import { createPortal } from "react-dom";
 import ReactDatePicker from "react-datepicker";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import "react-datepicker/dist/react-datepicker.css";
+import { MarketDate } from "../hooks/useMarketQuery";
 
-export const DatePicker = ({ 
+export interface DatePickerProps {
+  selectedDate: string | null;
+  availableDates: MarketDate[];
+  loadingData: boolean;
+  onChange: (date: string) => void;
+}
+
+export const DatePicker: React.FC<DatePickerProps> = ({ 
   selectedDate, 
   availableDates, 
   loadingData, 
@@ -35,7 +44,7 @@ export const DatePicker = ({
     }
   };
 
-  const handleCalendarChange = (date) => {
+  const handleCalendarChange = (date: Date | null) => {
     if (!date) return;
     // Find matching sheet for this date
     // We compare ISO strings YYYY-MM-DD to be safe or just time value (ignoring time)
@@ -56,7 +65,7 @@ export const DatePicker = ({
   // Extract enabled dates for the calendar
   const includeDates = availableDates
     .filter(d => d.date)
-    .map(d => new Date(d.date));
+    .map(d => new Date(d.date as Date));
 
   // Ensure z-index is higher than everything else (Sidebar is 60, Header is 50)
 
@@ -92,6 +101,9 @@ export const DatePicker = ({
           disabled={loadingData}
           popperPlacement="bottom-end"
           popperContainer={({ children }) => createPortal(children, document.body)}
+          showYearDropdown
+          showMonthDropdown
+          dropdownMode="select"
         />
       </div>
 
@@ -173,6 +185,27 @@ export const DatePicker = ({
         }
         .react-datepicker-popper {
           z-index: 99999 !important;
+        }
+        .react-datepicker__header__dropdown {
+          margin: 10px 0;
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+        }
+        .react-datepicker__month-select, .react-datepicker__year-select {
+          background-color: var(--bg-hover) !important;
+          color: var(--text-primary) !important;
+          border: 1px solid var(--glass-border) !important;
+          border-radius: var(--radius-sm) !important;
+          padding: 2px 4px !important;
+          font-family: inherit !important;
+          outline: none !important;
+          cursor: pointer !important;
+        }
+        /* Style options for better visibility across different OS browsers */
+        .react-datepicker__month-select option, .react-datepicker__year-select option {
+          background-color: var(--bg-elevated) !important;
+          color: var(--text-primary) !important;
         }
       `}</style>
     </div>

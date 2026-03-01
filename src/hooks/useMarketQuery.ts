@@ -4,9 +4,56 @@ import { useQuery } from "@tanstack/react-query";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
-// Helper: Parse "26Jan2026" -> Date Object
-const parseSheetDate = (sheetName) => {
+export interface MarketDate {
+    sheetName: string;
+    date: Date | null;
+}
+
+export interface StockData {
+    symbol: string;
+    open?: number;
+    close: number;
+    change: number;
+    originalChange?: string;
+    pctChange?: number;
+    prevClose?: number;
+    outstandingBid?: number;
+    outstandingOffer?: number;
+    turnoverPct?: number;
+    bidOffer?: number;
+    yearHigh?: number;
+    yearLow?: number;
+    highLowSpread?: number;
+    bidOfferRatio?: number;
+    turnoverPctDaily?: number;
+    turnoverMcapRatio?: number;
+    volPerDeal?: number;
+    turnoverPerDeal?: number;
+    changePerVol?: number;
+    volume?: number;
+    deals?: number;
+    turnover?: number;
+    mcap?: number;
+    [key: string]: any; // Catch-all for other fields
+}
+
+export interface MarketIndex {
+    Code: string;
+    IndexDescription: string;
+    ClosingPrice: number;
+    Change?: number;
+    [key: string]: any;
+}
+
+// Helper: Parse "26Jan2026" or "2024-01-26" -> Date Object
+const parseSheetDate = (sheetName: string): Date | null => {
     if (!sheetName) return null;
+    
+    // Check for standard ISO YYYY-MM-DD date first
+    if (/^\d{4}-\d{2}-\d{2}$/.test(sheetName)) {
+        return new Date(sheetName);
+    }
+
     const match = sheetName.match(/^(\d{1,2})([A-Za-z]{3})(\d{4})$/);
     if (!match) return null;
     
@@ -14,13 +61,13 @@ const parseSheetDate = (sheetName) => {
     const monthStr = match[2].toLowerCase();
     const year = parseInt(match[3]);
     
-    const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
     return new Date(year, months[monthStr], day);
 };
 
 // Fetch available dates from config/app
 export const useMarketDates = () => {
-    return useQuery({
+    return useQuery<MarketDate[]>({
         queryKey: ['marketDates'],
         queryFn: async () => {
             const docRef = doc(db, 'config', 'app');
@@ -29,23 +76,27 @@ export const useMarketDates = () => {
             if (!snapshot.exists()) return [];
             
             const data = snapshot.data();
-            // data.availableDates is array of strings ["26Jan2026", ...]
+            // data.availableDates is array of ISO strings ["2026-01-26", ...]
             
-            const dates = (data.availableDates || []).map(d => ({
+            const dates: MarketDate[] = (data.availableDates || []).map((d: string) => ({
                 sheetName: d,
                 date: parseSheetDate(d)
             }));
             
             // Sort Descending
-            dates.sort((a, b) => b.date - a.date);
+            dates.sort((a, b) => {
+                const dateA = a.date ? a.date.getTime() : 0;
+                const dateB = b.date ? b.date.getTime() : 0;
+                return dateB - dateA;
+            });
             return dates;
         }
     });
 };
 
 // Fetch daily closing data from dailyClosing/{date}/stocks
-export const useMarketData = (date) => {
-    return useQuery({
+export const useMarketData = (date: string) => {
+    return useQuery<StockData[]>({
         queryKey: ['marketData', date],
         queryFn: async () => {
             if (!date) return [];
@@ -57,12 +108,13 @@ export const useMarketData = (date) => {
                 const data = doc.data();
                 return {
                     ...data,
-                    change: data.changeValue || 0, // Numeric absolute change
+                    symbol: doc.id,
+                    open: data.open ?? 0,
+                    prevClose: data.prevClose ?? 0,
+                    change: data.ChangeAbs ?? ((data.close ?? 0) - (data.open ?? 0)), // Absolute change
                     originalChange: data.change, // String representation
-                    // Calculate Percentage Change: (Change / (Close - Change)) * 100
-                    pctChange: (data.changeValue && data.close) 
-                        ? ((data.changeValue / (data.close - data.changeValue)) * 100) 
-                        : 0,
+                    pctChange: data.ChangePer ?? data.changeValue
+                        ?? (data.open > 0 ? ((data.close - data.open) / data.open) * 100 : 0), // Compute from open/close for API records
                     // Map Firestore keys to frontend expected keys
                     outstandingBid: data.outstandingBid || 0,
                     outstandingOffer: data.outstandingOffer || 0,
@@ -79,7 +131,7 @@ export const useMarketData = (date) => {
                     volPerDeal: data.volPerDeal || 0,
                     turnoverPerDeal: data.turnoverPerDeal || 0,
                     changePerVol: data.changePerVol || 0,
-                };
+                } as StockData;
             });
             return stocks;
         },
@@ -93,7 +145,7 @@ export const useMarketData = (date) => {
 
 // Fetch all symbols from 'trends' collection
 export const useTickerSymbols = () => {
-    return useQuery({
+    return useQuery<string[]>({
         queryKey: ['tickerSymbols'],
         queryFn: async () => {
             const colRef = collection(db, 'trends');
@@ -106,14 +158,14 @@ export const useTickerSymbols = () => {
     });
 };
 
-// Fetch history from trends/{symbol}/history
-export const useTickerHistory = (symbol) => {
-    return useQuery({
+// Fetch history from trends/{symbol}/dailyClosingHistory
+export const useTickerHistory = (symbol: string) => {
+    return useQuery<StockData[]>({
         queryKey: ['tickerHistory', symbol],
         queryFn: async () => {
             if (!symbol) return [];
             
-            const colRef = collection(db, 'trends', symbol, 'history');
+            const colRef = collection(db, 'trends', symbol, 'dailyClosingHistory');
             // We can't orderBy document ID easily if meaningful (IDs are dates). 
             // But we stored 'date' field inside documents too.
             const snapshot = await getDocs(colRef);
@@ -122,8 +174,14 @@ export const useTickerHistory = (symbol) => {
                 const data = doc.data();
                 return {
                     ...data,
-                    change: data.changeValue || 0, // Numeric absolute change
+                    // doc.id might be date, keep symbol as prop
+                    symbol: symbol, 
+                    open: data.open ?? 0,
+                    close: data.close || 0, // Ensure 'close' exists as per interface
+                    change: data.ChangeAbs ?? ((data.close ?? 0) - (data.open ?? 0)), // Absolute change
                     originalChange: data.change, // String representation
+                    pctChange: data.ChangePer ?? data.changeValue
+                        ?? (data.open > 0 ? ((data.close - data.open) / data.open) * 100 : 0),
                     // Map Firestore keys to frontend expected keys
                     bidOffer: data.bidOfferRatio || 0,
                     spread: data.highLowSpread || 0,
@@ -134,7 +192,7 @@ export const useTickerHistory = (symbol) => {
                     changeVol: data.changePerVol || 0,
                     outstandingBid: data.outstandingBid || 0,
                     outstandingOffer: data.outstandingOffer || 0,
-                };
+                } as StockData;
             });
             return history;
         },
@@ -143,10 +201,26 @@ export const useTickerHistory = (symbol) => {
         select: (data) => {
             // Sort by date ascending
             return [...data].sort((a, b) => {
-                 const dateA = parseSheetDate(a.date);
-                 const dateB = parseSheetDate(b.date);
+                 const dateA = a.date ? parseSheetDate(a.date)?.getTime() || 0 : 0;
+                 const dateB = b.date ? parseSheetDate(b.date)?.getTime() || 0 : 0;
                  return dateA - dateB;
             });
         }
+    });
+};
+
+// Fetch current market indices
+export const useMarketIndices = () => {
+    return useQuery<MarketIndex[] | null>({
+        queryKey: ['marketIndices'],
+        queryFn: async () => {
+            const docRef = doc(db, 'marketIndices', 'current');
+            const snapshot = await getDoc(docRef);
+            
+            if (!snapshot.exists()) return null;
+            return (snapshot.data().data as MarketIndex[]) || []; // indicesResponse.data
+        },
+        // Refetch often since it's intraday data
+        refetchInterval: 1000 * 60 * 15 // 15 minutes
     });
 };

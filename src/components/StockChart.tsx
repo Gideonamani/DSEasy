@@ -1,15 +1,21 @@
+import React from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { getCommonChartOptions, getChartTheme } from '../utils/chartTheme';
+import { StockData } from '../hooks/useMarketQuery';
 
-export const PriceChangeChart = ({ data }) => {
+export interface StockChartProps {
+  data: StockData[];
+}
+
+export const PriceChangeChart: React.FC<StockChartProps> = ({ data }) => {
     const { settings } = useSettings();
-    const options = getCommonChartOptions(settings.theme);
+    const commonOptions = getCommonChartOptions(settings.theme);
 
     // Top 10 by absolute change
     const sortedData = useMemo(() => {
-        return [...data].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 10);
+        return [...data].sort((a, b) => Math.abs(b.pctChange ?? 0) - Math.abs(a.pctChange ?? 0)).slice(0, 10);
     }, [data]);
 
     const config = useMemo(() => {
@@ -18,9 +24,9 @@ export const PriceChangeChart = ({ data }) => {
             datasets: [
                 {
                     label: 'Price Change %',
-                    data: sortedData.map(d => d.change),
-                    backgroundColor: sortedData.map(d => d.change >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-                    borderColor: sortedData.map(d => d.change >= 0 ? '#10b981' : '#ef4444'),
+                    data: sortedData.map(d => d.pctChange ?? 0),
+                    backgroundColor: sortedData.map(d => (d.pctChange ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+                    borderColor: sortedData.map(d => (d.pctChange ?? 0) >= 0 ? '#10b981' : '#ef4444'),
                     borderWidth: 1,
                     borderRadius: 4,
                 },
@@ -32,16 +38,16 @@ export const PriceChangeChart = ({ data }) => {
         <div className="glass-panel" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-xl)', height: '400px' }}>
             <h3 style={{ margin: '0 0 var(--space-4) 0', fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Top Price Changes (%)</h3>
             <div style={{ position: 'relative', height: '320px' }}>
-                <Bar options={options} data={config} />
+                <Bar options={commonOptions} data={config} />
             </div>
         </div>
     );
 };
 
-export const TurnoverChart = ({ data }) => {
+export const TurnoverChart: React.FC<StockChartProps> = ({ data }) => {
     // Top 5 by Turnover
     const chartData = useMemo(() => {
-        return [...data].sort((a, b) => b.turnover - a.turnover).slice(0, 5);
+        return [...data].sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0)).slice(0, 5);
     }, [data]);
     
     const config = {

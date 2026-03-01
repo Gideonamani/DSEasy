@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { formatNumber } from "../utils/formatters";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -8,14 +8,21 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 import { Line, Bar } from "react-chartjs-2";
-import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, Bell } from "lucide-react";
+import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, Bell, LucideIcon } from "lucide-react";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
 import { getCommonChartOptions } from "../utils/chartTheme";
-import { Chart as ChartJS } from 'chart.js';
+// Chart.js registration handled globally in App.tsx
+
+interface MetricConfig {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+}
 
 // Available metrics for visualization
-const METRICS = [
+const METRICS: MetricConfig[] = [
   { key: "close", label: "Close Price", icon: DollarSign, color: "#6366f1" },
   { key: "volume", label: "Volume", icon: BarChart3, color: "#10b981" },
   { key: "turnover", label: "Turnover", icon: Activity, color: "#f59e0b" },
@@ -34,8 +41,15 @@ const METRICS = [
   { key: "changeVol", label: "Change/Vol", icon: TrendingUp, color: "#ec4899" },
 ];
 
+interface TrendCardProps {
+  title: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+  explanation?: string;
+}
+
 // Reusable card component
-const TrendCard = ({ title, icon, children, explanation }) => {
+const TrendCard: React.FC<TrendCardProps> = ({ title, icon, children, explanation }) => {
   const MetricIcon = icon;
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -147,7 +161,7 @@ const PERIODS = [
   { label: 'Custom', value: 'Custom' },
 ];
 
-export const TickerTrends = () => {
+export const TickerTrends: React.FC = () => {
   const { symbol: urlSymbol } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -182,12 +196,12 @@ export const TickerTrends = () => {
   const error = symbolsError ? "Failed to load symbols" : (dataError ? "Failed to load ticker data" : null);
 
   // Handle symbol change - just navigate
-  const handleSymbolChange = (newSymbol) => {
+  const handleSymbolChange = (newSymbol: string): void => {
     navigate(`/trends/${newSymbol}`);
   };
 
   // Toggle metric visibility
-  const toggleMetric = (key) => {
+  const toggleMetric = (key: string): void => {
     setHiddenMetrics(prev => {
       const next = new Set(prev);
       if (next.has(key)) {
@@ -202,17 +216,17 @@ export const TickerTrends = () => {
   // --- Filtering Logic ---
   
   // State for period and custom dates - initialize from URL
-  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "ALL");
-  const [customRange, setCustomRange] = useState({
-    start: searchParams.get("start") ? new Date(searchParams.get("start")) : null,
-    end: searchParams.get("end") ? new Date(searchParams.get("end")) : null,
+  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "6M");
+  const [customRange, setCustomRange] = useState<{ start: Date | null; end: Date | null }>({
+    start: searchParams.get("start") ? new Date(searchParams.get("start")!) : null,
+    end: searchParams.get("end") ? new Date(searchParams.get("end")!) : null,
   });
 
   // Sync URL when period/dates change
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     
-    if (selectedPeriod === "ALL") {
+    if (selectedPeriod === "6M") {
        params.delete("period");
        params.delete("start");
        params.delete("end");
@@ -243,16 +257,18 @@ export const TickerTrends = () => {
     // For Custom
     if (selectedPeriod === "Custom") {
         return timeseriesData.filter(d => {
-            const normalizeDate = (date) => {
+            const normalizeDate = (date: string | Date): Date => {
                  const d = new Date(date);
                  d.setHours(0,0,0,0);
                  return d;
             };
 
-            const parseDate = (str) => {
+            const parseDate = (str: string): Date => {
+                // ISO YYYY-MM-DD (standard) or DDMonYYYY (legacy fallback)
+                if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
                 const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
                 if (!match) return new Date(str);
-                const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+                const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
                 return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
             };
             const itemDate = normalizeDate(parseDate(d.date));
@@ -284,10 +300,12 @@ export const TickerTrends = () => {
     cutoffDate.setHours(0,0,0,0);
 
     return timeseriesData.filter(d => {
-         const parseDate = (str) => {
+         const parseDate = (str: string): Date => {
+            // ISO YYYY-MM-DD (standard) or DDMonYYYY (legacy fallback)
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
             const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
             if (!match) return new Date(str);
-            const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+            const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
             const date = new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
             return date;
          };
@@ -316,10 +334,11 @@ export const TickerTrends = () => {
         ...chartTheme.scales.y,
         ticks: { 
           ...chartTheme.scales.y.ticks,
-          callback: (value) => {
-            if (value >= 1000000000) return (value / 1000000000).toFixed(1) + "B";
-            if (value >= 1000000) return (value / 1000000).toFixed(1) + "M";
-            if (value >= 1000) return (value / 1000).toFixed(1) + "K";
+          callback: (value: any) => {
+            const v = Number(value);
+            if (v >= 1000000000) return (v / 1000000000).toFixed(1) + "B";
+            if (v >= 1000000) return (v / 1000000).toFixed(1) + "M";
+            if (v >= 1000) return (v / 1000).toFixed(1) + "K";
             return value;
           },
         },
@@ -332,7 +351,7 @@ export const TickerTrends = () => {
   };
 
   // Helper to generate chart data for any metric
-  const getMetricData = (metricKey, color) => {
+  const getMetricData = (metricKey: string, color: string) => {
     if (!filteredData.length) return null;
 
     // Special handling for Volume (Bar Chart with conditional colors)
@@ -342,7 +361,7 @@ export const TickerTrends = () => {
         datasets: [
           {
             label: "Volume",
-            data: filteredData.map((d) => d.volume),
+            data: filteredData.map((d) => d.volume ?? 0),
             backgroundColor: filteredData.map((d, i) => {
               if (i === 0) return "rgba(99, 102, 241, 0.7)";
               return d.close >= filteredData[i - 1].close
@@ -361,7 +380,7 @@ export const TickerTrends = () => {
       datasets: [
         {
           label: metricKey.charAt(0).toUpperCase() + metricKey.slice(1),
-          data: filteredData.map((d) => metricKey === 'turnoverPct' ? (d[metricKey] || 0) * 100 : d[metricKey]),
+          data: filteredData.map((d) => metricKey === 'turnoverPct' ? ((d as any)[metricKey] || 0) * 100 : (d as any)[metricKey]),
           borderColor: color,
           backgroundColor: `${color}20`,
           fill: true,
@@ -387,7 +406,7 @@ export const TickerTrends = () => {
       high: Math.max(...closes),
       low: Math.min(...closes),
       periodChange,
-      avgVolume: filteredData.reduce((sum, d) => sum + d.volume, 0) / filteredData.length,
+      avgVolume: filteredData.reduce((sum, d) => sum + (d.volume ?? 0), 0) / filteredData.length,
       dataPoints: filteredData.length,
     };
   }, [filteredData]);
@@ -506,10 +525,10 @@ export const TickerTrends = () => {
                  <div style={{ position: 'relative' }}>
                     <DatePicker 
                         selected={customRange.start}
-                        onChange={(date) => setCustomRange(prev => ({ ...prev, start: date }))}
+                        onChange={(date: Date | null) => setCustomRange(prev => ({ ...prev, start: date }))}
                         selectsStart
-                        startDate={customRange.start}
-                        endDate={customRange.end}
+                        startDate={customRange.start ?? undefined}
+                        endDate={customRange.end ?? undefined}
                         placeholderText="Start Date"
                         className="custom-date-input"
                         popperPlacement="bottom-start"
@@ -524,11 +543,11 @@ export const TickerTrends = () => {
                  <div style={{ position: 'relative' }}>
                     <DatePicker 
                         selected={customRange.end}
-                        onChange={(date) => setCustomRange(prev => ({ ...prev, end: date }))}
+                        onChange={(date: Date | null) => setCustomRange(prev => ({ ...prev, end: date }))}
                         selectsEnd
-                        startDate={customRange.start}
-                        endDate={customRange.end}
-                        minDate={customRange.start}
+                        startDate={customRange.start ?? undefined}
+                        endDate={customRange.end ?? undefined}
+                        minDate={customRange.start ?? undefined}
                         placeholderText="End Date"
                         className="custom-date-input"
                         popperPlacement="bottom-end"
@@ -647,7 +666,7 @@ export const TickerTrends = () => {
               key={metric.key} 
               title={`${metric.label} Trend`} 
               icon={metric.icon}
-              explanation={METRIC_EXPLANATIONS[metric.key]}
+              explanation={(METRIC_EXPLANATIONS as Record<string, string>)[metric.key]}
             >
                <div style={{ height: "320px" }}>
                   {data ? (
@@ -713,7 +732,7 @@ export const TickerTrends = () => {
                       grouped: false, // Prevent lateral offset
                       order: 3
                     }
-                  ]
+                  ] as any
                 }}
                 options={{
                   ...chartOptions,

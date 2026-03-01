@@ -1,9 +1,22 @@
+import React from 'react';
 import { ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export const StatCard = ({ title, value, change, subtext, type = 'neutral', onClick, to }) => {
-  const isPositive = type === 'success' || (parseFloat(change) > 0 && type !== 'danger');
-  const isNegative = type === 'danger' || (parseFloat(change) < 0 && type !== 'success');
+export interface StatCardProps {
+  title: string;
+  value: React.ReactNode;
+  change: string | number | null;
+  changeSuffix?: string;
+  subtext?: string;
+  type?: 'neutral' | 'success' | 'danger' | 'primary';
+  icon?: React.ReactNode;
+  onClick?: () => void;
+  to?: string;
+}
+
+export const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeSuffix = "", subtext, type = 'neutral', icon, onClick, to }) => {
+  const isPositive = type === 'success' || (change !== null && parseFloat(change as string) > 0 && type !== 'danger');
+  const isNegative = type === 'danger' || (change !== null && parseFloat(change as string) < 0 && type !== 'success');
 
   let accentColor = 'var(--text-secondary)';
   if (isPositive) accentColor = 'var(--accent-success)';
@@ -33,7 +46,7 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral', onCl
                 background: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
                 color: accentColor
             }}>
-                {isPositive ? <ArrowUpRight size={20} /> : isNegative ? <ArrowDownRight size={20} /> : <Activity size={20} />}
+                {icon ? icon : (isPositive ? <ArrowUpRight size={20} /> : isNegative ? <ArrowDownRight size={20} /> : <Activity size={20} />)}
             </div>
         </div>
 
@@ -51,7 +64,7 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral', onCl
                         display: 'flex', 
                         alignItems: 'center'
                     }}>
-                        {change > 0 ? '+' : ''}{change}%
+                        {parseFloat(change as string) > 0 ? '+' : ''}{change}{changeSuffix}
                     </span>
                 )}
                 <span style={{ color: 'var(--text-secondary)' }}>{subtext || 'vs last close'}</span>
@@ -60,10 +73,10 @@ export const StatCard = ({ title, value, change, subtext, type = 'neutral', onCl
       </>
   );
 
-  const cardStyles = { 
+  const cardStyles: React.CSSProperties = { 
     padding: 'var(--space-6)', 
     borderRadius: 'var(--radius-xl)', 
-    position: 'relative', 
+    position: 'relative' as React.CSSProperties['position'], 
     overflow: 'hidden',
     cursor: (onClick || to) ? 'pointer' : 'default',
     display: 'block', // Ensure Link behaves like block

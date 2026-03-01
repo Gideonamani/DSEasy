@@ -79,27 +79,27 @@ function formatDateForSheet(longDateStr: string): string | null {
   const parts = longDateStr.replace(/,/g, "").split(" "); // ["February", "7", "2026"]
   if (parts.length < 3) return null;
 
-  const monthNames: { [key: string]: string } = {
-    January: "Jan",
-    February: "Feb",
-    March: "Mar",
-    April: "Apr",
-    May: "May",
-    June: "Jun",
-    July: "Jul",
-    August: "Aug",
-    September: "Sep",
-    October: "Oct",
-    November: "Nov",
-    December: "Dec",
+  const monthNumbers: { [key: string]: string } = {
+    January: "01",
+    February: "02",
+    March: "03",
+    April: "04",
+    May: "05",
+    June: "06",
+    July: "07",
+    August: "08",
+    September: "09",
+    October: "10",
+    November: "11",
+    December: "12",
   };
 
-  const month = monthNames[parts[0]];
-  const day = parts[1];
+  const month = monthNumbers[parts[0]];
+  const day = parts[1].padStart(2, "0");
   const year = parts[2];
 
   if (!month) return null;
-  return `${day}${month}${year}`;
+  return `${year}-${month}-${day}`;
 }
 
 // ------------------------------------------------------------------
@@ -298,8 +298,8 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
         { merge: true },
       );
 
-      // D. trends/{symbol}/history/{date}
-      const historyRef = trendsRef.collection("history").doc(formattedDate);
+      // D. trends/{symbol}/dailyClosingHistory/{date}
+      const historyRef = trendsRef.collection("dailyClosingHistory").doc(formattedDate);
       batch.set(historyRef, {
         date: formattedDate,
         ...stock,
@@ -396,13 +396,18 @@ export const monitorIntradayMarket = onSchedule(
       const priceMap: { [symbol: string]: number } = {};
 
       marketData.forEach((item) => {
-        const rawPrice = item.price
+        const basePrice = item.price
           ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
+        const changeValue = item.change
+          ? parseFloat(String(item.change).replace(/,/g, ""))
+          : 0;
+          
+        const currentPrice = basePrice + changeValue;
         const symbol = item.company.trim();
 
-        if (symbol && rawPrice > 0) {
-          priceMap[symbol] = rawPrice;
+        if (symbol && currentPrice > 0) {
+          priceMap[symbol] = currentPrice;
         }
       });
 
@@ -425,13 +430,15 @@ export const monitorIntradayMarket = onSchedule(
 
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price ? parseFloat(String(item.price).replace(/,/g, "")) : 0;
+        const basePrice = item.price
+          ? parseFloat(String(item.price).replace(/,/g, ""))
+          : 0;
         const change = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
 
         if (symbol) {
-          pricesPayload[symbol] = { price, change };
+          pricesPayload[symbol] = { price: basePrice + change, change };
         }
       });
 
@@ -441,6 +448,40 @@ export const monitorIntradayMarket = onSchedule(
       });
 
       console.log(`Queued write to livePrices/${timestamp}`);
+
+      // C.2 Fetch Market Indices (TSI, DSEI)
+      try {
+        const indicesUrl = "https://dse.co.tz/get/last/traded/indices";
+        const { data: indicesResponse } = await axios.get(indicesUrl);
+        if (
+          indicesResponse &&
+          indicesResponse.success &&
+          indicesResponse.data
+        ) {
+          const currentIndicesRef = db
+            .collection("marketIndices")
+            .doc("current");
+          const historyIndicesRef = db
+            .collection("marketIndices")
+            .doc("history")
+            .collection("records")
+            .doc(timestamp);
+
+          const indicesPayload = {
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            data: indicesResponse.data,
+          };
+
+          batch.set(currentIndicesRef, indicesPayload);
+          batch.set(historyIndicesRef, indicesPayload);
+          console.log(
+            `Queued write to marketIndices/current and history for ${indicesResponse.data.length} indices.`,
+          );
+        }
+      } catch (indicesError) {
+        console.error("Failed to fetch market indices:", indicesError);
+        // Continue execution, we still want to process alerts
+      }
 
       // D. Fetch Active Alerts
       const alertsSnap = await db
@@ -460,8 +501,15 @@ export const monitorIntradayMarket = onSchedule(
 
       // E. Check Conditions
       // Batch already initialized
-      const notifications: admin.messaging.Message[] = [];
+      // Track triggered alerts and the userIds that need notifications
       let triggeredCount = 0;
+      const triggeredAlerts: {
+        userId: string;
+        symbol: string;
+        currentPrice: number;
+        targetPrice: number;
+        alertId: string;
+      }[] = [];
 
       alertsSnap.forEach((doc) => {
         const alert = doc.data();
@@ -493,22 +541,14 @@ export const monitorIntradayMarket = onSchedule(
             triggeredPrice: currentPrice,
           });
 
-          // 2. Prepare Push Notification
-          if (alert.fcmToken) {
-            notifications.push({
-              token: alert.fcmToken,
-              notification: {
-                title: `Price Alert: ${alert.symbol}`,
-                body: `${alert.symbol} is now ${currentPrice} TZS (Target: ${alert.targetPrice})`,
-              },
-              data: {
-                type: "PRICE_ALERT",
-                symbol: alert.symbol,
-                alertId: doc.id,
-                price: String(currentPrice),
-              },
-            });
-          }
+          // 2. Track for multi-device notification lookup
+          triggeredAlerts.push({
+            userId: alert.userId,
+            symbol: alert.symbol,
+            currentPrice,
+            targetPrice: alert.targetPrice,
+            alertId: doc.id,
+          });
 
           // 3. Log to History
           const notifRef = db.collection("notifications").doc();
@@ -528,15 +568,87 @@ export const monitorIntradayMarket = onSchedule(
         }
       });
 
-      // F. Execute Batch Updates & Send Notifications
+      // F. Execute Batch Updates
       await batch.commit();
       console.log(`Batch committed. Triggered ${triggeredCount} alerts.`);
 
-      if (triggeredCount > 0 && notifications.length > 0) {
-        const response = await admin.messaging().sendEach(notifications);
-        console.log(
-          `Sent ${response.successCount} push notifications. Failed: ${response.failureCount}`,
-        );
+      // G. Send Multi-Device Push Notifications
+      if (triggeredAlerts.length > 0) {
+        // Collect unique userIds to look up tokens
+        const uniqueUserIds = [
+          ...new Set(triggeredAlerts.map((a) => a.userId)),
+        ];
+
+        // Fetch all FCM tokens for each user
+        const userTokensMap: { [userId: string]: string[] } = {};
+        for (const userId of uniqueUserIds) {
+          const tokensSnap = await db
+            .collection("users")
+            .doc(userId)
+            .collection("fcmTokens")
+            .get();
+          userTokensMap[userId] = tokensSnap.docs.map(
+            (d) => d.data().token as string,
+          );
+        }
+
+        // Build notification messages for ALL devices of each triggered alert
+        const notifications: admin.messaging.Message[] = [];
+        // Track which token corresponds to which index for stale cleanup
+        const tokenRefs: { userId: string; token: string }[] = [];
+
+        for (const alert of triggeredAlerts) {
+          const tokens = userTokensMap[alert.userId] || [];
+          for (const token of tokens) {
+            notifications.push({
+              token,
+              notification: {
+                title: `Price Alert: ${alert.symbol}`,
+                body: `${alert.symbol} is now ${alert.currentPrice} TZS (Target: ${alert.targetPrice})`,
+              },
+              data: {
+                type: "PRICE_ALERT",
+                symbol: alert.symbol,
+                alertId: alert.alertId,
+                price: String(alert.currentPrice),
+              },
+            });
+            tokenRefs.push({ userId: alert.userId, token });
+          }
+        }
+
+        if (notifications.length > 0) {
+          const response = await admin.messaging().sendEach(notifications);
+          console.log(
+            `Sent ${response.successCount} push notifications to ${notifications.length} devices. Failed: ${response.failureCount}`,
+          );
+
+          // Clean up stale/unregistered tokens
+          const staleDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
+          response.responses.forEach((resp, idx) => {
+            if (
+              resp.error &&
+              (resp.error.code ===
+                "messaging/registration-token-not-registered" ||
+                resp.error.code === "messaging/invalid-registration-token")
+            ) {
+              const { userId, token } = tokenRefs[idx];
+              console.log(`Removing stale FCM token for user ${userId}`);
+              staleDeletes.push(
+                db
+                  .collection("users")
+                  .doc(userId)
+                  .collection("fcmTokens")
+                  .doc(token)
+                  .delete(),
+              );
+            }
+          });
+          if (staleDeletes.length > 0) {
+            await Promise.all(staleDeletes);
+            console.log(`Cleaned up ${staleDeletes.length} stale FCM tokens.`);
+          }
+        }
       }
     } catch (error) {
       console.error("Error in monitorIntradayMarket:", error);
@@ -577,12 +689,17 @@ export const monitorIntradayMarketHttp = onRequest(
       // B. Create Price Map
       const priceMap: { [symbol: string]: number } = {};
       marketData.forEach((item) => {
-        const rawPrice = item.price
+        const basePrice = item.price
           ? parseFloat(String(item.price).replace(/,/g, ""))
           : 0;
+        const changeValue = item.change
+          ? parseFloat(String(item.change).replace(/,/g, ""))
+          : 0;
+          
+        const currentPrice = basePrice + changeValue;
         const symbol = item.company.trim();
-        if (symbol && rawPrice > 0) {
-          priceMap[symbol] = rawPrice;
+        if (symbol && currentPrice > 0) {
+          priceMap[symbol] = currentPrice;
         }
       });
 
@@ -598,17 +715,41 @@ export const monitorIntradayMarketHttp = onRequest(
       } = {};
       marketData.forEach((item) => {
         const symbol = item.company.trim();
-        const price = item.price ? parseFloat(String(item.price).replace(/,/g, "")) : 0;
+        const basePrice = item.price
+          ? parseFloat(String(item.price).replace(/,/g, ""))
+          : 0;
         const change = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
-        if (symbol) pricesPayload[symbol] = { price, change };
+        if (symbol) pricesPayload[symbol] = { price: basePrice + change, change };
       });
 
       batch.set(livePricesRef, {
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         prices: pricesPayload,
       });
+
+      // C.2 Fetch Market Indices (TSI, DSEI)
+      try {
+        const indicesUrl = "https://dse.co.tz/get/last/traded/indices";
+        const { data: indicesResponse } = await axios.get(indicesUrl);
+        if (indicesResponse && indicesResponse.success && indicesResponse.data) {
+          const currentIndicesRef = db.collection("marketIndices").doc("current");
+          const historyIndicesRef = db.collection("marketIndices").doc("history").collection("records").doc(timestamp);
+          
+          const indicesPayload = {
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            data: indicesResponse.data
+          };
+
+          batch.set(currentIndicesRef, indicesPayload);
+          batch.set(historyIndicesRef, indicesPayload);
+          console.log(`(HTTP Test) Queued write to marketIndices/current and history for ${indicesResponse.data.length} indices.`);
+        }
+      } catch (indicesError) {
+        console.error("Failed to fetch market indices:", indicesError);
+        // Continue execution, we still want to process alerts
+      }
 
       // D. Check Alerts (Simplified for HTTP test - just check, don't necessarily send push if we want to avoid spam, but let's keep consistency)
       const alertsSnap = await db
@@ -674,7 +815,7 @@ export const createAlert = onCall(
       );
     }
 
-    const { symbol, targetPrice, condition, fcmToken } = request.data;
+    const { symbol, targetPrice, condition } = request.data;
     const userId = request.auth.uid;
 
     // B. Validation
@@ -695,6 +836,7 @@ export const createAlert = onCall(
     }
 
     // C. Write to Firestore
+    // FCM tokens are now stored in users/{uid}/fcmTokens, not on individual alerts
     try {
       const docRef = await db.collection("alerts").add({
         userId,
@@ -702,7 +844,6 @@ export const createAlert = onCall(
         symbol: symbol.toUpperCase(),
         targetPrice,
         condition,
-        fcmToken, // Store token to target device later
         status: "ACTIVE",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         // Initial check metadata

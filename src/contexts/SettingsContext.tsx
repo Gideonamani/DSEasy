@@ -1,18 +1,32 @@
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 
-const SettingsContext = createContext();
+export interface Settings {
+  theme: "dark" | "light" | "system";
+  density: "comfortable" | "compact";
+  numberFormat: "abbreviated" | "full";
+  showCurrency: boolean;
+  defaultChartRange: "1W" | "1M" | "3M" | "6M" | "1Y" | "YTD" | "ALL";
+}
 
-const DEFAULT_SETTINGS = {
-  theme: "dark", // 'dark' | 'light' | 'system'
-  density: "comfortable", // 'comfortable' | 'compact'
-  numberFormat: "abbreviated", // 'abbreviated' (10.5B) | 'full' (10,500,000,000)
-  showCurrency: true, // true | false
-  defaultChartRange: "1M", // '1W', '1M', '3M', '6M', '1Y', 'YTD', 'ALL'
+export interface SettingsContextType {
+  settings: Settings;
+  updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+  resetSettings: () => void;
+}
+
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+const DEFAULT_SETTINGS: Settings = {
+  theme: "dark", 
+  density: "comfortable", 
+  numberFormat: "abbreviated", 
+  showCurrency: true, 
+  defaultChartRange: "1M", 
 };
 
-export function SettingsProvider({ children }) {
+export function SettingsProvider({ children }: { children: ReactNode }) {
   // Load from localStorage or use defaults
-  const [settings, setSettings] = useState(() => {
+  const [settings, setSettings] = useState<Settings>(() => {
     try {
       const saved = localStorage.getItem("dseasy-settings");
       if (saved) {
@@ -47,7 +61,7 @@ export function SettingsProvider({ children }) {
   }, [settings]);
 
   // Update a single setting
-  const updateSetting = (key, value) => {
+  const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setSettings((prev) => ({
       ...prev,
       [key]: value,
@@ -73,7 +87,7 @@ export function SettingsProvider({ children }) {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useSettings() {
+export function useSettings(): SettingsContextType {
   const context = useContext(SettingsContext);
   if (context === undefined) {
     throw new Error("useSettings must be used within a SettingsProvider");
