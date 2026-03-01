@@ -33,20 +33,17 @@ When writing commit messages, adhere strictly to the **Conventional Commits** fo
 - `docs: [description]` for updating documentation like this file.
   _Rule: Keep commits atomic. Focus on a single feature or fix per commit._
 
-### The DVCP Protocol
+### The DVCP Protocol (Document, Version, Commit, Push)
 
-If the Developer requests `dvcp` (Document, Version, Commit, and Push), follow these steps in order:
+When the Developer requests `dvcp` (or when preparing for a major push), follow these sequential steps meticulously:
 
-1. **Document**: Update the `CHANGELOG.md` file and any other relevant documentation (`agent.md`, code comments, etc.).
-2. **Version**: Bump the project version in `package.json` appropriately.
-3. **Commit**: Stage and commit the project changes with a Conventional Commits message.
+1. **Document**:
+   - Check the commit history (`git log`) to review **all commits made since the last version bump**. Do not look at just the most recent commit.
+   - Summarize these changes and update the `CHANGELOG.md` file comprehensively.
+   - Update any other relevant documentation (e.g., `agent.md`, JSDoc comments).
+2. **Version**: Bump the project version in `package.json` appropriately (patch, minor, or major based on the changes).
+3. **Commit**: Stage the updated documentation and `package.json`, then commit the changes with a Conventional Commits message (e.g., `docs: update changelog and bump version to X.X.X`).
 4. **Push**: Push the committed changes to the upstream remote branch.
-
-- `feat: [description]` for a new feature.
-- `fix: [description]` for a bug fix.
-- `chore: [description]` for updating tasks, refactoring, or maintenance (e.g., dependency updates).
-- `docs: [description]` for updating documentation like this file.
-  _Rule: Keep commits atomic. Focus on a single feature or fix per commit._
 
 ## Workflow: Deployment & Verification
 
