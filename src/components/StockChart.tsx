@@ -11,7 +11,7 @@ export interface StockChartProps {
 
 export const PriceChangeChart: React.FC<StockChartProps> = ({ data }) => {
     const { settings } = useSettings();
-    const options = getCommonChartOptions(settings.theme);
+    const commonOptions = getCommonChartOptions(settings.theme);
 
     // Top 10 by absolute change
     const sortedData = useMemo(() => {
@@ -38,7 +38,7 @@ export const PriceChangeChart: React.FC<StockChartProps> = ({ data }) => {
         <div className="glass-panel" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-xl)', height: '400px' }}>
             <h3 style={{ margin: '0 0 var(--space-4) 0', fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Top Price Changes (%)</h3>
             <div style={{ position: 'relative', height: '320px' }}>
-                <Bar options={options} data={config} />
+                <Bar options={commonOptions} data={config} />
             </div>
         </div>
     );

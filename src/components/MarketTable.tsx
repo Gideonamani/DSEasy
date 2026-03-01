@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 // lucide-react icons removed - not used directly in this component
 import { useSettings } from '../contexts/SettingsContext';
 import { formatLargeNumber } from "../utils/formatters";
@@ -9,6 +10,7 @@ export interface MarketTableProps {
 }
 
 export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
+    const navigate = useNavigate();
     const { settings } = useSettings();
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: string }>({ key: 'change', direction: 'desc' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -100,7 +102,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr>
-                            <th style={thStyle} onClick={() => requestSort('symbol')}>
+                            <th style={{...thStyle, backgroundColor: 'var(--bg-elevated)', position: 'sticky', left: 0, zIndex: 10, borderRight: '1px solid var(--glass-border)', boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)'}} onClick={() => requestSort('symbol')}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>Symbol {getSortIcon('symbol')}</div>
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('close')}>
@@ -143,7 +145,36 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
                                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
-                                <td style={{...tdStyle, fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)'}}>{row.symbol}</td>
+                                <td style={{
+                                    ...tdStyle, 
+                                    fontWeight: 'var(--font-semibold)', 
+                                    color: 'var(--text-primary)',
+                                    position: 'sticky',
+                                    left: 0,
+                                    zIndex: 5,
+                                    backgroundColor: 'var(--bg-elevated)',
+                                    borderRight: '1px solid var(--glass-border)',
+                                    boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)'
+                                }}>
+                                    <span 
+                                        onClick={() => navigate(`/trends/${row.symbol}`)}
+                                        style={{ 
+                                            cursor: 'pointer', 
+                                            color: 'var(--color-primary-500)',
+                                            transition: 'color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.textDecoration = 'underline';
+                                            e.currentTarget.style.color = 'var(--color-primary-600)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.textDecoration = 'none';
+                                            e.currentTarget.style.color = 'var(--color-primary-500)';
+                                        }}
+                                    >
+                                        {row.symbol}
+                                    </span>
+                                </td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{row.close.toLocaleString()}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{row.high.toLocaleString()}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{row.low.toLocaleString()}</td>
