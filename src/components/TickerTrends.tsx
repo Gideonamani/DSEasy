@@ -216,7 +216,7 @@ export const TickerTrends: React.FC = () => {
   // --- Filtering Logic ---
   
   // State for period and custom dates - initialize from URL
-  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "ALL");
+  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "6M");
   const [customRange, setCustomRange] = useState<{ start: Date | null; end: Date | null }>({
     start: searchParams.get("start") ? new Date(searchParams.get("start")!) : null,
     end: searchParams.get("end") ? new Date(searchParams.get("end")!) : null,
@@ -226,7 +226,7 @@ export const TickerTrends: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     
-    if (selectedPeriod === "ALL") {
+    if (selectedPeriod === "6M") {
        params.delete("period");
        params.delete("start");
        params.delete("end");
