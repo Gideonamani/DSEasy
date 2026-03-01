@@ -151,14 +151,14 @@ export const useTickerSymbols = () => {
     });
 };
 
-// Fetch history from trends/{symbol}/history
+// Fetch history from trends/{symbol}/dailyClosingHistory
 export const useTickerHistory = (symbol: string) => {
     return useQuery<StockData[]>({
         queryKey: ['tickerHistory', symbol],
         queryFn: async () => {
             if (!symbol) return [];
             
-            const colRef = collection(db, 'trends', symbol, 'history');
+            const colRef = collection(db, 'trends', symbol, 'dailyClosingHistory');
             // We can't orderBy document ID easily if meaningful (IDs are dates). 
             // But we stored 'date' field inside documents too.
             const snapshot = await getDocs(colRef);

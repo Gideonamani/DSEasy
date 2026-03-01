@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-03-01
+
+### Changed
+
+- Renamed Firestore subcollection `trends/{symbol}/history` to `trends/{symbol}/dailyClosingHistory` for clarity and to differentiate from future intraday/API history collections.
+- Updated `functions/src/index.ts` scraper write path to use `dailyClosingHistory`.
+- Updated `src/hooks/useMarketQuery.ts` frontend read path to use `dailyClosingHistory`.
+- Updated `scripts/migrate.cjs` historical import write path to use `dailyClosingHistory`.
+- Updated `firestore.rules` security rules to allow reads on `dailyClosingHistory`.
+
+### Added
+
+- Added `scripts/migrate_paths.cjs` — one-time Firestore path migration script that copied 976 historical documents across 30 stock symbols from the old `history` path to `dailyClosingHistory`, then deleted the originals.
+
 ## [1.0.7] - 2026-02-27
 
 ### Changed

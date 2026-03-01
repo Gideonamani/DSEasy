@@ -16,7 +16,7 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
 
-      match /history/{date} {
+      match /dailyClosingHistory/{date} {
         allow read: if true;
         allow write: if false;
       }

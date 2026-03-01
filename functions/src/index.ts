@@ -298,8 +298,8 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
         { merge: true },
       );
 
-      // D. trends/{symbol}/history/{date}
-      const historyRef = trendsRef.collection("history").doc(formattedDate);
+      // D. trends/{symbol}/dailyClosingHistory/{date}
+      const historyRef = trendsRef.collection("dailyClosingHistory").doc(formattedDate);
       batch.set(historyRef, {
         date: formattedDate,
         ...stock,
