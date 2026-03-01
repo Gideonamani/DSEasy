@@ -180,7 +180,8 @@ export const useTickerHistory = (symbol: string) => {
                     close: data.close || 0, // Ensure 'close' exists as per interface
                     change: data.ChangeAbs ?? ((data.close ?? 0) - (data.open ?? 0)), // Absolute change
                     originalChange: data.change, // String representation
-                    pctChange: data.ChangePer ?? data.changeValue ?? 0, // Scraper originally stored % in changeValue
+                    pctChange: data.ChangePer ?? data.changeValue
+                        ?? (data.open > 0 ? ((data.close - data.open) / data.open) * 100 : 0),
                     // Map Firestore keys to frontend expected keys
                     bidOffer: data.bidOfferRatio || 0,
                     spread: data.highLowSpread || 0,
