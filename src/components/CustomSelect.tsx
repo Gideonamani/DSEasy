@@ -11,9 +11,10 @@ export interface CustomSelectProps {
   options: SelectOption[];
   onChange: (value: string | number) => void;
   placeholder?: string;
+  dropdownClassName?: string;
 }
 
-export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onChange, placeholder = "Select..." }) => {
+export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onChange, placeholder = "Select...", dropdownClassName = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -78,7 +79,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onCh
 
       {isOpen && (
         <div 
-          className="glass-panel"
+          className={`glass-panel ${dropdownClassName}`}
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",

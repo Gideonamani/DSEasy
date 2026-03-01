@@ -2,6 +2,57 @@ import React from 'react';
 import { Coffee, Info, CalendarX2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
+export interface EmptyStateProps {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}
+
+export const EmptyState: React.FC<EmptyStateProps> = ({ icon: Icon, title, description }) => (
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 'var(--space-12) var(--space-6)',
+    textAlign: 'center',
+    minHeight: '400px',
+    background: 'var(--bg-surface)',
+    borderRadius: 'var(--radius-xl)',
+    border: '1px solid var(--glass-border)',
+    marginTop: 'var(--space-6)'
+  }}>
+    <div style={{
+      width: '80px',
+      height: '80px',
+      borderRadius: '50%',
+      background: 'rgba(99, 102, 241, 0.1)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 'var(--space-6)'
+    }}>
+      <Icon size={40} color="var(--accent-primary)" strokeWidth={1.5} />
+    </div>
+    <h2 style={{
+      fontSize: 'var(--text-xl)',
+      fontWeight: 'var(--font-semibold)',
+      color: 'var(--text-primary)',
+      marginBottom: 'var(--space-3)'
+    }}>
+      {title}
+    </h2>
+    <p style={{
+      fontSize: 'var(--text-base)',
+      color: 'var(--text-secondary)',
+      maxWidth: '460px',
+      lineHeight: 1.6
+    }}>
+      {description}
+    </p>
+  </div>
+);
+
 interface MarketEmptyStateProps {
   selectedDate: string | null;
   availableDates: { sheetName: string; date: Date | null }[];

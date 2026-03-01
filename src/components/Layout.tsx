@@ -342,6 +342,7 @@ export const Layout: React.FC<LayoutProps> = ({
             "Dashboard",
             "Derived Analytics",
             "Ticker Trends",
+            "Backtesting",
             "Notifications",
             "Settings",
           ].map((tab) => (
@@ -354,9 +355,11 @@ export const Layout: React.FC<LayoutProps> = ({
                     ? TrendingUp
                     : tab === "Ticker Trends"
                       ? LineChart
-                      : tab === "Notifications"
-                        ? Bell
-                        : Settings
+                      : tab === "Backtesting"
+                        ? TrendingUp // Re-use icon or import another in future
+                        : tab === "Notifications"
+                          ? Bell
+                          : Settings
               }
               label={tab}
               active={activeTab === tab}

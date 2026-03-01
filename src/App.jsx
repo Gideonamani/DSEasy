@@ -5,6 +5,7 @@ import { Dashboard } from "./components/Dashboard";
 import { DerivedAnalytics } from "./components/DerivedAnalytics";
 import { TickerTrends } from "./components/TickerTrends";
 import { NotificationsManager } from "./components/NotificationsManager";
+import { Backtesting } from "./components/Backtesting";
 import { Loader2 } from "lucide-react";
 import { useSettings } from "./contexts/SettingsContext";
 import { Settings } from "./components/Settings";
@@ -18,6 +19,7 @@ const ROUTES = {
   "/": "Dashboard",
   "/analytics": "Derived Analytics",
   "/trends": "Ticker Trends",
+  "/backtesting": "Backtesting",
   "/notifications": "Notifications",
   "/settings": "Settings",
 };
@@ -26,6 +28,7 @@ const TAB_TO_ROUTE = {
   "Dashboard": "/",
   "Derived Analytics": "/analytics",
   "Ticker Trends": "/trends",
+  "Backtesting": "/backtesting",
   "Notifications": "/notifications",
   "Settings": "/settings",
 };
@@ -193,6 +196,7 @@ function App() {
           } 
         />
         <Route path="/trends/:symbol?" element={<TickerTrends />} />
+        <Route path="/backtesting" element={<Backtesting />} />
         <Route path="/notifications" element={<NotificationsManager />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
