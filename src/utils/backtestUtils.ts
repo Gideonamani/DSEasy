@@ -270,6 +270,53 @@ export function createMACrossoverStrategy(shortPeriod: number, longPeriod: numbe
     };
 }
 
+export function createEMACrossoverStrategy(shortPeriod: number, longPeriod: number): Strategy {
+    let shortEma: (number | null)[], longEma: (number | null)[];
+    return {
+        name: `EMA Crossover (${shortPeriod}/${longPeriod})`,
+        init: (data: StockData[]) => {
+            shortEma = _ema(data, shortPeriod);
+            longEma = _ema(data, longPeriod);
+        },
+        signal: (i: number) => {
+            if (i < longPeriod || shortEma[i] === null || longEma[i] === null) return 'HOLD';
+            const prevShort = shortEma[i - 1];
+            const prevLong = longEma[i - 1];
+            const currShort = shortEma[i] as number;
+            const currLong = longEma[i] as number;
+
+            if (prevShort !== null && prevLong !== null) {
+                if (currShort > currLong && prevShort <= prevLong) return 'BUY';
+                if (currShort < currLong && prevShort >= prevLong) return 'SELL';
+            }
+            return 'HOLD';
+        },
+        indicators: () => ({ shortEma, longEma })
+    };
+}
+
+export function createBreakoutStrategy(period: number): Strategy {
+    return {
+        name: `Price Breakout (${period}d)`,
+        init: () => {}, 
+        signal: (i: number, data: StockData[]) => {
+            if (i < period) return 'HOLD';
+            const currentPrice = data[i].close;
+            let max = -Infinity;
+            let min = Infinity;
+            // Check the high/low of the previous `period` days
+            for (let j = 1; j <= period; j++) {
+                const p = data[i - j].close;
+                if (p > max) max = p;
+                if (p < min) min = p;
+            }
+            if (currentPrice > max) return 'BUY';
+            if (currentPrice < min) return 'SELL';
+            return 'HOLD';
+        }
+    };
+}
+
 export function createBollingerBounceStrategy(period: number, multiplier: number): Strategy {
     let bb: { middle: (number | null)[], upper: (number | null)[], lower: (number | null)[] };
     return {

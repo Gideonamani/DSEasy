@@ -6,8 +6,10 @@ import {
     buyAndHold, 
     calculateMetrics, 
     createMACrossoverStrategy, 
+    createEMACrossoverStrategy,
     createBollingerBounceStrategy, 
     createRSIStrategy, 
+    createBreakoutStrategy,
     Strategy, 
     BacktestResult
 } from '../utils/backtestUtils';
@@ -39,27 +41,54 @@ ChartJS.register(
 
 const STRATEGY_OPTIONS = [
     { value: 'sma', label: 'SMA Crossover (20/50)' },
+    { value: 'ema', label: 'Fast EMA Crossover (5/12)' },
     { value: 'bb', label: 'Bollinger Bounce (20, 2σ)' },
-    { value: 'rsi', label: 'RSI Reversal (14)' }
+    { value: 'tight_bb', label: 'Tight Bollinger (10, 1.5σ)' },
+    { value: 'rsi', label: 'RSI Reversal (14)' },
+    { value: 'fast_rsi', label: 'Fast RSI Reversal (7)' },
+    { value: 'breakout', label: '10-Day Breakout' }
 ];
 
-const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f43f5e'];
 
 export const Backtesting: React.FC = () => {
     const [selectedSymbol, setSelectedSymbol] = useState<string>('CRDB');
     const [initialCapital, setInitialCapital] = useState<number>(10_000_000);
     const [selectedStrategies, setSelectedStrategies] = useState<string[]>(['sma']);
+    const [timePeriod, setTimePeriod] = useState<string>('all');
 
     const { data: symbolsList = [], isLoading: loadingSymbols } = useTickerSymbols();
     const { data: historyData = [], isLoading: loadingHistory, error: historyError } = useTickerHistory(selectedSymbol);
 
-    const validData = useMemo(() => historyData.filter(d => d.close > 0), [historyData]);
+    const validData = useMemo(() => {
+        let data = historyData.filter(d => d.close > 0);
+        if (timePeriod !== 'all' && data.length > 0) {
+            const lastDateRaw = data[data.length - 1].date;
+            const lastDate = lastDateRaw ? new Date(lastDateRaw) : new Date();
+            
+            const cutoffDate = new Date(lastDate);
+            if (timePeriod === '6m') cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+            else if (timePeriod === '1y') cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+            else if (timePeriod === '2y') cutoffDate.setFullYear(cutoffDate.getFullYear() - 2);
+
+            data = data.filter(d => {
+                if (!d.date) return true;
+                const dDate = new Date(d.date);
+                return dDate >= cutoffDate;
+            });
+        }
+        return data;
+    }, [historyData, timePeriod]);
 
     const strategies = useMemo(() => {
         const strats: Strategy[] = [];
         if (selectedStrategies.includes('sma')) strats.push(createMACrossoverStrategy(20, 50));
+        if (selectedStrategies.includes('ema')) strats.push(createEMACrossoverStrategy(5, 12));
         if (selectedStrategies.includes('bb')) strats.push(createBollingerBounceStrategy(20, 2));
+        if (selectedStrategies.includes('tight_bb')) strats.push(createBollingerBounceStrategy(10, 1.5));
         if (selectedStrategies.includes('rsi')) strats.push(createRSIStrategy(14, 70, 30));
+        if (selectedStrategies.includes('fast_rsi')) strats.push(createRSIStrategy(7, 80, 20));
+        if (selectedStrategies.includes('breakout')) strats.push(createBreakoutStrategy(10));
         return strats;
     }, [selectedStrategies]);
 
@@ -172,7 +201,7 @@ export const Backtesting: React.FC = () => {
 
             {/* ── CONTROLS PANEL ── */}
             <div style={{ ...cardStyle, overflow: 'visible', zIndex: 10 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '2rem', alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', alignItems: 'start' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Ticker Symbol</label>
                         <CustomSelect
@@ -180,6 +209,20 @@ export const Backtesting: React.FC = () => {
                             value={selectedSymbol}
                             onChange={(val) => setSelectedSymbol(val as string)}
                             placeholder="Choose a ticker..."
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Time Period</label>
+                        <CustomSelect
+                            options={[
+                                { value: 'all', label: 'All History' },
+                                { value: '2y', label: 'Last 2 Years' },
+                                { value: '1y', label: 'Last 1 Year' },
+                                { value: '6m', label: 'Last 6 Months' }
+                            ]}
+                            value={timePeriod}
+                            onChange={(val) => setTimePeriod(val as string)}
                         />
                     </div>
 
