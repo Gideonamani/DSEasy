@@ -12,6 +12,7 @@ import {
   LogOut,
   User,
   LucideIcon,
+  Zap, // Added Zap icon
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -356,7 +357,7 @@ export const Layout: React.FC<LayoutProps> = ({
                     : tab === "Ticker Trends"
                       ? LineChart
                       : tab === "Backtesting"
-                        ? TrendingUp // Re-use icon or import another in future
+                        ? Zap // Changed icon for Backtesting to Zap
                         : tab === "Notifications"
                           ? Bell
                           : Settings
