@@ -171,7 +171,7 @@ export const Backtesting: React.FC = () => {
             </header>
 
             {/* ── CONTROLS PANEL ── */}
-            <div style={cardStyle}>
+            <div style={{ ...cardStyle, overflow: 'visible', zIndex: 10 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '2rem', alignItems: 'start' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Ticker Symbol</label>
@@ -332,11 +332,13 @@ export const Backtesting: React.FC = () => {
                                                 labels: { color: 'var(--text-secondary)' as string, usePointStyle: true, pointStyleWidth: 10, boxHeight: 7, font: { family: "'Inter', sans-serif", size: 12, weight: 600 } }
                                             },
                                             tooltip: {
-                                                backgroundColor: 'var(--bg-card)' as string,
-                                                borderColor: 'var(--glass-border)' as string,
+                                                backgroundColor: 'rgba(15, 23, 42, 0.95)', // Solid dark slate for premium look in both modes
+                                                titleColor: '#f8fafc',
+                                                bodyColor: '#cbd5e1',
+                                                borderColor: 'rgba(51, 65, 85, 0.8)',
                                                 borderWidth: 1,
-                                                titleColor: 'var(--text-primary)' as string,
-                                                bodyColor: 'var(--text-secondary)' as string,
+                                                padding: 12,
+                                                boxPadding: 6,
                                                 callbacks: {
                                                     label: (context) => {
                                                         let label = context.dataset.label || '';
