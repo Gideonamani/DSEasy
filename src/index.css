@@ -198,6 +198,8 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--glass-border);
   z-index: var(--z-header);
+  position: sticky;
+  top: 0;
 }
 
 /* Scrollbar Styling - Cross Browser */

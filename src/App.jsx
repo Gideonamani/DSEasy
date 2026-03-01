@@ -108,7 +108,8 @@ function App() {
   }, [marketData]);
 
   const totalMcap = useMemo(() => {
-    return marketData.reduce((acc, curr) => acc + (curr.mcap || 0), 0);
+    // Market cap is stored in Billions, so multiply by 1,000,000,000 to get actual TZS value
+    return marketData.reduce((acc, curr) => acc + (curr.mcap || 0), 0) * 1e9;
   }, [marketData]);
 
   const tradedSymbolsCount = useMemo(() => {
@@ -128,12 +129,12 @@ function App() {
     : effectiveDate; // Fallback to raw string if no date object or not found
 
   // Helper for large numbers
-  const formatLargeNumberDisplay = (num) => {
+  const formatLargeNumberDisplay = (num, spellOut = false) => {
     if (!num) return "0";
     if (settings.numberFormat === 'full') {
       return num.toLocaleString();
     }
-    return formatLargeNumber(num);
+    return formatLargeNumber(num, spellOut);
   };
 
   // Loading State (Initial)

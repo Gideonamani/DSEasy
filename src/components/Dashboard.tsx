@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { TrendingUp, TrendingDown, BarChart2, DollarSign, Briefcase, Globe, List, Activity } from 'lucide-react';
 import { StatCard } from "./StatCard";
 import { MarketTable } from "./MarketTable";
 import { PriceChangeChart, TurnoverChart } from "./StockChart";
@@ -23,7 +24,7 @@ export interface DashboardProps {
   availableDates: MarketDate[];
   loadingData: boolean;
   onDateChange: (date: string) => void;
-  formatLargeNumber: (num: number) => string;
+  formatLargeNumber: (num: number, spellOut?: boolean) => string;
 }
 
 export const Dashboard: React.FC<DashboardProps> = memo(({ 
@@ -100,6 +101,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
               change={topGainer.change}
               subtext={`Change: ${topGainer.pctChange !== undefined && topGainer.pctChange !== null ? topGainer.pctChange.toFixed(2) + "%" : "N/A"}`}
               type="success"
+              icon={<TrendingUp size={20} />}
               to={`/trends/${topGainer.symbol}`}
             />
             <StatCard
@@ -108,6 +110,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
               change={topLoser.change}
               subtext={`Change: ${topLoser.pctChange !== undefined && topLoser.pctChange !== null ? topLoser.pctChange.toFixed(2) + "%" : "N/A"}`}
               type="danger"
+              icon={<TrendingDown size={20} />}
               to={`/trends/${topLoser.symbol}`}
             />
             <StatCard
@@ -116,6 +119,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
               change={null}
               subtext="Total number of shares traded"
               type="primary"
+              icon={<BarChart2 size={20} />}
             />
             <StatCard
               title="Total Turnover"
@@ -123,6 +127,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
               change={null}
               subtext="Total value of trades in TZS"
               type="neutral"
+              icon={<DollarSign size={20} />}
             />
           </div>
 
@@ -134,13 +139,15 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
               change={null}
               subtext="Total number of executed trades"
               type="neutral"
+              icon={<Briefcase size={20} />}
             />
             <StatCard
               title="Total Market Cap"
-              value={formatLargeNumber(totalMcap)}
+              value={formatLargeNumber(totalMcap, true)}
               change={null}
               subtext="Total market capitalization (TZS)"
               type="primary"
+              icon={<Globe size={20} />}
             />
             <StatCard
               title="Symbols Listed"
@@ -148,6 +155,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
               change={null}
               subtext="Total number of listed symbols"
               type="neutral"
+              icon={<List size={20} />}
             />
             <StatCard
               title="Active Symbols"
@@ -155,6 +163,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
               change={null}
               subtext="Symbols with trading activity"
               type="neutral"
+              icon={<Activity size={20} />}
             />
           </div>
 

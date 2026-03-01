@@ -9,11 +9,12 @@ export interface StatCardProps {
   changeSuffix?: string;
   subtext?: string;
   type?: 'neutral' | 'success' | 'danger' | 'primary';
+  icon?: React.ReactNode;
   onClick?: () => void;
   to?: string;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeSuffix = "", subtext, type = 'neutral', onClick, to }) => {
+export const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeSuffix = "", subtext, type = 'neutral', icon, onClick, to }) => {
   const isPositive = type === 'success' || (change !== null && parseFloat(change as string) > 0 && type !== 'danger');
   const isNegative = type === 'danger' || (change !== null && parseFloat(change as string) < 0 && type !== 'success');
 
@@ -45,7 +46,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, change, change
                 background: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
                 color: accentColor
             }}>
-                {isPositive ? <ArrowUpRight size={20} /> : isNegative ? <ArrowDownRight size={20} /> : <Activity size={20} />}
+                {icon ? icon : (isPositive ? <ArrowUpRight size={20} /> : isNegative ? <ArrowDownRight size={20} /> : <Activity size={20} />)}
             </div>
         </div>
 
