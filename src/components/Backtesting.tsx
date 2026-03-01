@@ -42,11 +42,11 @@ ChartJS.register(
 const STRATEGY_OPTIONS = [
     { value: 'sma', label: 'SMA Crossover (20/50)' },
     { value: 'ema', label: 'Fast EMA Crossover (5/12)' },
-    { value: 'bb', label: 'Bollinger Bounce (20, 2σ)' },
-    { value: 'tight_bb', label: 'Tight Bollinger (10, 1.5σ)' },
+    { value: 'bb', label: 'Bollinger Bounce (20, 2.5σ)' },
+    { value: 'wide_bb', label: 'Wide Bollinger (20, 3σ)' },
     { value: 'rsi', label: 'RSI Reversal (14)' },
     { value: 'fast_rsi', label: 'Fast RSI Reversal (7)' },
-    { value: 'breakout', label: '10-Day Breakout' }
+    { value: 'breakout', label: '10-Day Breakout (5% TS)' }
 ];
 
 const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f43f5e'];
@@ -84,11 +84,11 @@ export const Backtesting: React.FC = () => {
         const strats: Strategy[] = [];
         if (selectedStrategies.includes('sma')) strats.push(createMACrossoverStrategy(20, 50));
         if (selectedStrategies.includes('ema')) strats.push(createEMACrossoverStrategy(5, 12));
-        if (selectedStrategies.includes('bb')) strats.push(createBollingerBounceStrategy(20, 2));
-        if (selectedStrategies.includes('tight_bb')) strats.push(createBollingerBounceStrategy(10, 1.5));
+        if (selectedStrategies.includes('bb')) strats.push(createBollingerBounceStrategy(20, 2.5));
+        if (selectedStrategies.includes('wide_bb')) strats.push(createBollingerBounceStrategy(20, 3.0));
         if (selectedStrategies.includes('rsi')) strats.push(createRSIStrategy(14, 70, 30));
         if (selectedStrategies.includes('fast_rsi')) strats.push(createRSIStrategy(7, 80, 20));
-        if (selectedStrategies.includes('breakout')) strats.push(createBreakoutStrategy(10));
+        if (selectedStrategies.includes('breakout')) strats.push(createBreakoutStrategy(10, 0.05));
         return strats;
     }, [selectedStrategies]);
 

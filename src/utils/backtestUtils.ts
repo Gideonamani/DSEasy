@@ -22,7 +22,7 @@ export interface BacktestResult {
 export interface Strategy {
     name: string;
     init: (data: StockData[]) => void;
-    signal: (i: number, data: StockData[]) => 'BUY' | 'SELL' | 'HOLD';
+    signal: (i: number, data: StockData[], holding?: boolean) => 'BUY' | 'SELL' | 'HOLD';
     indicators?: () => any;
 }
 
@@ -114,6 +114,7 @@ export function runBacktest(data: StockData[], strategy: Strategy, initialCapita
     let shares = 0;
     const equityCurve: EquityPoint[] = [];
     const trades: Trade[] = [];
+    const FEE_RATE = 0.018; // 1.8% per side transaction cost
 
     if (data.length === 0) {
         return { strategyName: strategy.name, equityCurve: [], trades: [], finalEquity: cash };
@@ -123,28 +124,29 @@ export function runBacktest(data: StockData[], strategy: Strategy, initialCapita
 
     for (let i = 0; i < data.length; i++) {
         const price = data[i].close;
-        const signal = strategy.signal(i, data);
+        const signal = strategy.signal(i, data, shares > 0);
         const dateStr = data[i].date ? (typeof data[i].date === 'string' ? data[i].date : (data[i].date as any).toISOString ? (data[i].date as any).toISOString() : new Date(data[i].date as any).toISOString()) : `Day ${i}`;
 
-        if (signal === 'BUY' && cash >= price) { 
-            // Only buy if we have enough cash for at least 1 share, use all available cash
-            shares = Math.floor(cash / price);
-            const cost = shares * price;
+        if (signal === 'BUY' && cash >= price * (1 + FEE_RATE)) { 
+            // Only buy if we have enough cash for at least 1 share including fees
+            shares = Math.floor(cash / (price * (1 + FEE_RATE)));
+            const cost = shares * price * (1 + FEE_RATE);
             cash -= cost;
             trades.push({ date: dateStr, action: 'BUY', price, shares });
         } else if (signal === 'SELL' && shares > 0) {
-            const revenue = shares * price;
+            const revenue = shares * price * (1 - FEE_RATE);
             cash += revenue;
             trades.push({ date: dateStr, action: 'SELL', price, shares });
             shares = 0; // Sell all shares
         }
         
-        equityCurve.push({ date: dateStr, equity: cash + shares * price });
+        // Equity evaluates the current net liquidation value
+        equityCurve.push({ date: dateStr, equity: cash + shares * price * (1 - FEE_RATE) });
     }
 
     // Sell remaining shares at the end
     const finalPrice = data[data.length - 1].close;
-    const finalEquity = cash + shares * finalPrice;
+    const finalEquity = cash + shares * finalPrice * (1 - FEE_RATE);
 
     return { strategyName: strategy.name, equityCurve, trades, finalEquity };
 }
@@ -221,20 +223,21 @@ export function calculateMetrics(equityCurve: EquityPoint[]) {
 
 // --- Benchmark ---
 export function buyAndHold(data: StockData[], initialCapital = INITIAL_CAPITAL): BacktestResult {
+    const FEE_RATE = 0.018; 
     if (data.length === 0) return { strategyName: 'Buy & Hold', equityCurve: [], trades: [], finalEquity: initialCapital };
     
     const initialPrice = data[0].close;
     // Catch-all to avoid division by 0
     if (initialPrice <= 0) return { strategyName: 'Buy & Hold', equityCurve: [], trades: [], finalEquity: initialCapital };
     
-    const shares = Math.floor(initialCapital / initialPrice);
-    const cash = initialCapital - (shares * initialPrice);
+    const shares = Math.floor(initialCapital / (initialPrice * (1 + FEE_RATE)));
+    const cash = initialCapital - (shares * initialPrice * (1 + FEE_RATE));
     
     const equityCurve = data.map((d, i) => {
         const dateStr = d.date ? (typeof d.date === 'string' ? d.date : (d.date as any).toISOString ? (d.date as any).toISOString() : new Date(d.date as any).toISOString()) : `Day ${i}`;
         return {
             date: dateStr,
-            equity: cash + (shares * d.close)
+            equity: cash + (shares * d.close * (1 - FEE_RATE))
         };
     });
     
@@ -295,24 +298,46 @@ export function createEMACrossoverStrategy(shortPeriod: number, longPeriod: numb
     };
 }
 
-export function createBreakoutStrategy(period: number): Strategy {
+export function createBreakoutStrategy(period: number, trailingStopPct = 0.05): Strategy {
+    let highestPriceSinceEntry = 0;
+
     return {
-        name: `Price Breakout (${period}d)`,
-        init: () => {}, 
-        signal: (i: number, data: StockData[]) => {
+        name: `Price Breakout (${period}d, 5% TS)`,
+        init: () => {
+             highestPriceSinceEntry = 0;
+        }, 
+        signal: (i: number, data: StockData[], holding?: boolean) => {
             if (i < period) return 'HOLD';
             const currentPrice = data[i].close;
-            let max = -Infinity;
-            let min = Infinity;
-            // Check the high/low of the previous `period` days
-            for (let j = 1; j <= period; j++) {
-                const p = data[i - j].close;
-                if (p > max) max = p;
-                if (p < min) min = p;
+
+            if (holding) {
+                if (currentPrice > highestPriceSinceEntry) highestPriceSinceEntry = currentPrice;
+                
+                // Trailing Stop Loss Ext.
+                if (currentPrice < highestPriceSinceEntry * (1 - trailingStopPct)) {
+                    return 'SELL';
+                }
+
+                // Normal low breakout exit bounds
+                let min = Infinity;
+                for (let j = 1; j <= period; j++) {
+                    if (data[i - j].close < min) min = data[i - j].close;
+                }
+                if (currentPrice < min) {
+                    return 'SELL';
+                }
+                return 'HOLD';
+            } else {
+                let max = -Infinity;
+                for (let j = 1; j <= period; j++) {
+                    if (data[i - j].close > max) max = data[i - j].close;
+                }
+                if (currentPrice > max) {
+                    highestPriceSinceEntry = currentPrice;
+                    return 'BUY';
+                }
+                return 'HOLD';
             }
-            if (currentPrice > max) return 'BUY';
-            if (currentPrice < min) return 'SELL';
-            return 'HOLD';
         }
     };
 }
