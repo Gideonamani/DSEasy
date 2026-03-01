@@ -113,7 +113,8 @@ export const useMarketData = (date: string) => {
                     prevClose: data.prevClose ?? 0,
                     change: data.ChangeAbs ?? ((data.close ?? 0) - (data.open ?? 0)), // Absolute change
                     originalChange: data.change, // String representation
-                    pctChange: data.ChangePer ?? data.changeValue ?? 0, // Scraper originally stored % in changeValue
+                    pctChange: data.ChangePer ?? data.changeValue
+                        ?? (data.open > 0 ? ((data.close - data.open) / data.open) * 100 : 0), // Compute from open/close for API records
                     // Map Firestore keys to frontend expected keys
                     outstandingBid: data.outstandingBid || 0,
                     outstandingOffer: data.outstandingOffer || 0,
