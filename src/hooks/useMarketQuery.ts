@@ -45,9 +45,15 @@ export interface MarketIndex {
     [key: string]: any;
 }
 
-// Helper: Parse "26Jan2026" -> Date Object
+// Helper: Parse "26Jan2026" or "2024-01-26" -> Date Object
 const parseSheetDate = (sheetName: string): Date | null => {
     if (!sheetName) return null;
+    
+    // Check for standard ISO YYYY-MM-DD date first
+    if (/^\d{4}-\d{2}-\d{2}$/.test(sheetName)) {
+        return new Date(sheetName);
+    }
+
     const match = sheetName.match(/^(\d{1,2})([A-Za-z]{3})(\d{4})$/);
     if (!match) return null;
     

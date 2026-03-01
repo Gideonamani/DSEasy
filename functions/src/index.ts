@@ -79,27 +79,27 @@ function formatDateForSheet(longDateStr: string): string | null {
   const parts = longDateStr.replace(/,/g, "").split(" "); // ["February", "7", "2026"]
   if (parts.length < 3) return null;
 
-  const monthNames: { [key: string]: string } = {
-    January: "Jan",
-    February: "Feb",
-    March: "Mar",
-    April: "Apr",
-    May: "May",
-    June: "Jun",
-    July: "Jul",
-    August: "Aug",
-    September: "Sep",
-    October: "Oct",
-    November: "Nov",
-    December: "Dec",
+  const monthNumbers: { [key: string]: string } = {
+    January: "01",
+    February: "02",
+    March: "03",
+    April: "04",
+    May: "05",
+    June: "06",
+    July: "07",
+    August: "08",
+    September: "09",
+    October: "10",
+    November: "11",
+    December: "12",
   };
 
-  const month = monthNames[parts[0]];
-  const day = parts[1];
+  const month = monthNumbers[parts[0]];
+  const day = parts[1].padStart(2, "0");
   const year = parts[2];
 
   if (!month) return null;
-  return `${day}${month}${year}`;
+  return `${year}-${month}-${day}`;
 }
 
 // ------------------------------------------------------------------

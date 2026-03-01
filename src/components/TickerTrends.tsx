@@ -264,6 +264,8 @@ export const TickerTrends: React.FC = () => {
             };
 
             const parseDate = (str: string): Date => {
+                // ISO YYYY-MM-DD (standard) or DDMonYYYY (legacy fallback)
+                if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
                 const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
                 if (!match) return new Date(str);
                 const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
@@ -299,6 +301,8 @@ export const TickerTrends: React.FC = () => {
 
     return timeseriesData.filter(d => {
          const parseDate = (str: string): Date => {
+            // ISO YYYY-MM-DD (standard) or DDMonYYYY (legacy fallback)
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
             const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
             if (!match) return new Date(str);
             const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
