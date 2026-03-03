@@ -903,7 +903,7 @@ export const scrapeDailyClosing = onSchedule(
   async (event) => {
     // 1. Check if data for TODAY already exists
     const now = moment().tz("Africa/Dar_es_Salaam");
-    const todayFormatted = now.format("DMMMYYYY"); // e.g., "9Feb2026"
+    const todayFormatted = now.format("YYYY-MM-DD"); // e.g., "2026-03-09"
 
     // Check Firestore directly first to avoid unnecessary scraping
     const docRef = db.collection("dailyClosing").doc(todayFormatted);
