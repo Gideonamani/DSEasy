@@ -86,13 +86,13 @@ function App() {
 
   // Derived Stats
   const topGainer = useMemo(() => {
-    if (!marketData.length) return { symbol: "-", change: 0, close: 0 };
-    return marketData.reduce((prev, curr) => (prev.change > curr.change ? prev : curr), marketData[0]);
+    if (!marketData.length) return { symbol: "-", change: 0, pctChange: 0, close: 0 };
+    return marketData.reduce((prev, curr) => ((prev.pctChange || 0) > (curr.pctChange || 0) ? prev : curr), marketData[0]);
   }, [marketData]);
 
   const topLoser = useMemo(() => {
-    if (!marketData.length) return { symbol: "-", change: 0, close: 0 };
-    return marketData.reduce((prev, curr) => (prev.change < curr.change ? prev : curr), marketData[0]);
+    if (!marketData.length) return { symbol: "-", change: 0, pctChange: 0, close: 0 };
+    return marketData.reduce((prev, curr) => ((prev.pctChange || 0) < (curr.pctChange || 0) ? prev : curr), marketData[0]);
   }, [marketData]);
 
   const totalVolume = useMemo(() => {
