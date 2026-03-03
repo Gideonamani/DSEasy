@@ -37,6 +37,8 @@ When writing commit messages, adhere strictly to the **Conventional Commits** fo
 
 When the Developer requests `dvcp` (or when preparing for a major push), follow these sequential steps meticulously:
 
+> **Important**: Version bumping and updating the `CHANGELOG.md` should **ONLY** occur when on the `master` (or `main`) branch to ensure proper alignment. If on a feature branch, remind the Developer to perform the `dvcp` workflow after merging to `master`.
+
 1. **Document**:
    - Check the commit history (`git log`) to review **all commits made since the last version bump**. Do not look at just the most recent commit.
    - Summarize these changes and update the `CHANGELOG.md` file comprehensively.
