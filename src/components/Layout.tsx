@@ -6,6 +6,7 @@ import {
   Settings,
   Bell,
   Search,
+  ArrowUpDown,
   Menu,
   X,
   LogIn,
@@ -340,6 +341,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <div style={{ flex: 1, padding: "12px 0" }}>
           {[
             "Dashboard",
+            "Daily Glance",
             "Derived Analytics",
             "Ticker Trends",
             "Notifications",
@@ -350,6 +352,8 @@ export const Layout: React.FC<LayoutProps> = ({
               icon={
                 tab === "Dashboard"
                   ? LayoutDashboard
+                  : tab === "Daily Glance"
+                    ? ArrowUpDown
                   : tab === "Derived Analytics"
                     ? TrendingUp
                     : tab === "Ticker Trends"

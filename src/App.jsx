@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Routes, Route, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
+import { DailyGlance } from "./components/DailyGlance";
 import { DerivedAnalytics } from "./components/DerivedAnalytics";
 import { TickerTrends } from "./components/TickerTrends";
 import { NotificationsManager } from "./components/NotificationsManager";
@@ -16,6 +17,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 // Route configuration
 const ROUTES = {
   "/": "Dashboard",
+  "/glance": "Daily Glance",
   "/analytics": "Derived Analytics",
   "/trends": "Ticker Trends",
   "/notifications": "Notifications",
@@ -24,6 +26,7 @@ const ROUTES = {
 
 const TAB_TO_ROUTE = {
   "Dashboard": "/",
+  "Daily Glance": "/glance",
   "Derived Analytics": "/analytics",
   "Ticker Trends": "/trends",
   "Notifications": "/notifications",
@@ -179,6 +182,7 @@ function App() {
                formatLargeNumber={formatLargeNumberDisplay}
             />
         } />
+        <Route path="/glance" element={<DailyGlance />} />
         <Route 
           path="/analytics" 
           element={
