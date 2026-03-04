@@ -15,6 +15,35 @@ interface DSEMarketData {
   change: string;
 }
 
+// Rich market data from api.dse.co.tz/api/market-data
+interface MarketWatchEntry {
+  id: number;
+  company: { symbol: string; name: string };
+  companyDescription: string;
+  marketPrice: number;
+  openingPrice: number;
+  change: number;
+  percentageChange: number;
+  bestBidPrice: number;
+  bestBidQuantity: number;
+  bestOfferPrice: number;
+  bestOfferQuantity: number;
+  high: number;
+  low: number;
+  volume: number;
+  marketCap: number;
+  minLimit: number;
+  maxLimit: number;
+  time: string;
+  security: {
+    totalSharesIssued: number;
+    securityType: string;
+    marketSegmentID: string;
+    symbol: string;
+    securityDesc: string;
+  };
+}
+
 interface StockData {
   symbol: string;
   open: number;
@@ -539,6 +568,93 @@ export const monitorIntradayMarket = onSchedule(
 
       console.log(`Queued write to livePrices/${timestamp}`);
 
+      // C.1.5 Fetch Rich Market Data from new API and store in marketWatch
+      try {
+        const marketWatchUrl =
+          "https://api.dse.co.tz/api/market-data?isBond=false";
+        const { data: marketWatchRaw } = await axios.get(marketWatchUrl, {
+          timeout: 15000,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "application/json",
+          },
+        });
+
+        const marketWatchData: MarketWatchEntry[] = Array.isArray(marketWatchRaw)
+          ? marketWatchRaw
+          : [];
+
+        if (marketWatchData.length > 0) {
+          // Build flattened snapshot for Firestore
+          const snapshot: { [symbol: string]: Record<string, unknown> } = {};
+
+          marketWatchData.forEach((item) => {
+            const symbol =
+              item.company?.symbol ||
+              item.security?.symbol ||
+              "";
+            if (!symbol) return;
+
+            snapshot[symbol] = {
+              marketPrice: item.marketPrice || 0,
+              openingPrice: item.openingPrice || 0,
+              change: item.change || 0,
+              bestBidPrice: item.bestBidPrice || 0,
+              bestBidQuantity: item.bestBidQuantity || 0,
+              bestOfferPrice: item.bestOfferPrice || 0,
+              bestOfferQuantity: item.bestOfferQuantity || 0,
+              high: item.high || 0,
+              low: item.low || 0,
+              volume: item.volume || 0,
+              marketCap: item.marketCap || 0,
+              minLimit: item.minLimit || 0,
+              maxLimit: item.maxLimit || 0,
+              totalSharesIssued: item.security?.totalSharesIssued || 0,
+              companyDescription:
+                item.companyDescription ||
+                item.security?.securityDesc ||
+                symbol,
+              marketSegment: item.security?.marketSegmentID || "",
+            };
+
+            // Update priceMap with more accurate data from new API
+            if (item.marketPrice && item.marketPrice > 0) {
+              priceMap[symbol] = item.marketPrice;
+            }
+          });
+
+          // Date string for document path: marketWatch/{date}/snapshots/{timestamp}
+          const dateStr = eatDate
+            .toISOString()
+            .split("T")[0]; // YYYY-MM-DD
+          const snapshotRef = db
+            .collection("marketWatch")
+            .doc(dateStr)
+            .collection("snapshots")
+            .doc(timestamp);
+
+          batch.set(snapshotRef, {
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            capturedAt: timestamp,
+            stockCount: Object.keys(snapshot).length,
+            stocks: snapshot,
+          });
+
+          console.log(
+            `Queued write to marketWatch/${dateStr}/snapshots/${timestamp} with ${Object.keys(snapshot).length} stocks.`,
+          );
+        } else {
+          console.warn("New market-data API returned no data.");
+        }
+      } catch (marketWatchError) {
+        console.error(
+          "Failed to fetch from api.dse.co.tz market-data:",
+          marketWatchError,
+        );
+        // Continue execution — old livePrices data is still available
+      }
+
       // C.2 Fetch Market Indices (TSI, DSEI)
       try {
         const indicesUrl = "https://dse.co.tz/get/last/traded/indices";
@@ -819,6 +935,95 @@ export const monitorIntradayMarketHttp = onRequest(
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         prices: pricesPayload,
       });
+
+      // C.1.5 Fetch Rich Market Data from new API and store in marketWatch
+      let marketWatchCount = 0;
+      try {
+        const marketWatchUrl =
+          "https://api.dse.co.tz/api/market-data?isBond=false";
+        const { data: marketWatchRaw } = await axios.get(marketWatchUrl, {
+          timeout: 15000,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "application/json",
+          },
+        });
+
+        const marketWatchData: MarketWatchEntry[] = Array.isArray(marketWatchRaw)
+          ? marketWatchRaw
+          : [];
+
+        if (marketWatchData.length > 0) {
+          const snapshot: { [symbol: string]: Record<string, unknown> } = {};
+
+          marketWatchData.forEach((item) => {
+            const symbol =
+              item.company?.symbol ||
+              item.security?.symbol ||
+              "";
+            if (!symbol) return;
+
+            snapshot[symbol] = {
+              marketPrice: item.marketPrice || 0,
+              openingPrice: item.openingPrice || 0,
+              change: item.change || 0,
+              bestBidPrice: item.bestBidPrice || 0,
+              bestBidQuantity: item.bestBidQuantity || 0,
+              bestOfferPrice: item.bestOfferPrice || 0,
+              bestOfferQuantity: item.bestOfferQuantity || 0,
+              high: item.high || 0,
+              low: item.low || 0,
+              volume: item.volume || 0,
+              marketCap: item.marketCap || 0,
+              minLimit: item.minLimit || 0,
+              maxLimit: item.maxLimit || 0,
+              totalSharesIssued: item.security?.totalSharesIssued || 0,
+              companyDescription:
+                item.companyDescription ||
+                item.security?.securityDesc ||
+                symbol,
+              marketSegment: item.security?.marketSegmentID || "",
+            };
+
+            // Update priceMap with more accurate data from new API
+            if (item.marketPrice && item.marketPrice > 0) {
+              priceMap[symbol] = item.marketPrice;
+            }
+          });
+
+          const now = new Date();
+          const eatTimeStr = now.toLocaleString("en-US", {
+            timeZone: "Africa/Dar_es_Salaam",
+          });
+          const eatDate = new Date(eatTimeStr);
+          const dateStr = eatDate
+            .toISOString()
+            .split("T")[0];
+          const snapshotRef = db
+            .collection("marketWatch")
+            .doc(dateStr)
+            .collection("snapshots")
+            .doc(timestamp);
+
+          batch.set(snapshotRef, {
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            capturedAt: timestamp,
+            stockCount: Object.keys(snapshot).length,
+            stocks: snapshot,
+          });
+
+          marketWatchCount = Object.keys(snapshot).length;
+          console.log(
+            `Queued write to marketWatch/${dateStr}/snapshots/${timestamp} with ${marketWatchCount} stocks.`,
+          );
+        }
+      } catch (marketWatchError) {
+        console.error(
+          "Failed to fetch from api.dse.co.tz market-data:",
+          marketWatchError,
+        );
+      }
 
       // C.2 Fetch Market Indices (TSI, DSEI)
       try {
