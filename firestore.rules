@@ -38,6 +38,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /marketWatch/{date} {
+      allow read: if true;
+      allow write: if false;
+
+      match /snapshots/{ts} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
     match /marketIndices/{doc} {
       allow read: if true;
       allow write: if false;
