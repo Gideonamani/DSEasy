@@ -12,7 +12,7 @@ export interface MarketTableProps {
 export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
-    const [sortConfig, setSortConfig] = useState<{ key: string; direction: string }>({ key: 'change', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: string }>({ key: 'pctChange', direction: 'desc' });
     const [searchTerm, setSearchTerm] = useState('');
 
     const sortedData = useMemo(() => {
