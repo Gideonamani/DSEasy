@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-03-04
+
+### Changed
+
+- Updated Dashboard "Top Gainer" and "Top Loser" logic to prioritize percentage changes over absolute price changes for more meaningful insights.
+
+### Fixed
+
+- Resolved `429 Too Many Requests` errors in Cloud Functions (`monitorIntradayMarket`, `scrapeDailyClosing`) caused by DSE rate-limiting GCP shared IP pools.
+  - Added `fetchWithRetry()` helper with automatic retry and `retry-after` header parsing.
+  - Spoofed browser-like HTTP headers (Chrome User-Agent, Sec-Fetch-\*) to avoid bot detection.
+  - Added random jitter (1–30s) before API requests to reduce GCP IP collisions.
+
+### Added
+
+- Created `.agent/workflows/dvcp.md` — formalized DVCP workflow as a reusable workflow file.
+
 ## [1.0.11] - 2026-03-03
 
 ### Fixed
