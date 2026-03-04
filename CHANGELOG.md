@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-04
+
+### Added
+
+- Developed **Daily Glance** live dashboard showcasing market sentiment, a bid/offer imbalance heatmap, circuit breaker position monitors, and a ranked deal finder.
+- Added `useMarketWatch` React Query hook with 5-minute auto-refresh to fetch daily snapshots from Firestore.
+- Added "Daily Glance" to sidebar navigation and registered the `/glance` application route.
+- Integrated the new `api.dse.co.tz/api/market-data` endpoint within Cloud Functions to fetch richer live data containing market depth and limits.
+- Made ticker symbols clickable within the Market Table to route users directly to ticker trends (from a previously unreleased commit).
+
+### Changed
+
+- Updated scheduled and HTTP Cloud Functions to store the new flattened data snapshots under the `marketWatch/{date}/snapshots/{timestamp}` collection in Firestore.
+
+### Security
+
+- Updated `firestore.rules` to grant public read-only access to the new `marketWatch` collection.
+
 ## [1.0.12] - 2026-03-04
 
 ### Changed
