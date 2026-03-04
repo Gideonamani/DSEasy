@@ -1,7 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onCall, HttpsError, onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import * as nodemailer from "nodemailer";
 import * as moment from "moment-timezone";
 
@@ -49,6 +49,91 @@ const SYMBOL_MAPPINGS: { [key: string]: string } = {
 // ------------------------------------------------------------------
 // HELPER FUNCTIONS
 // ------------------------------------------------------------------
+
+// Browser-like headers to avoid bot detection by DSE's Nginx rate limiter.
+// Cloud Functions default User-Agent ('axios/x.x.x') is easily flagged.
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Sec-Ch-Ua": '"Chromium";v="131", "Not_A Brand";v="24"',
+  "Sec-Ch-Ua-Mobile": "?0",
+  "Sec-Ch-Ua-Platform": '"Windows"',
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  Connection: "keep-alive",
+};
+
+/**
+ * Fetch a URL with automatic retry on 429 (Too Many Requests) errors.
+ * - Uses browser-like headers to reduce bot detection.
+ * - Parses the `retry-after` response header (seconds) from the server.
+ * - Falls back to exponential backoff if no retry-after header is present.
+ * @param url - The URL to fetch
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @param timeout - Request timeout in ms (default: 30000)
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries = 3,
+  timeout = 30000,
+): Promise<{ data: any }> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios.get(url, {
+        headers: BROWSER_HEADERS,
+        timeout,
+      });
+      return response;
+    } catch (error) {
+      const axiosErr = error as AxiosError;
+
+      // Only retry on 429 (rate limit) errors
+      if (axiosErr.response?.status === 429 && attempt < maxRetries) {
+        // Parse retry-after header (in seconds), default to exponential backoff
+        const retryAfterHeader = axiosErr.response.headers["retry-after"];
+        const retryAfterSecs = retryAfterHeader
+          ? parseInt(String(retryAfterHeader), 10)
+          : Math.pow(2, attempt + 1); // 2s, 4s, 8s fallback
+
+        const waitMs = (isNaN(retryAfterSecs) ? 5 : retryAfterSecs) * 1000;
+
+        console.warn(
+          `[fetchWithRetry] 429 on ${url} (attempt ${attempt + 1}/${maxRetries}). ` +
+            `Waiting ${waitMs / 1000}s before retry...`,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        continue;
+      }
+
+      // Non-429 error or exhausted retries — rethrow
+      throw error;
+    }
+  }
+
+  // Should never reach here, but TypeScript needs a return
+  throw new Error(
+    `[fetchWithRetry] All ${maxRetries} retries exhausted for ${url}`,
+  );
+}
+
+/**
+ * Random jitter delay (1-30 seconds) to avoid hitting rate limits
+ * at the same time as other GCP users on shared IP pools.
+ */
+async function randomJitter(): Promise<void> {
+  const jitterMs = Math.floor(Math.random() * 29000) + 1000; // 1s to 30s
+  console.log(
+    `[Jitter] Waiting ${(jitterMs / 1000).toFixed(1)}s before making requests...`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, jitterMs));
+}
 
 function normalizeSymbol(rawSymbol: string): string {
   if (!rawSymbol) return "";
@@ -116,7 +201,7 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
 
   try {
     console.log("Fetching DSE homepage...");
-    const { data: html } = await axios.get(url, { timeout: 30000 });
+    const { data: html } = await fetchWithRetry(url);
 
     // 1. EXTRACT DATE
     const dateRegex =
@@ -299,7 +384,9 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
       );
 
       // D. trends/{symbol}/dailyClosingHistory/{date}
-      const historyRef = trendsRef.collection("dailyClosingHistory").doc(formattedDate);
+      const historyRef = trendsRef
+        .collection("dailyClosingHistory")
+        .doc(formattedDate);
       batch.set(historyRef, {
         date: formattedDate,
         ...stock,
@@ -382,9 +469,12 @@ export const monitorIntradayMarket = onSchedule(
     try {
       console.log("Starting alert check...");
 
+      // Jitter: random 1-30s delay to avoid shared GCP IP collisions
+      await randomJitter();
+
       // A. Fetch Live Prices from DSE API
       const dseUrl = "https://dse.co.tz/api/get/live/market/prices";
-      const { data: apiResponse } = await axios.get(dseUrl);
+      const { data: apiResponse } = await fetchWithRetry(dseUrl);
       const marketData: DSEMarketData[] = apiResponse.data || [];
 
       if (!marketData || marketData.length === 0) {
@@ -402,7 +492,7 @@ export const monitorIntradayMarket = onSchedule(
         const changeValue = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
-          
+
         const currentPrice = basePrice + changeValue;
         const symbol = item.company.trim();
 
@@ -452,7 +542,7 @@ export const monitorIntradayMarket = onSchedule(
       // C.2 Fetch Market Indices (TSI, DSEI)
       try {
         const indicesUrl = "https://dse.co.tz/get/last/traded/indices";
-        const { data: indicesResponse } = await axios.get(indicesUrl);
+        const { data: indicesResponse } = await fetchWithRetry(indicesUrl);
         if (
           indicesResponse &&
           indicesResponse.success &&
@@ -677,7 +767,7 @@ export const monitorIntradayMarketHttp = onRequest(
 
       // A. Fetch Live Prices from DSE API
       const dseUrl = "https://dse.co.tz/api/get/live/market/prices";
-      const { data: apiResponse } = await axios.get(dseUrl);
+      const { data: apiResponse } = await fetchWithRetry(dseUrl);
       const marketData: DSEMarketData[] = apiResponse.data || [];
 
       if (!marketData || marketData.length === 0) {
@@ -695,7 +785,7 @@ export const monitorIntradayMarketHttp = onRequest(
         const changeValue = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
-          
+
         const currentPrice = basePrice + changeValue;
         const symbol = item.company.trim();
         if (symbol && currentPrice > 0) {
@@ -721,7 +811,8 @@ export const monitorIntradayMarketHttp = onRequest(
         const change = item.change
           ? parseFloat(String(item.change).replace(/,/g, ""))
           : 0;
-        if (symbol) pricesPayload[symbol] = { price: basePrice + change, change };
+        if (symbol)
+          pricesPayload[symbol] = { price: basePrice + change, change };
       });
 
       batch.set(livePricesRef, {
@@ -732,19 +823,31 @@ export const monitorIntradayMarketHttp = onRequest(
       // C.2 Fetch Market Indices (TSI, DSEI)
       try {
         const indicesUrl = "https://dse.co.tz/get/last/traded/indices";
-        const { data: indicesResponse } = await axios.get(indicesUrl);
-        if (indicesResponse && indicesResponse.success && indicesResponse.data) {
-          const currentIndicesRef = db.collection("marketIndices").doc("current");
-          const historyIndicesRef = db.collection("marketIndices").doc("history").collection("records").doc(timestamp);
-          
+        const { data: indicesResponse } = await fetchWithRetry(indicesUrl);
+        if (
+          indicesResponse &&
+          indicesResponse.success &&
+          indicesResponse.data
+        ) {
+          const currentIndicesRef = db
+            .collection("marketIndices")
+            .doc("current");
+          const historyIndicesRef = db
+            .collection("marketIndices")
+            .doc("history")
+            .collection("records")
+            .doc(timestamp);
+
           const indicesPayload = {
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            data: indicesResponse.data
+            data: indicesResponse.data,
           };
 
           batch.set(currentIndicesRef, indicesPayload);
           batch.set(historyIndicesRef, indicesPayload);
-          console.log(`(HTTP Test) Queued write to marketIndices/current and history for ${indicesResponse.data.length} indices.`);
+          console.log(
+            `(HTTP Test) Queued write to marketIndices/current and history for ${indicesResponse.data.length} indices.`,
+          );
         }
       } catch (indicesError) {
         console.error("Failed to fetch market indices:", indicesError);
