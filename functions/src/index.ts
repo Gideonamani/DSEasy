@@ -644,8 +644,7 @@ export const monitorIntradayMarket = onSchedule(
     }
 
     // Validation: Run only between 09:30 (570) and 16:15 (975)
-    // Adding a buffer: 9:00 (540) to 17:00 (1020) to be safe with timezone edges
-    if (totalMins < 540 || totalMins > 1020) {
+    if (totalMins < 540 || totalMins > 975) {
       console.log("Outside market hours - skipping alert check.");
       return;
     }
