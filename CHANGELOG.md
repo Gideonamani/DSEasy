@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-05
+
+### Added
+
+- **Historical Daily Glance**: Added a `DatePicker` inside the Daily Glance to enable users to view live order book snapshots for past market watch dates.
+- **MarketWatch Dates Sync**: Implemented a backend update strategy where the `monitorIntradayMarket` Cloud Function adds successfully scraped dates to the `marketWatchDates` array in the `config/app` document.
+- Created `useMarketWatchDates` frontend hook to fetch these dates directly from Firestore.
+
+### Fixed
+
+- Resolved "Encountered two children with the same key" React warnings inside the Market Timeline by formulating a unique combination key.
+
 ## [1.1.2] - 2026-03-05
 
 ### Fixed
