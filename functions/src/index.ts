@@ -693,34 +693,6 @@ export const monitorIntradayMarket = onSchedule(
 
       // C. Save Live Prices to Firestore (Fix for missing updates)
       const timestamp = new Date().toISOString();
-      // Use clean timestamp for document ID to avoid special chars if any, but ISO is fine usually.
-      // Actually, let's use a simpler ID for readability if we want, but ISO is standard.
-      const livePricesRef = db.collection("livePrices").doc(timestamp);
-
-      const pricesPayload: {
-        [symbol: string]: { price: number; change: number };
-      } = {};
-
-      marketData.forEach((item) => {
-        const symbol = item.company.trim();
-        const basePrice = item.price
-          ? parseFloat(String(item.price).replace(/,/g, ""))
-          : 0;
-        const change = item.change
-          ? parseFloat(String(item.change).replace(/,/g, ""))
-          : 0;
-
-        if (symbol) {
-          pricesPayload[symbol] = { price: basePrice + change, change };
-        }
-      });
-
-      batch.set(livePricesRef, {
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        prices: pricesPayload,
-      });
-
-      console.log(`Queued write to livePrices/${timestamp}`);
 
       // C.1.5 Fetch Rich Market Data from new API and store in marketWatch
       try {
@@ -795,6 +767,13 @@ export const monitorIntradayMarket = onSchedule(
             stocks: snapshot,
           });
 
+          // Update available dates for Market Watch
+          const configAppRef = db.collection("config").doc("app");
+          batch.set(configAppRef, {
+            marketWatchDates: admin.firestore.FieldValue.arrayUnion(dateStr),
+            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+
           console.log(
             `Queued write to marketWatch/${dateStr}/snapshots/${timestamp} with ${Object.keys(snapshot).length} stocks.`,
           );
@@ -833,7 +812,7 @@ export const monitorIntradayMarket = onSchedule(
           "Failed to fetch from api.dse.co.tz market-data:",
           marketWatchError,
         );
-        // Continue execution — old livePrices data is still available
+        // Continue execution
       }
 
       // C.2 Fetch Market Indices (TSI, DSEI)
@@ -878,10 +857,10 @@ export const monitorIntradayMarket = onSchedule(
 
       if (alertsSnap.empty) {
         console.log("No active alerts found.");
-        // Commit live prices even if no alerts
-        if (Object.keys(pricesPayload).length > 0) {
+        // Commit market data even if no alerts
+        if (Object.keys(priceMap).length > 0) {
           await batch.commit();
-          console.log("Committed live prices (no alerts checked).");
+          console.log("Committed market data (no alerts checked).");
         }
         return;
       }
@@ -1090,32 +1069,10 @@ export const monitorIntradayMarketHttp = onRequest(
         }
       });
 
-      // C. Save Live Prices to Firestore
       const db = admin.firestore();
       const batch = db.batch();
 
       const timestamp = new Date().toISOString();
-      const livePricesRef = db.collection("livePrices").doc(timestamp);
-
-      const pricesPayload: {
-        [symbol: string]: { price: number; change: number };
-      } = {};
-      marketData.forEach((item) => {
-        const symbol = item.company.trim();
-        const basePrice = item.price
-          ? parseFloat(String(item.price).replace(/,/g, ""))
-          : 0;
-        const change = item.change
-          ? parseFloat(String(item.change).replace(/,/g, ""))
-          : 0;
-        if (symbol)
-          pricesPayload[symbol] = { price: basePrice + change, change };
-      });
-
-      batch.set(livePricesRef, {
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        prices: pricesPayload,
-      });
 
       // C.1.5 Fetch Rich Market Data from new API and store in marketWatch
       let marketWatchCount = 0;
@@ -1279,7 +1236,7 @@ export const monitorIntradayMarketHttp = onRequest(
       res.json({
         success: true,
         message: "Executed monitorIntradayMarket logic",
-        pricesSaved: Object.keys(pricesPayload).length,
+        pricesSaved: Object.keys(priceMap).length,
         alertsTriggered: triggeredCount,
       });
     } catch (error) {
