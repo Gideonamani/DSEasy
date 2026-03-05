@@ -19,9 +19,11 @@ description: Document, Version, Commit, Push — the standard release workflow
 4. **Document (CHANGELOG.md)**: Update `CHANGELOG.md` with a new version section summarizing all changes since the last version. Group by type (Features, Fixes, Chores, etc.).
 
 5. **Version (package.json)**: Bump the version in `package.json`:
-   - **patch** (0.0.x): bug fixes, minor tweaks
-   - **minor** (0.x.0): new features, non-breaking
+   - **patch** (0.0.x): bug fixes, UI tweaks, or incremental enhancements (favor this for daily progress)
+   - **minor** (0.x.0): significant new features or substantial functional updates
    - **major** (x.0.0): breaking changes
+
+> **Tip**: Don't pump up minor versions too rapidly for daily additions. Use patches for most dashboard refinements.
 
 6. **Commit**: Stage ONLY changelog and version files, then commit:
 
