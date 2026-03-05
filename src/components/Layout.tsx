@@ -229,6 +229,7 @@ export const Layout: React.FC<LayoutProps> = ({
   activeTab,
   onTabChange,
 }) => {
+  const { currentUser } = useAuth();
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false,
   );
@@ -341,7 +342,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <div style={{ flex: 1, padding: "12px 0" }}>
           {[
             "Dashboard",
-            "Daily Glance",
+            ...(currentUser ? ["Daily Glance"] : []),
             "Derived Analytics",
             "Ticker Trends",
             "Notifications",

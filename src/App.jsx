@@ -6,13 +6,90 @@ import { DailyGlance } from "./components/DailyGlance";
 import { DerivedAnalytics } from "./components/DerivedAnalytics";
 import { TickerTrends } from "./components/TickerTrends";
 import { NotificationsManager } from "./components/NotificationsManager";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, LogIn } from "lucide-react";
 import { useSettings } from "./contexts/SettingsContext";
 import { Settings } from "./components/Settings";
 import { useMarketDates, useMarketData, useMarketIndices } from "./hooks/useMarketQuery";
 import { formatLargeNumber } from "./utils/formatters";
+import { useAuth } from "./contexts/AuthContext";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
+
+/** Gate screen shown to unauthenticated visitors on protected routes. */
+function ProtectedRoute({ children }) {
+  const { currentUser, loginWithGoogle } = useAuth();
+
+  if (currentUser) return children;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "60vh",
+        gap: 20,
+        textAlign: "center",
+        padding: 32,
+      }}
+    >
+      <div
+        style={{
+          padding: 20,
+          borderRadius: "50%",
+          background: "color-mix(in srgb, var(--accent-primary) 15%, transparent)",
+          marginBottom: 8,
+        }}
+      >
+        <Lock size={40} color="var(--accent-primary)" />
+      </div>
+      <h2
+        style={{
+          fontSize: "var(--text-2xl)",
+          fontWeight: "var(--font-bold)",
+          margin: 0,
+          color: "var(--text-primary)",
+        }}
+      >
+        Members Only
+      </h2>
+      <p
+        style={{
+          color: "var(--text-secondary)",
+          maxWidth: 420,
+          margin: 0,
+          lineHeight: 1.6,
+          fontSize: "var(--text-sm)",
+        }}
+      >
+        Daily Glance contains live order-book intelligence and premium market
+        insights. Please sign in to access this section.
+      </p>
+      <button
+        onClick={loginWithGoogle}
+        style={{
+          marginTop: 8,
+          padding: "12px 28px",
+          background: "var(--accent-primary)",
+          border: "none",
+          borderRadius: "var(--radius-md)",
+          color: "white",
+          cursor: "pointer",
+          fontWeight: "var(--font-semibold)",
+          fontSize: "var(--text-sm)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          transition: "opacity 0.2s",
+        }}
+      >
+        <LogIn size={16} />
+        Sign In with Google
+      </button>
+    </div>
+  );
+}
 
 // Route configuration
 const ROUTES = {
@@ -182,7 +259,7 @@ function App() {
                formatLargeNumber={formatLargeNumberDisplay}
             />
         } />
-        <Route path="/glance" element={<DailyGlance />} />
+        <Route path="/glance" element={<ProtectedRoute><DailyGlance /></ProtectedRoute>} />
         <Route 
           path="/analytics" 
           element={
