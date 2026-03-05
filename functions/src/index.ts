@@ -457,6 +457,161 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
 }
 
 // ------------------------------------------------------------------
+// MARKET INTEL HELPERS
+// ------------------------------------------------------------------
+function formatLargeNumber(num: number): string {
+  if (num >= 1e6) return (num / 1e6).toFixed(1) + "M";
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + "K";
+  return new Intl.NumberFormat("en-US").format(num);
+}
+
+function generateSnapshotIntel(snapshot: any): string {
+  if (!snapshot || !snapshot.stocks) return "";
+  
+  const stocks = Object.entries(snapshot.stocks).map(([symbol, data]) => ({
+    symbol,
+    ...(data as any)
+  }));
+  
+  if (stocks.length === 0) return "";
+
+  let upCount = 0;
+  let downCount = 0;
+  let flatCount = 0;
+
+  let strongestDemand = stocks[0];
+  let maxDemandRatio = -1;
+
+  let biggestSupply = stocks[0];
+  let maxOfferQty = -1;
+
+  stocks.forEach((s) => {
+    if (s.change > 0) upCount++;
+    else if (s.change < 0) downCount++;
+    else flatCount++;
+
+    const demandRatio = s.bestOfferQuantity === 0 && s.bestBidQuantity > 0 
+      ? Infinity 
+      : s.bestOfferQuantity > 0 ? s.bestBidQuantity / s.bestOfferQuantity : 0;
+    
+    if (demandRatio > maxDemandRatio || (demandRatio === Infinity && s.bestBidQuantity > (strongestDemand?.bestBidQuantity || 0))) {
+      maxDemandRatio = demandRatio;
+      strongestDemand = s;
+    }
+
+    if (s.bestOfferQuantity > maxOfferQty) {
+      maxOfferQty = s.bestOfferQuantity;
+      biggestSupply = s;
+    }
+  });
+
+  const sentiment = upCount > downCount ? 'BULLISH' : downCount > upCount ? 'BEARISH' : 'NEUTRAL';
+  
+  // Use EAT strictly
+  const capturedAtEat = new Date(snapshot.capturedAt).toLocaleString('en-US', { timeZone: 'Africa/Dar_es_Salaam' });
+  const d = new Date(capturedAtEat);
+  const formattedTime = (d.getHours().toString().padStart(2, '0')) + ':' + (d.getMinutes().toString().padStart(2, '0'));
+  
+  let txt = `At **${formattedTime}**, the overall market sentiment is **${sentiment}** with ${downCount} stocks down and ${upCount} up. `;
+  
+  if (strongestDemand && strongestDemand.bestBidQuantity > 0) {
+    txt += `The strongest demand is seen in **${strongestDemand.symbol}** (${formatLargeNumber(strongestDemand.bestBidQuantity)} shares bid vs ${formatLargeNumber(strongestDemand.bestOfferQuantity)} offered). `;
+  }
+  
+  if (biggestSupply && biggestSupply.bestOfferQuantity > 0) {
+    txt += `Conversely, **${biggestSupply.symbol}** is facing heavy supply pressure with ${formatLargeNumber(biggestSupply.bestOfferQuantity)} shares offered. `;
+  }
+
+  const maxedOut = stocks.filter(s => s.marketPrice === s.maxLimit && s.maxLimit > 0);
+  if (maxedOut.length > 0) {
+    txt += `Notably, ${maxedOut.map(s => `**${s.symbol}**`).join(", ")} reached their daily maximum circuit breaker limits.`;
+  }
+
+  return txt;
+}
+
+async function generateTrendIntel(dbInstance: admin.firestore.Firestore, dateStr: string, currentSnapshot: any): Promise<string> {
+  if (!currentSnapshot || !currentSnapshot.stocks) return "";
+  
+  // Fetch the first snapshot of the day
+  const openSnapQuery = await dbInstance.collection("marketWatch").doc(dateStr).collection("snapshots")
+    .orderBy("capturedAt", "asc")
+    .limit(1)
+    .get();
+    
+  if (openSnapQuery.empty) return "";
+  
+  let startSnapshot = openSnapQuery.docs[0].data();
+  
+  // If the first snapshot IS the current snapshot, there is no trend yet
+  if (startSnapshot.capturedAt === currentSnapshot.capturedAt) {
+    return "";
+  }
+
+  let startUp = 0;
+  let startDown = 0;
+  Object.values(startSnapshot.stocks).forEach((s: any) => {
+    if (s.change > 0) startUp++;
+    else if (s.change < 0) startDown++;
+  });
+  const startSentiment = startUp > startDown ? 'BULLISH' : startDown > startUp ? 'BEARISH' : 'NEUTRAL';
+  
+  let currUp = 0;
+  let currDown = 0;
+  Object.values(currentSnapshot.stocks).forEach((s: any) => {
+    if (s.change > 0) currUp++;
+    else if (s.change < 0) currDown++;
+  });
+  const currSentiment = currUp > currDown ? 'BULLISH' : currDown > currUp ? 'BEARISH' : 'NEUTRAL';
+
+  const startEat = new Date(startSnapshot.capturedAt).toLocaleString('en-US', { timeZone: 'Africa/Dar_es_Salaam' });
+  const startD = new Date(startEat);
+  const startTime = (startD.getHours().toString().padStart(2, '0')) + ':' + (startD.getMinutes().toString().padStart(2, '0'));
+
+  const currEat = new Date(currentSnapshot.capturedAt).toLocaleString('en-US', { timeZone: 'Africa/Dar_es_Salaam' });
+  const currD = new Date(currEat);
+  const currTime = (currD.getHours().toString().padStart(2, '0')) + ':' + (currD.getMinutes().toString().padStart(2, '0'));
+  
+  let txt = "";
+  if (startSentiment !== currSentiment) {
+    txt += `The market opened **${startSentiment}** at ${startTime} but has since turned **${currSentiment}** by ${currTime}. `;
+  } else {
+    txt += `Since the open at ${startTime}, the market has held a steady **${currSentiment}** posture. `;
+  }
+
+  let biggestMoverSymbol = "";
+  let maxAbsMovePct = -1;
+  let moveDir = "";
+  let movePctVal = 0;
+
+  const currentStocks = Object.entries(currentSnapshot.stocks);
+  for (const [symbol, currDataAny] of currentStocks) {
+    const currData = currDataAny as any;
+    const startData = startSnapshot.stocks[symbol];
+    if (startData && currData.marketPrice > 0 && startData.marketPrice > 0) {
+      if (currData.marketPrice !== startData.marketPrice) {
+        const pctMove = ((currData.marketPrice - startData.marketPrice) / startData.marketPrice) * 100;
+        const absMove = Math.abs(pctMove);
+         if (absMove > maxAbsMovePct) {
+            maxAbsMovePct = absMove;
+            biggestMoverSymbol = symbol;
+            moveDir = pctMove > 0 ? "gained" : "dropped";
+            movePctVal = absMove;
+         }
+      }
+    }
+  }
+
+  if (biggestMoverSymbol) {
+    txt += `**${biggestMoverSymbol}** is the most significant mover, having ${moveDir} **${movePctVal.toFixed(2)}%** since the open.`;
+  } else if (startSentiment === currSentiment) {
+    txt = `Since the open at ${startTime}, the market has held a steady **${currSentiment}** posture with no distinct price shifts.`;
+  }
+
+  return txt.trim();
+}
+
+// ------------------------------------------------------------------
 // 1. Scheduled Function: Monitor Intraday Market
 // Runs every 15 minutes Mon-Fri during market hours (09:30 - 16:15)
 // Scrapes live prices, saves to Firestore, and checks alerts.
@@ -644,6 +799,33 @@ export const monitorIntradayMarket = onSchedule(
           console.log(
             `Queued write to marketWatch/${dateStr}/snapshots/${timestamp} with ${Object.keys(snapshot).length} stocks.`,
           );
+
+          // C.1.6 Generate and store Market Intel
+          try {
+            const currentSnapPayload = {
+               capturedAt: timestamp,
+               stockCount: Object.keys(snapshot).length,
+               stocks: snapshot,
+            };
+            const snapshotSummary = generateSnapshotIntel(currentSnapPayload);
+            const trendSummary = await generateTrendIntel(db, dateStr, currentSnapPayload);
+            
+            const intelRef = db
+              .collection("marketWatch")
+              .doc(dateStr)
+              .collection("intel")
+              .doc(timestamp);
+
+            batch.set(intelRef, {
+              capturedAt: timestamp,
+              type: "intraday",
+              snapshotSummary,
+              trendSummary,
+            });
+            console.log(`Queued market intel for ${dateStr}/${timestamp}`);
+          } catch (intelError) {
+            console.error("Failed to generate market intel:", intelError);
+          }
         } else {
           console.warn("New market-data API returned no data.");
         }
@@ -1278,4 +1460,98 @@ export const scrapeDailyClosingHttp = onRequest(
     const result = await scrapeDSEAndWriteToFirestore();
     res.json(result);
   },
+);
+
+// ------------------------------------------------------------------
+// 5. Scheduled Function: Market Intel Closing Summary
+// ------------------------------------------------------------------
+export const generateDailyCloseSummary = onSchedule(
+  {
+    schedule: "45 16 * * 1-5",
+    timeZone: "Africa/Dar_es_Salaam",
+    region: "europe-west1",
+  },
+  async (event) => {
+    const now = moment().tz("Africa/Dar_es_Salaam");
+    const dateStr = now.format("YYYY-MM-DD");
+    
+    try {
+      // Get last snapshot of the day
+      const lastSnapQuery = await db.collection("marketWatch").doc(dateStr).collection("snapshots")
+        .orderBy("capturedAt", "desc")
+        .limit(1)
+        .get();
+        
+      if (lastSnapQuery.empty) {
+        console.log(`No snapshots found for ${dateStr} closing summary.`);
+        return;
+      }
+      
+      const lastSnapshot = lastSnapQuery.docs[0].data();
+      const snapshotSummary = generateSnapshotIntel(lastSnapshot);
+      
+      let trendSummary = await generateTrendIntel(db, dateStr, lastSnapshot);
+      
+      // Compare daily open vs close
+      const firstSnapQuery = await db.collection("marketWatch").doc(dateStr).collection("snapshots")
+        .orderBy("capturedAt", "asc")
+        .limit(1)
+        .get();
+        
+      if (!firstSnapQuery.empty && firstSnapQuery.docs[0].id !== lastSnapQuery.docs[0].id) {
+         const firstSnapshot = firstSnapQuery.docs[0].data();
+         
+         let firstUp = 0; let firstDown = 0;
+         Object.values(firstSnapshot.stocks).forEach((s: any) => { if (s.change > 0) firstUp++; else if (s.change < 0) firstDown++; });
+         const firstSentiment = firstUp > firstDown ? 'BULLISH' : firstDown > firstUp ? 'BEARISH' : 'NEUTRAL';
+         
+         let lastUp = 0; let lastDown = 0;
+         Object.values(lastSnapshot.stocks).forEach((s: any) => { if (s.change > 0) lastUp++; else if (s.change < 0) lastDown++; });
+         const lastSentiment = lastUp > lastDown ? 'BULLISH' : lastDown > lastUp ? 'BEARISH' : 'NEUTRAL';
+         
+         let txt = `Overall for the day, the market opened **${firstSentiment}** and closed **${lastSentiment}**. `;
+         
+         let biggestMoverSymbol = "";
+         let maxAbsMovePct = -1;
+         let movePctVal = 0;
+         let moveDir = "";
+         
+         for (const [symbol, currDataAny] of Object.entries(lastSnapshot.stocks)) {
+            const currData = currDataAny as any;
+            const startData = firstSnapshot.stocks[symbol];
+            if (startData && currData.marketPrice > 0 && startData.marketPrice > 0 && currData.marketPrice !== startData.marketPrice) {
+               const pctMove = ((currData.marketPrice - startData.marketPrice) / startData.marketPrice) * 100;
+               const absMove = Math.abs(pctMove);
+               if (absMove > maxAbsMovePct) {
+                  maxAbsMovePct = absMove;
+                  biggestMoverSymbol = symbol;
+                  moveDir = pctMove > 0 ? "gained" : "dropped";
+                  movePctVal = absMove;
+               }
+            }
+         }
+         if (biggestMoverSymbol && maxAbsMovePct > 0) {
+            txt += `**${biggestMoverSymbol}** was today's notable mover, having ${moveDir} **${movePctVal.toFixed(2)}%** from the open.`;
+         }
+         trendSummary = txt;
+      }
+      
+      const timestamp = new Date().toISOString();
+      const intelRef = db
+        .collection("marketWatch")
+        .doc(dateStr)
+        .collection("intel")
+        .doc(timestamp);
+
+      await intelRef.set({
+        capturedAt: lastSnapshot.capturedAt, 
+        type: "closing",
+        snapshotSummary,
+        trendSummary: `Closing Wrap-Up: ${trendSummary}`,
+      });
+      console.log(`Successfully generated closing intel for ${dateStr}`);
+    } catch (e) {
+      console.error("Error generating daily close summary:", e);
+    }
+  }
 );
