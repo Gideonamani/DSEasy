@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-03-05
+
+### Fixed
+
+- **Scroll Retention on Navigation**: Restored the standard SPA scroll-to-top behavior for menu navigations, while correctly preserving the exact scroll position on back/forward browser requests.
+
+### Added
+
+- **Daily Glance Protection**: The Daily Glance route (`/glance`) and its corresponding menu item have been restricted to authenticated users only. Unauthenticated visitors are presented with a gated 'Members Only' SignIn screen.
+
 ## [1.1.1] - 2026-03-05
 
 ### Added
