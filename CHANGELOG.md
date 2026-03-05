@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-05
+
+### Added
+
+- **Market Intel Timeline**: Implemented a rich, chronological backend-generated timeline on the Daily Glance page.
+  - Snapshot summary paragraphs detailing market sentiment, demand/supply imbalances, and circuit breaker status.
+  - Standalone **Latest Trend Insight** card with a "Fixed Open" comparison strategy anchored to the daily opening snapshot.
+  - Visual timeline connectivity with nodes, vertical lines, and pulse animations for the current status.
+- **Notable Movers Section**: Added a compact, high-signal table in Daily Glance showing the session's top percentage and absolute price movers.
+- Added `useMarketIntel` hook to fetch chronological trend documents from Firestore.
+
+### Changed
+
+- Refactored `generateTrendIntel` Cloud Function to use a stable daily open reference point instead of a sliding window, providing a clearer market narrative ("Since the open at 09:30...").
+- Enhanced backend trend messaging to handle "quiet/flat" market conditions more naturally.
+- Moved all market summary logic from the frontend to the backend for better consistency and performance.
+
+### Fixed
+
+- Resolved an issue where market timeline was hidden due to missing Firestore read permissions for the `intel` subcollection.
+- Handled potential UI loading/error states for the Market Intel feed with explicit error cards and ShieldAlert icons.
+
+### Security
+
+- Updated `firestore.rules` to allow public read access to `marketWatch/{date}/intel`.
+
+### Chores
+
+- Added deferred feature roadmap (anomaly flags, momentum score, watchlist integration) to `TODO.md`.
+
 ## [1.1.0] - 2026-03-04
 
 ### Added
