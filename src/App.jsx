@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Routes, Route, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useMemo, useEffect } from "react";
+import { Routes, Route, useLocation, useNavigate, useSearchParams, useNavigationType } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { DailyGlance } from "./components/DailyGlance";
@@ -113,10 +113,18 @@ const TAB_TO_ROUTE = {
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const navType = useNavigationType();
   const { settings } = useSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const dateFromUrl = searchParams.get("date");
   
+  // Scroll to top on new route navigation (but preserve on back/forward)
+  useEffect(() => {
+    if (navType !== "POP") {
+      window.scrollTo(0, 0);
+    }
+  }, [location.pathname, navType]);
+
   // React Query Hooks
   const { data: availableDates = [], isLoading: loadingDates, error: datesError } = useMarketDates();
   
