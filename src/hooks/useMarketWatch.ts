@@ -35,6 +35,13 @@ export interface MarketWatchSnapshot {
   timestamp: any; // Firestore server timestamp
 }
 
+export interface MarketIntel {
+  capturedAt: string;
+  type: "intraday" | "closing";
+  snapshotSummary: string;
+  trendSummary: string;
+}
+
 /**
  * Get today's date string in YYYY-MM-DD format (EAT timezone)
  */
@@ -97,6 +104,31 @@ export function useAllSnapshots(date?: string) {
 
       return snap.docs.map((doc) => doc.data() as MarketWatchSnapshot);
     },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch all market intels for a given date.
+ */
+export function useMarketIntel(date?: string) {
+  const dateStr = date || getTodayDateStr();
+
+  return useQuery<MarketIntel[]>({
+    queryKey: ["marketWatch", "intel", dateStr],
+    queryFn: async () => {
+      const intelRef = collection(
+        db,
+        "marketWatch",
+        dateStr,
+        "intel"
+      );
+      const q = query(intelRef, orderBy("capturedAt", "asc"));
+      const snap = await getDocs(q);
+
+      return snap.docs.map((doc) => doc.data() as MarketIntel);
+    },
+    refetchInterval: 5 * 60 * 1000,
     staleTime: 5 * 60 * 1000,
   });
 }
