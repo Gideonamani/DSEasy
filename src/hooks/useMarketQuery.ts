@@ -94,6 +94,35 @@ export const useMarketDates = () => {
     });
 };
 
+// Fetch available Market Watch dates from config/app
+export const useMarketWatchDates = () => {
+    return useQuery<MarketDate[]>({
+        queryKey: ['marketWatchDates'],
+        queryFn: async () => {
+            const docRef = doc(db, 'config', 'app');
+            const snapshot = await getDoc(docRef);
+            
+            if (!snapshot.exists()) return [];
+            
+            const data = snapshot.data();
+            // data.marketWatchDates is array of ISO strings ["2026-03-04", ...]
+            
+            const dates: MarketDate[] = (data.marketWatchDates || []).map((d: string) => ({
+                sheetName: d,
+                date: parseSheetDate(d)
+            }));
+            
+            // Sort Descending
+            dates.sort((a, b) => {
+                const dateA = a.date ? a.date.getTime() : 0;
+                const dateB = b.date ? b.date.getTime() : 0;
+                return dateB - dateA;
+            });
+            return dates;
+        }
+    });
+};
+
 // Fetch daily closing data from dailyClosing/{date}/stocks
 export const useMarketData = (date: string) => {
     return useQuery<StockData[]>({
