@@ -1,5 +1,8 @@
 import React, { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLatestSnapshot, useMarketIntel } from "../hooks/useMarketWatch";
+import { useMarketWatchDates } from "../hooks/useMarketQuery";
+import { DatePicker } from "./DatePicker";
 import { StatCard } from "./StatCard";
 import {
   TrendingUp,
@@ -15,8 +18,33 @@ import {
 import { formatNumber, formatLargeNumber } from "../utils/formatters";
 
 export const DailyGlance: React.FC = () => {
-  const { data: snapshot, isLoading, error } = useLatestSnapshot();
-  const { data: intelHistory, error: intelError } = useMarketIntel();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dateFromUrl = searchParams.get("date");
+  
+  const { data: availableDates = [], isLoading: loadingDates } = useMarketWatchDates();
+  
+  const effectiveDate = useMemo(() => {
+    if (dateFromUrl) return dateFromUrl;
+    if (availableDates.length > 0) return availableDates[0].sheetName;
+    return undefined;
+  }, [dateFromUrl, availableDates]);
+
+  const handleDateChange = (date: string) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (date) {
+        newParams.set("date", date);
+      } else {
+        newParams.delete("date");
+      }
+      return newParams;
+    });
+  };
+
+  const { data: snapshot, isLoading: isLoadingSnapshot, error } = useLatestSnapshot(effectiveDate);
+  const { data: intelHistory, error: intelError } = useMarketIntel(effectiveDate);
+
+  const isLoading = isLoadingSnapshot || loadingDates;
 
   const stocks = useMemo(() => {
     if (!snapshot?.stocks) return [];
@@ -164,8 +192,7 @@ export const DailyGlance: React.FC = () => {
     );
   }
 
-  if (error || !snapshot) {
-    console.error("Snapshot Error:", error);
+  if (!snapshot) {
     return (
       <div
         className="error-container"
@@ -198,14 +225,17 @@ export const DailyGlance: React.FC = () => {
             ? `Error: ${(error as Error).message}`
             : "Market watch snapshots are currently unavailable. The market may be closed or the scraper is initializing."}
         </p>
+        <div style={{ marginTop: 24 }}>
+          <DatePicker
+            selectedDate={effectiveDate || null}
+            availableDates={availableDates}
+            loadingData={isLoading}
+            onChange={handleDateChange}
+          />
+        </div>
       </div>
     );
   }
-
-  const formattedTime = new Date(snapshot.capturedAt).toLocaleTimeString(
-    "en-GB",
-    { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" },
-  );
 
   return (
     <div
@@ -260,37 +290,50 @@ export const DailyGlance: React.FC = () => {
             Live order book intelligence and market pulse
           </p>
         </div>
-        <div
-          style={{
-            background: "var(--bg-elevated)",
-            padding: "8px 16px",
-            borderRadius: "var(--radius-full)",
-            border: "1px solid var(--glass-border)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: "var(--text-sm)",
-            flex: "0 0 auto",
-          }}
-        >
+        <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", flex: "0 0 auto" }}>
           <div
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "var(--accent-success)",
-              boxShadow: "0 0 8px var(--accent-success)",
-            }}
-          />
-          Last updated:{" "}
-          <span
-            style={{
-              color: "var(--text-primary)",
-              fontWeight: "var(--font-semibold)",
+              background: "var(--bg-elevated)",
+              padding: "8px 16px",
+              borderRadius: "var(--radius-full)",
+              border: "1px solid var(--glass-border)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: "var(--text-sm)",
             }}
           >
-            {formattedTime} EAT
-          </span>
+            <div
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "var(--accent-success)",
+                boxShadow: "0 0 8px var(--accent-success)",
+              }}
+            />
+            {snapshot && snapshot.capturedAt ? (
+              <>
+                Last updated:{" "}
+                <span
+                  style={{
+                    color: "var(--text-primary)",
+                    fontWeight: "var(--font-semibold)",
+                  }}
+                >
+                  {new Date(snapshot.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" })} EAT
+                </span>
+              </>
+            ) : (
+              <span>Not available</span>
+            )}
+          </div>
+          <DatePicker
+            selectedDate={effectiveDate || null}
+            availableDates={availableDates}
+            loadingData={isLoading}
+            onChange={handleDateChange}
+          />
         </div>
       </div>
 
@@ -765,7 +808,7 @@ export const DailyGlance: React.FC = () => {
 
                     return (
                       <div 
-                        key={intel.capturedAt} 
+                        key={`${intel.capturedAt}-${intel.type}-${idx}`} 
                         style={{ position: "relative", paddingLeft: 32 }}
                       >
                         {/* Timeline Node/Dot */}
