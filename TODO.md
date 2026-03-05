@@ -24,3 +24,9 @@
 - [ ] **Firebase Migration**: Transition the application backend and auth to Firebase.
 - [ ] **Dark Mode**: Update dark mode color consistency for Trends symbols dropdown picker.
 - [ ] **Level 2 Insights**: Develop more detailed Level 2 market data visualizations.
+
+## Daily Glance Intel Innovations (Deferred)
+
+- [ ] **Anomaly Flags**: Backend should detect and flag unusual intraday events — e.g. a stock's bid volume jumping 10x vs its own daily average — and embed them in the intel summary text.
+- [ ] **Market Momentum Score**: Compute a scalar score (-100 to +100) per scrape cycle based on weighted up/down count and volume side pressure. Store alongside intel docs. Render as a sparkline gauge on the Glance page.
+- [ ] **Watchlist Integration**: When generating trend intel, check if any stocks in a user's watchlist are notable (big movers, circuit breaker near, order book imbalance) and surface a separate personalised intel paragraph.

@@ -46,6 +46,11 @@ service cloud.firestore {
         allow read: if true;
         allow write: if false;
       }
+
+      match /intel/{ts} {
+        allow read: if true;
+        allow write: if false;
+      }
     }
 
     match /marketIndices/{doc} {
