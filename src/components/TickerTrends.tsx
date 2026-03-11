@@ -29,7 +29,7 @@ const METRICS: MetricConfig[] = [
   { key: "deals", label: "Deals", icon: TrendingUp, color: "#ec4899" },
   { key: "high", label: "High", icon: TrendingUp, color: "#22c55e" },
   { key: "low", label: "Low", icon: TrendingUp, color: "#ef4444" },
-  { key: "mcap", label: "MCAP (B)", icon: DollarSign, color: "#8b5cf6" },
+  { key: "mcap", label: "Market Cap", icon: DollarSign, color: "#8b5cf6" },
   { key: "outstandingBid", label: "Outstanding Bid", icon: TrendingUp, color: "#0ea5e9" },
   { key: "outstandingOffer", label: "Outstanding Offer", icon: TrendingUp, color: "#f43f5e" },
   { key: "bidOffer", label: "Bid/Offer Ratio", icon: Activity, color: "#d946ef" },
@@ -169,8 +169,26 @@ export const TickerTrends: React.FC = () => {
   const chartTheme = getCommonChartOptions(settings.theme);
 
   
-  // Track hidden metrics instead of single selected metric
-  const [hiddenMetrics, setHiddenMetrics] = useState(new Set());
+  // Track hidden metrics and persist to localStorage
+  const [hiddenMetrics, setHiddenMetrics] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("dseasy_hidden_metrics");
+      if (saved) {
+        return new Set(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn("Failed to parse saved metrics state");
+    }
+    // Default: Show only Close Price, Volume, and Turnover. Hide the rest.
+    return new Set(
+      METRICS.map(m => m.key).filter(k => !['close', 'volume', 'turnover'].includes(k))
+    );
+  });
+
+  // Auto-save hidden metrics whenever they change
+  useEffect(() => {
+    localStorage.setItem("dseasy_hidden_metrics", JSON.stringify(Array.from(hiddenMetrics)));
+  }, [hiddenMetrics]);
   
   // NEW: Alert Modal State
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
@@ -361,10 +379,13 @@ export const TickerTrends: React.FC = () => {
         datasets: [
           {
             label: "Volume",
-            data: filteredData.map((d) => d.volume ?? 0),
+            data: filteredData.map((d) => d.volume !== undefined && d.volume !== null ? d.volume : null),
             backgroundColor: filteredData.map((d, i) => {
               if (i === 0) return "rgba(99, 102, 241, 0.7)";
-              return d.close >= filteredData[i - 1].close
+              const prevClose = filteredData[i - 1].close;
+              const currClose = d.close;
+              if (currClose == null || prevClose == null) return "rgba(99, 102, 241, 0.7)"; // Neutral color if comparison unavailable
+              return currClose >= prevClose
                 ? "rgba(16, 185, 129, 0.7)"
                 : "rgba(239, 68, 68, 0.7)";
             }),
@@ -380,13 +401,18 @@ export const TickerTrends: React.FC = () => {
       datasets: [
         {
           label: metricKey.charAt(0).toUpperCase() + metricKey.slice(1),
-          data: filteredData.map((d) => metricKey === 'turnoverPct' ? ((d as any)[metricKey] || 0) * 100 : (d as any)[metricKey]),
+          data: filteredData.map((d) => {
+             const val = (d as any)[metricKey];
+             if (val === undefined || val === null) return null; // Pass null for missing data to avoid false '0' dip
+             return metricKey === 'turnoverPct' ? val * 100 : val;
+          }),
           borderColor: color,
           backgroundColor: `${color}20`,
           fill: true,
           tension: 0.3,
           pointRadius: 3,
           pointHoverRadius: 6,
+          spanGaps: true, // Interpolate lines across gaps resulting from missing data
         },
       ],
     };
@@ -626,32 +652,38 @@ export const TickerTrends: React.FC = () => {
       )}
 
       {/* Metric Visibility Toggles */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
-        {METRICS.map((metric) => {
-            const isHidden = hiddenMetrics.has(metric.key);
-            return (
-              <button
-                key={metric.key}
-                onClick={() => toggleMetric(metric.key)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "20px",
-                  border: isHidden ? "1px dashed var(--text-secondary)" : "1px solid var(--glass-border)",
-                  background: isHidden ? "transparent" : metric.color,
-                  color: isHidden ? "var(--text-secondary)" : "#fff",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  transition: "all 0.2s ease",
-                  textDecoration: isHidden ? "line-through" : "none",
-                  opacity: isHidden ? 0.6 : 1
-                }}
-              >
-                {metric.label}
-              </button>
-            )
-        })}
-      </div>
+      <details className="glass-panel" style={{ padding: "16px", borderRadius: "12px", marginBottom: "24px", transition: "all 0.3s ease" }}>
+        <summary style={{ cursor: "pointer", fontWeight: "var(--font-semibold)", display: "flex", alignItems: "center", gap: "8px", color: "var(--text-primary)", outline: "none" }}>
+           <BarChart3 size={18} color="var(--accent-primary)" />
+           <span>Customize Visible Charts</span>
+        </summary>
+        <div style={{ display: "flex", gap: "8px", marginTop: "16px", flexWrap: "wrap", paddingLeft: "26px" }}>
+          {METRICS.map((metric) => {
+              const isHidden = hiddenMetrics.has(metric.key);
+              return (
+                <button
+                  key={metric.key}
+                  onClick={() => toggleMetric(metric.key)}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "20px",
+                    border: isHidden ? "1px dashed var(--text-secondary)" : "1px solid var(--glass-border)",
+                    background: isHidden ? "transparent" : metric.color,
+                    color: isHidden ? "var(--text-secondary)" : "#fff",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    transition: "all 0.2s ease",
+                    textDecoration: isHidden ? "line-through" : "none",
+                    opacity: isHidden ? 0.6 : 1
+                  }}
+                >
+                  {metric.label}
+                </button>
+              )
+          })}
+        </div>
+      </details>
 
       {/* Charts Grid */}
       <div className="charts-grid">
@@ -698,18 +730,19 @@ export const TickerTrends: React.FC = () => {
                     {
                       type: 'line',
                       label: 'Close Price',
-                      data: filteredData.map(d => d.close),
+                      data: filteredData.map(d => d.close !== undefined && d.close !== null ? d.close : null),
                       borderColor: '#4f46e5', // Indigo-600
                       borderWidth: 2,
                       pointRadius: 0,
                       tension: 0.4,
                       yAxisID: 'y',
-                      order: 1
+                      order: 1,
+                      spanGaps: true
                     },
                     {
                       type: 'bar',
                       label: 'High Deviation (Green)',
-                      data: filteredData.map(d => [d.close, d.high]),
+                      data: filteredData.map(d => (d.close == null || d.high == null) ? null : [d.close, d.high]),
                       backgroundColor: 'rgba(16, 185, 129, 0.6)', // Green
                       borderColor: 'rgba(16, 185, 129, 1)',
                       borderWidth: { top: 1, right: 1, bottom: 0, left: 1 },
@@ -722,7 +755,7 @@ export const TickerTrends: React.FC = () => {
                     {
                       type: 'bar',
                       label: 'Low Deviation (Red)',
-                      data: filteredData.map(d => [d.low, d.close]),
+                      data: filteredData.map(d => (d.close == null || d.low == null) ? null : [d.low, d.close]),
                       backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
                       borderColor: 'rgba(239, 68, 68, 1)',
                       borderWidth: { top: 0, right: 1, bottom: 1, left: 1 },
