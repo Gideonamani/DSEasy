@@ -46,6 +46,7 @@ interface MarketWatchEntry {
 
 interface StockData {
   symbol: string;
+  source: "api" | "scraper";
   open: number;
   prevClose: number;
   close: number;
@@ -345,14 +346,20 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
       const outstandingBid = parseNum(row[9]);
       const outstandingOffer = parseNum(row[10]);
       const volume = parseNum(row[11]);
-      const mcap = parseNum(row[12]);
+      let mcap = parseNum(row[12]);
+
+      // DSE website reports MCAP in Billions (e.g. 1.23 = 1.23B TZS).
+      // Expand to full number for uniform storage across all sources.
+      if (mcap > 0 && Math.abs(mcap) < 1000000) {
+        mcap = mcap * 1000000000;
+      }
 
       // 8 Derived Metrics
       const changeValue = parseChangeValue(changeStr);
       const highLowSpread = high - low;
       const volPerDeal = deals > 0 ? volume / deals : 0;
       const turnoverPerDeal = deals > 0 ? turnover / deals : 0;
-      const turnoverPerMcap = mcap > 0 ? turnover / (mcap * 1000000000) : 0;
+      const turnoverPerMcap = mcap > 0 ? turnover / mcap : 0;
       const turnoverPercent =
         dayTotalTurnover > 0 ? (turnover / dayTotalTurnover) * 100 : 0;
       const changePerVol = volume > 0 ? changeValue / volume : 0;
@@ -361,6 +368,7 @@ async function scrapeDSEAndWriteToFirestore(): Promise<{
 
       stocksData.push({
         symbol,
+        source: "scraper" as const,
         open,
         prevClose,
         close,
