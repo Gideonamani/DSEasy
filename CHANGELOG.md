@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-03-11
+
+### Added
+
+- **Circuit Breaker Enhancements**: Upgraded the `DailyGlance` circuit breaker monitor to show Distance to Limit (DTL) percentages, `Locked (Max/Min)` status badges, glowing traffic light proximity indicators, and a Volumetric Pressure bar (bids vs offers ratio).
+- **Trends Chart Persistence**: Added `localStorage` support in `TickerTrends` to persist user chart visibility preferences.
+
+### Changed
+
+- **Decluttered Trends UI**: `TickerTrends` now hides less commonly used charts by default for a cleaner initial rendering, allowing users to opt into them via the customize menu.
+- **Handling Data Gaps**: Configured `Chart.js` to intelligently bridge `null` values over holiday/gap periods on `TickerTrends` rather than aggressively dipping to 0.
+
+### Fixed
+
+- **MCAP Labels Validation**: Ensured consistent display of `(B)` suffix logic outside of `TickerTrends` after full-number normalization in the backend backend data model.
+
 ## [1.1.5] - 2026-03-11
 
 ### Fixed
