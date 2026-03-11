@@ -45,6 +45,17 @@ export interface MarketIndex {
     [key: string]: any;
 }
 
+// Helper: Parse market cap value (backend ensures uniform full-number scaling)
+export const normalizeMcap = (mcap: any): number => {
+    if (mcap === undefined || mcap === null) return 0;
+    
+    const parsed = typeof mcap === 'string' 
+        ? parseFloat(mcap.replace(/,/g, ''))
+        : Number(mcap);
+        
+    return isNaN(parsed) ? 0 : parsed;
+};
+
 // Helper: Parse "26Jan2026" or "2024-01-26" -> Date Object
 const parseSheetDate = (sheetName: string): Date | null => {
     if (!sheetName) return null;
@@ -145,6 +156,7 @@ export const useMarketData = (date: string) => {
                     pctChange: data.ChangePer ?? data.changeValue
                         ?? (data.open > 0 ? ((data.close - data.open) / data.open) * 100 : 0), // Compute from open/close for API records
                     // Map Firestore keys to frontend expected keys
+                    mcap: normalizeMcap(data.mcap),
                     outstandingBid: data.outstandingBid || 0,
                     outstandingOffer: data.outstandingOffer || 0,
                     // Keys used by TickerTrends (mapped names)
@@ -221,6 +233,7 @@ export const useTickerHistory = (symbol: string) => {
                     changeVol: data.changePerVol || 0,
                     outstandingBid: data.outstandingBid || 0,
                     outstandingOffer: data.outstandingOffer || 0,
+                    mcap: normalizeMcap(data.mcap),
                 } as StockData;
             });
             return history;
