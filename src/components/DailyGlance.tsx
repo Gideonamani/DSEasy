@@ -593,41 +593,98 @@ export const DailyGlance: React.FC = () => {
                     );
 
                     let barColor = "var(--accent-primary)";
-                    if (posPct >= 95) barColor = "var(--accent-success)";
-                    if (posPct <= 5) barColor = "var(--accent-danger)";
+                    let status = "Open";
+                    let statusColor = "var(--text-secondary)";
+                    let glowColor = "transparent";
+
+                    if (posPct >= 99) {
+                        barColor = "var(--accent-success)";
+                        status = "Locked (Max)";
+                        statusColor = "var(--accent-success)";
+                        glowColor = "var(--accent-success)";
+                    } else if (posPct <= 1) {
+                        barColor = "var(--accent-danger)";
+                        status = "Locked (Min)";
+                        statusColor = "var(--accent-danger)";
+                        glowColor = "var(--accent-danger)";
+                    } else if (posPct >= 95) {
+                        barColor = "color-mix(in srgb, var(--accent-success) 80%, var(--accent-primary))";
+                        glowColor = "var(--accent-success)";
+                    } else if (posPct <= 5) {
+                        barColor = "color-mix(in srgb, var(--accent-danger) 80%, var(--accent-primary))";
+                        glowColor = "var(--accent-danger)";
+                    }
+                    
+                    const distToMax = s.marketPrice > 0 ? ((s.maxLimit - s.marketPrice) / s.marketPrice) * 100 : 0;
+                    const distToMin = s.marketPrice > 0 ? ((s.marketPrice - s.minLimit) / s.marketPrice) * 100 : 0;
+                    
+                    // Volumetric Pressure
+                    const totalVolume = s.bestBidQuantity + s.bestOfferQuantity;
+                    const buyPressurePct = totalVolume > 0 ? (s.bestBidQuantity / totalVolume) * 100 : 50;
+
+                    const tooltipText = `Dist to Max: ${distToMax.toFixed(2)}%\nDist to Min: ${distToMin.toFixed(2)}%\nVol Press (Bids): ${buyPressurePct.toFixed(1)}%`;
 
                     return (
                       <div key={s.symbol} style={{ width: "100%" }}>
                         <div
+                          title={tooltipText}
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
                             fontSize: "var(--text-sm)",
                             marginBottom: 6,
+                            alignItems: "center"
                           }}
                         >
-                          <span
-                            style={{
-                              fontWeight: "var(--font-semibold)",
-                              color: "var(--text-primary)",
-                            }}
-                          >
-                            {s.symbol}
-                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span
+                                style={{
+                                  fontWeight: "var(--font-semibold)",
+                                  color: "var(--text-primary)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px"
+                                }}
+                              >
+                                {s.symbol}
+                                {/* Traffic Light Dot */}
+                                {glowColor !== "transparent" && (
+                                   <div style={{ width: 6, height: 6, borderRadius: "50%", background: glowColor, boxShadow: `0 0 6px ${glowColor}` }} />
+                                )}
+                              </span>
+                              {status !== "Open" && (
+                                  <span style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px", background: `color-mix(in srgb, ${statusColor} 15%, transparent)`, color: statusColor, fontWeight: "var(--font-bold)" }}>
+                                      {status}
+                                  </span>
+                              )}
+                          </div>
                           <span style={{ color: "var(--text-secondary)" }}>
                             {formatNumber(s.marketPrice)}
                           </span>
                         </div>
                         <div
+                          title={tooltipText}
                           style={{
                             position: "relative",
-                            height: 8,
+                            height: 16,
                             background: "var(--bg-input)",
-                            borderRadius: 4,
+                            borderRadius: 8,
                             overflow: "hidden",
                             width: "100%",
                           }}
                         >
+                          {/* Background fill based on posPct */}
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: `${posPct}%`,
+                              background: `color-mix(in srgb, ${barColor} 20%, transparent)`,
+                            }}
+                          />
+                          {/* The indicator line */}
                           <div
                             style={{
                               position: "absolute",
@@ -641,17 +698,41 @@ export const DailyGlance: React.FC = () => {
                               boxShadow: `0 0 6px ${barColor}`,
                             }}
                           />
+                          {/* The percentage fill text inside the bar */}
+                          <div style={{
+                            position: "absolute",
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "10px",
+                            fontWeight: "var(--font-bold)",
+                            color: "var(--text-primary)",
+                            opacity: 0.9,
+                            textShadow: "0 0 4px var(--bg-card)",
+                            pointerEvents: "none"
+                          }}>
+                            {posPct.toFixed(1)}%
+                          </div>
                         </div>
                         <div
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
+                            alignItems: "center",
                             fontSize: 10,
                             color: "var(--text-tertiary)",
                             marginTop: 4,
                           }}
                         >
                           <span>Min: {formatNumber(s.minLimit)}</span>
+                          <span title="Volumetric Pressure: Outstanding Bids vs Offers" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                             <div style={{ width: 40, height: 4, background: "var(--bg-input)", borderRadius: 2, overflow: "hidden", display: "flex" }}>
+                                <div style={{ height: "100%", width: `${buyPressurePct}%`, background: "var(--accent-success)" }} />
+                                <div style={{ height: "100%", width: `${100 - buyPressurePct}%`, background: "var(--accent-danger)" }} />
+                             </div>
+                          </span>
                           <span>Max: {formatNumber(s.maxLimit)}</span>
                         </div>
                       </div>
