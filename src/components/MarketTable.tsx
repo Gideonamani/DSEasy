@@ -133,7 +133,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Turnover {getSortIcon('turnover')}</div>
                             </th>
                             <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('mcap')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>MCap (B) {getSortIcon('mcap')}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>MCap {getSortIcon('mcap')}</div>
                             </th>
                         </tr>
                     </thead>

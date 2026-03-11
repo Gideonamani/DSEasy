@@ -5,17 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-03-11
+
+### Fixed
+
+- **MCAP UI Labels**: Removed redundant `(B)` suffix from MCap column headers and chart labels in `MarketTable` and `TickerTrends` to reflect full-number storage.
+- **Total Market Cap Math**: Fixed redundant `1e9` scaling in the dashboard summary that caused astronomical totals.
+
 ## [1.1.4] - 2026-03-11
 
 ### Added
 
 - **Data Source Tagging**: Added `source: 'scraper'` identifier to all daily closing scraper writes in Cloud Functions, matching the existing `source: 'api'` on historical API records.
-- **MCAP Normalization Script**: Created `scripts/normalize_mcap.cjs` — a one-time migration script that normalizes all MCAP values to full numbers and backfills the `source` field on 2026+ records. Supports `--dry-run` mode.
+- **MCAP Normalization Script**: Created `scripts/normalize_mcap.cjs` — a one-time migration script developed to expand Bilion-denominated MCAP values to full numbers and backfill data lineage.
 
 ### Changed
 
-- **Backend MCAP Uniformity**: All MCAP values in Firestore are now stored as full numbers regardless of data source. The scraper explicitly expands DSE's Billion-denominated values before writing.
-- **Simplified Frontend**: Replaced the heuristic-based `normalizeMcap()` in `useMarketQuery.ts` with a simple parser, since the backend now guarantees uniform scaling.
+- **Backend MCAP Uniformity**: All MCAP values in Firestore are now stored as full numbers. The scraper explicitly expands values before writing to ensure consistency across sources.
+- **Simplified Frontend**: Streamlined the `normalizeMcap()` utility in `useMarketQuery.ts`, as backend data is now guaranteed to be uniform.
 
 ### Fixed
 

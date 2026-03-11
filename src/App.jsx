@@ -196,8 +196,8 @@ function App() {
   }, [marketData]);
 
   const totalMcap = useMemo(() => {
-    // Market cap is stored in Billions, so multiply by 1,000,000,000 to get actual TZS value
-    return marketData.reduce((acc, curr) => acc + (curr.mcap || 0), 0) * 1e9;
+    // Backend now ensures uniform full-number scaling for mcap
+    return marketData.reduce((acc, curr) => acc + (curr.mcap || 0), 0);
   }, [marketData]);
 
   const tradedSymbolsCount = useMemo(() => {
