@@ -582,9 +582,9 @@ async function generateTrendIntel(dbInstance: admin.firestore.Firestore, dateStr
   
   let txt = "";
   if (startSentiment !== currSentiment) {
-    txt += `The market opened **${startSentiment}** at ${startTime} but has since turned **${currSentiment}** by ${currTime}. `;
+    txt += `The market opened **${startSentiment}** at 09:30 but has since turned **${currSentiment}** by ${currTime}. `;
   } else {
-    txt += `Since the open at ${startTime}, the market has held a steady **${currSentiment}** posture. `;
+    txt += `Since the open at 09:30, the market has held a steady **${currSentiment}** posture. `;
   }
 
   let biggestMoverSymbol = "";
@@ -1580,26 +1580,7 @@ export const generatePreOpenSummary = onSchedule(
       
       txt += `The opening auction begins in 5 minutes.`;
 
-      // 4. Also check for closing intel from yesterday for extra context
-      let closingContext = "";
-      try {
-        const closingIntelQuery = await db.collection("marketWatch").doc(lastClosingDate)
-          .collection("intel")
-          .where("type", "==", "closing")
-          .limit(1)
-          .get();
-        
-        if (!closingIntelQuery.empty) {
-          const closingIntel = closingIntelQuery.docs[0].data();
-          if (closingIntel.trendSummary) {
-            closingContext = closingIntel.trendSummary;
-          }
-        }
-      } catch (e) {
-        console.warn("Could not fetch yesterday's closing intel:", e);
-      }
-
-      // 5. Write pre-open intel
+      // 4. Write pre-open intel
       const timestamp = new Date().toISOString();
       const intelRef = db
         .collection("marketWatch")
@@ -1611,7 +1592,6 @@ export const generatePreOpenSummary = onSchedule(
         capturedAt: timestamp,
         type: "pre-open",
         snapshotSummary: txt.trim(),
-        trendSummary: closingContext,
       });
 
       // Also ensure today's date is in the marketWatchDates list

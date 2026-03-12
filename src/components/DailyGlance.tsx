@@ -942,14 +942,14 @@ export const DailyGlance: React.FC = () => {
                           <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
                              dangerouslySetInnerHTML={{ __html: intel.snapshotSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                           
-                          {/* Render trend context for closing bell and pre-open cards */}
-                          {(isClosing || isPreOpen) && intel.trendSummary && (
+                          {/* Render trend context for closing bell cards */}
+                          {isClosing && intel.trendSummary && (
                             <div style={{ 
                               marginTop: 12,
                               padding: "10px 14px", 
-                              background: isPreOpen ? "color-mix(in srgb, #f97316 5%, transparent)" : "color-mix(in srgb, #f59e0b 5%, transparent)", 
+                              background: "color-mix(in srgb, #f59e0b 5%, transparent)", 
                               borderRadius: "var(--radius-md)",
-                              borderLeft: isPreOpen ? "2px solid #f97316" : "2px solid #f59e0b",
+                              borderLeft: "2px solid #f59e0b",
                             }}>
                               <p style={{ color: "var(--text-secondary)", lineHeight: 1.4, margin: 0, fontSize: "var(--text-sm)" }}
                                  dangerouslySetInnerHTML={{ __html: intel.trendSummary.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary)">$1</strong>') }} />
