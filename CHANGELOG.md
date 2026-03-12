@@ -5,9 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.9] - 2026-03-12
+## [1.2.0] - 2026-03-12
 
-### Added
+### Changed
+
+- **Cloud Functions Refactor**: Modularized the monolithic `functions/src/index.ts` file by extracting configuration, types, utilities, scrapers, and individual Cloud Function handlers into dedicated directories. This drastically improves code maintainability and testability without changing existing behavior.
+
+### Removed
+
+- **Google AppScripts**: Deleted the legacy `google-scripts` directory as the application has fully migrated to Firebase Cloud Functions and no longer relies on Google Sheets triggers.
+
+## [1.1.9] - 2026-03-12
 
 - **Hybrid Context Banners**: Deployed `<MarketStatusBanner />` on the Dashboard and Daily Glance pages.
   - Dynamically educates users on why they are viewing historical data outside of active market hours (09:30–16:00).
