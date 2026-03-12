@@ -5,8 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.6] - 2026-03-11
+## [1.1.7] - 2026-03-12
 
+### Added
+
+- **Pre-Open Market Intel**: Added a new scheduled function (09:25 EAT) to summarize the previous day's closing sentiment and top movers before the market opens.
+- **Gap Detection**: Implemented gap detection logic on the first intraday snapshot to flag significant (≥2%) price differences between yesterday's close and today's open.
+
+### Changed
+
+- **Trend Clarity**: Clarified intraday trend wording to explicitly state "strongest intraday momentum" instead of "most significant mover".
+- **Scraper Timetable**: Aligned intraday scraper time gates (09:30–16:00) and closing summary schedules (16:15) strictly to the official DSE continuous trading phase.
+
+## [1.1.6] - 2026-03-11
 ### Added
 
 - **Circuit Breaker Enhancements**: Upgraded the `DailyGlance` circuit breaker monitor to show Distance to Limit (DTL) percentages, `Locked (Max/Min)` status badges, glowing traffic light proximity indicators, and a Volumetric Pressure bar (bids vs offers ratio).
