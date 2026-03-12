@@ -611,7 +611,7 @@ async function generateTrendIntel(dbInstance: admin.firestore.Firestore, dateStr
   }
 
   if (biggestMoverSymbol) {
-    txt += `**${biggestMoverSymbol}** is the most significant mover, having ${moveDir} **${movePctVal.toFixed(2)}%** since the open.`;
+    txt += `**${biggestMoverSymbol}** is showing the strongest intraday momentum, having ${moveDir} **${movePctVal.toFixed(2)}%** since the opening bell.`;
   } else if (startSentiment === currSentiment) {
     txt = `Since the open at ${startTime}, the market has held a steady **${currSentiment}** posture with no distinct price shifts.`;
   }
@@ -619,9 +619,72 @@ async function generateTrendIntel(dbInstance: admin.firestore.Firestore, dateStr
   return txt.trim();
 }
 
+/**
+ * Detect opening gaps: compare today's opening prices with the most recent
+ * daily closing prices. Flags stocks that opened ≥ GAP_THRESHOLD_PCT away
+ * from yesterday's close. Only meaningful on the first snapshot of the day.
+ */
+const GAP_THRESHOLD_PCT = 2;
+
+async function generateGapDetection(dbInstance: admin.firestore.Firestore, currentSnapshot: any): Promise<string> {
+  if (!currentSnapshot || !currentSnapshot.stocks) return "";
+
+  // Find the most recent dailyClosing doc (handles weekends/holidays)
+  const closingQuery = await dbInstance.collection("dailyClosing")
+    .orderBy("date", "desc")
+    .limit(1)
+    .get();
+
+  if (closingQuery.empty) return "";
+
+  const lastClosingDate = closingQuery.docs[0].data().date;
+  const stocksSnap = await dbInstance.collection("dailyClosing").doc(lastClosingDate)
+    .collection("stocks")
+    .get();
+
+  if (stocksSnap.empty) return "";
+
+  // Build a map of yesterday's closing prices
+  const prevCloseMap: { [symbol: string]: number } = {};
+  stocksSnap.docs.forEach(doc => {
+    const data = doc.data();
+    if (data.close && data.close > 0) {
+      prevCloseMap[data.symbol] = data.close;
+    }
+  });
+
+  // Detect gaps
+  const gaps: { symbol: string; gapPct: number; prevClose: number; openPrice: number }[] = [];
+
+  for (const [symbol, dataAny] of Object.entries(currentSnapshot.stocks)) {
+    const data = dataAny as any;
+    const openPrice = data.openingPrice || data.marketPrice;
+    const prevClose = prevCloseMap[symbol];
+
+    if (prevClose && prevClose > 0 && openPrice > 0 && openPrice !== prevClose) {
+      const gapPct = ((openPrice - prevClose) / prevClose) * 100;
+      if (Math.abs(gapPct) >= GAP_THRESHOLD_PCT) {
+        gaps.push({ symbol, gapPct, prevClose, openPrice });
+      }
+    }
+  }
+
+  if (gaps.length === 0) return "";
+
+  // Sort by absolute gap size descending
+  gaps.sort((a, b) => Math.abs(b.gapPct) - Math.abs(a.gapPct));
+
+  const gapTexts = gaps.slice(0, 3).map(g => {
+    const dir = g.gapPct > 0 ? "above" : "below";
+    return `**${g.symbol}** opened ${Math.abs(g.gapPct).toFixed(1)}% ${dir} yesterday's close of ${formatLargeNumber(g.prevClose)}`;
+  });
+
+  return `Opening gaps detected: ${gapTexts.join("; ")}.`;
+}
+
 // ------------------------------------------------------------------
 // 1. Scheduled Function: Monitor Intraday Market
-// Runs every 15 minutes Mon-Fri during market hours (09:30 - 16:15)
+// Runs every 15 minutes Mon-Fri during market hours (09:30 - 16:00)
 // Scrapes live prices, saves to Firestore, and checks alerts.
 // ------------------------------------------------------------------
 export const monitorIntradayMarket = onSchedule(
@@ -651,8 +714,9 @@ export const monitorIntradayMarket = onSchedule(
       return;
     }
 
-    // Validation: Run only between 09:30 (570) and 16:15 (975)
-    if (totalMins < 540 || totalMins > 975) {
+    // Validation: Run only between 09:30 (570) and 16:00 (960)
+    // Aligned to official DSE timetable (effective 2 June 2025)
+    if (totalMins < 570 || totalMins > 960) {
       console.log("Outside market hours - skipping alert check.");
       return;
     }
@@ -793,9 +857,18 @@ export const monitorIntradayMarket = onSchedule(
                stockCount: Object.keys(snapshot).length,
                stocks: snapshot,
             };
-            const snapshotSummary = generateSnapshotIntel(currentSnapPayload);
+            let snapshotSummary = generateSnapshotIntel(currentSnapPayload);
             const trendSummary = await generateTrendIntel(db, dateStr, currentSnapPayload);
             
+            // On the first snapshot of the day, append gap detection
+            if (!trendSummary) {
+              // No trend = first snapshot. Detect opening gaps vs yesterday's close.
+              const gapText = await generateGapDetection(db, currentSnapPayload);
+              if (gapText) {
+                snapshotSummary += ` ${gapText}`;
+              }
+            }
+
             const intelRef = db
               .collection("marketWatch")
               .doc(dateStr)
@@ -1427,11 +1500,140 @@ export const scrapeDailyClosingHttp = onRequest(
 );
 
 // ------------------------------------------------------------------
-// 5. Scheduled Function: Market Intel Closing Summary
+// 5. Scheduled Function: Pre-Open Intel Summary
+// Runs at 09:25 EAT Mon-Fri, 5 minutes before the opening auction.
+// Summarises yesterday's close and sets the stage for today's session.
+// ------------------------------------------------------------------
+export const generatePreOpenSummary = onSchedule(
+  {
+    schedule: "25 9 * * 1-5",
+    timeZone: "Africa/Dar_es_Salaam",
+    region: "europe-west1",
+  },
+  async (event) => {
+    const now = moment().tz("Africa/Dar_es_Salaam");
+    const todayStr = now.format("YYYY-MM-DD");
+
+    try {
+      // 1. Find the most recent dailyClosing (handles weekends/holidays)
+      const closingQuery = await db.collection("dailyClosing")
+        .orderBy("date", "desc")
+        .limit(1)
+        .get();
+
+      if (closingQuery.empty) {
+        console.log("No previous dailyClosing data found for pre-open intel.");
+        return;
+      }
+
+      const lastClosingDoc = closingQuery.docs[0].data();
+      const lastClosingDate = lastClosingDoc.date;
+
+      // Fetch stocks from last closing
+      const stocksSnap = await db.collection("dailyClosing").doc(lastClosingDate)
+        .collection("stocks")
+        .get();
+
+      if (stocksSnap.empty) {
+        console.log(`No stocks data for ${lastClosingDate}.`);
+        return;
+      }
+
+      const stocks = stocksSnap.docs.map(doc => doc.data());
+
+      // 2. Compute yesterday's sentiment and top movers
+      let upCount = 0;
+      let downCount = 0;
+      const movers: { symbol: string; changePct: number; changeVal: number }[] = [];
+
+      stocks.forEach(s => {
+        const changeVal = s.changeValue || 0;
+        if (changeVal > 0) upCount++;
+        else if (changeVal < 0) downCount++;
+
+        if (s.close && s.close > 0 && s.prevClose && s.prevClose > 0 && changeVal !== 0) {
+          const changePct = ((s.close - s.prevClose) / s.prevClose) * 100;
+          movers.push({ symbol: s.symbol, changePct, changeVal });
+        }
+      });
+
+      const prevSentiment = upCount > downCount ? "BULLISH" : downCount > upCount ? "BEARISH" : "NEUTRAL";
+      
+      // Sort by absolute percentage change
+      movers.sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct));
+      
+      const topGainers = movers.filter(m => m.changePct > 0).slice(0, 3);
+      const topLosers = movers.filter(m => m.changePct < 0).slice(0, 3);
+
+      // 3. Build the pre-open summary text
+      let txt = `Yesterday's session (${lastClosingDate}) closed **${prevSentiment}** with ${upCount} stocks up and ${downCount} down. `;
+
+      if (topGainers.length > 0) {
+        const gainersList = topGainers.map(g => `**${g.symbol}** (+${g.changePct.toFixed(2)}%)`).join(", ");
+        txt += `Top gainers: ${gainersList}. `;
+      }
+      
+      if (topLosers.length > 0) {
+        const losersList = topLosers.map(l => `**${l.symbol}** (${l.changePct.toFixed(2)}%)`).join(", ");
+        txt += `Biggest decliners: ${losersList}. `;
+      }
+      
+      txt += `The opening auction begins in 5 minutes.`;
+
+      // 4. Also check for closing intel from yesterday for extra context
+      let closingContext = "";
+      try {
+        const closingIntelQuery = await db.collection("marketWatch").doc(lastClosingDate)
+          .collection("intel")
+          .where("type", "==", "closing")
+          .limit(1)
+          .get();
+        
+        if (!closingIntelQuery.empty) {
+          const closingIntel = closingIntelQuery.docs[0].data();
+          if (closingIntel.trendSummary) {
+            closingContext = closingIntel.trendSummary;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch yesterday's closing intel:", e);
+      }
+
+      // 5. Write pre-open intel
+      const timestamp = new Date().toISOString();
+      const intelRef = db
+        .collection("marketWatch")
+        .doc(todayStr)
+        .collection("intel")
+        .doc(timestamp);
+
+      await intelRef.set({
+        capturedAt: timestamp,
+        type: "pre-open",
+        snapshotSummary: txt.trim(),
+        trendSummary: closingContext,
+      });
+
+      // Also ensure today's date is in the marketWatchDates list
+      const configAppRef = db.collection("config").doc("app");
+      await configAppRef.set({
+        marketWatchDates: admin.firestore.FieldValue.arrayUnion(todayStr),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      console.log(`Successfully generated pre-open intel for ${todayStr}`);
+    } catch (e) {
+      console.error("Error generating pre-open summary:", e);
+    }
+  }
+);
+
+// ------------------------------------------------------------------
+// 6. Scheduled Function: Market Intel Closing Summary
 // ------------------------------------------------------------------
 export const generateDailyCloseSummary = onSchedule(
   {
-    schedule: "45 16 * * 1-5",
+    schedule: "15 16 * * 1-5", // 15 min after official 16:00 close
     timeZone: "Africa/Dar_es_Salaam",
     region: "europe-west1",
   },

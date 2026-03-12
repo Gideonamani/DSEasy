@@ -14,6 +14,7 @@ import {
   Target,
   Clock,
   Flag,
+  Sunrise,
 } from "lucide-react";
 import { formatNumber, formatLargeNumber } from "../utils/formatters";
 
@@ -885,6 +886,7 @@ export const DailyGlance: React.FC = () => {
                   {intelHistory.map((intel, idx) => {
                     const isLatest = idx === intelHistory.length - 1;
                     const isClosing = intel.type === "closing";
+                    const isPreOpen = intel.type === "pre-open";
                     const timeEat = new Date(intel.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" });
 
                     return (
@@ -900,9 +902,9 @@ export const DailyGlance: React.FC = () => {
                           width: 12,
                           height: 12,
                           borderRadius: "50%",
-                          background: isClosing ? "#f59e0b" : isLatest ? "var(--accent-primary)" : "var(--bg-body)",
-                          border: isClosing || isLatest ? "none" : "2px solid var(--text-tertiary)",
-                          boxShadow: isLatest && !isClosing ? "0 0 0 4px color-mix(in srgb, var(--accent-primary) 20%, transparent)" : "none",
+                          background: isClosing ? "#f59e0b" : isPreOpen ? "#f97316" : isLatest ? "var(--accent-primary)" : "var(--bg-body)",
+                          border: isClosing || isPreOpen || isLatest ? "none" : "2px solid var(--text-tertiary)",
+                          boxShadow: isPreOpen ? "0 0 0 4px color-mix(in srgb, #f97316 20%, transparent)" : isLatest && !isClosing ? "0 0 0 4px color-mix(in srgb, var(--accent-primary) 20%, transparent)" : "none",
                           zIndex: 1,
                           transform: "translateX(-1px)"
                         }} />
@@ -911,23 +913,26 @@ export const DailyGlance: React.FC = () => {
                         <div style={{
                           padding: 20,
                           borderRadius: "var(--radius-xl)",
-                          background: isClosing ? "color-mix(in srgb, #f59e0b 5%, var(--bg-elevated))" : "var(--bg-elevated)",
-                          border: isClosing ? "1px solid color-mix(in srgb, #f59e0b 30%, transparent)" : "1px solid var(--glass-border)",
+                          background: isClosing ? "color-mix(in srgb, #f59e0b 5%, var(--bg-elevated))" : isPreOpen ? "color-mix(in srgb, #f97316 5%, var(--bg-elevated))" : "var(--bg-elevated)",
+                          border: isClosing ? "1px solid color-mix(in srgb, #f59e0b 30%, transparent)" : isPreOpen ? "1px solid color-mix(in srgb, #f97316 30%, transparent)" : "1px solid var(--glass-border)",
                           position: "relative",
                           overflow: "hidden",
                           transition: "all 0.2s ease"
                         }}>
                           {/* Accent glow for the newest item */}
-                          {isLatest && !isClosing && (
+                          {isLatest && !isClosing && !isPreOpen && (
                             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, var(--accent-primary), transparent)" }} />
+                          )}
+                          {isPreOpen && (
+                            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, #f97316, transparent)" }} />
                           )}
                           
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                            {isClosing ? <Flag size={14} color="#f59e0b" /> : <Clock size={14} color="var(--text-tertiary)" />}
-                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--font-bold)", color: isClosing ? "#f59e0b" : "var(--text-secondary)", letterSpacing: "0.05em" }}>
-                              {timeEat} EAT {isClosing ? "— CLOSING BELL" : ""}
+                            {isClosing ? <Flag size={14} color="#f59e0b" /> : isPreOpen ? <Sunrise size={14} color="#f97316" /> : <Clock size={14} color="var(--text-tertiary)" />}
+                            <span style={{ fontSize: "var(--text-xs)", fontWeight: "var(--font-bold)", color: isClosing ? "#f59e0b" : isPreOpen ? "#f97316" : "var(--text-secondary)", letterSpacing: "0.05em" }}>
+                              {timeEat} EAT {isClosing ? "— CLOSING BELL" : isPreOpen ? "— PRE-OPEN" : ""}
                             </span>
-                            {isLatest && !isClosing && (
+                            {isLatest && !isClosing && !isPreOpen && (
                               <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 10, background: "color-mix(in srgb, var(--accent-primary) 15%, transparent)", color: "var(--accent-primary)", fontWeight: "var(--font-semibold)", marginLeft: "auto" }}>
                                 NEW
                               </span>
@@ -937,14 +942,14 @@ export const DailyGlance: React.FC = () => {
                           <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
                              dangerouslySetInnerHTML={{ __html: intel.snapshotSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                           
-                          {/* Only render trend here if it's the daily close summary wrap-up */}
-                          {isClosing && intel.trendSummary && (
+                          {/* Render trend context for closing bell and pre-open cards */}
+                          {(isClosing || isPreOpen) && intel.trendSummary && (
                             <div style={{ 
                               marginTop: 12,
                               padding: "10px 14px", 
-                              background: "color-mix(in srgb, #f59e0b 5%, transparent)", 
+                              background: isPreOpen ? "color-mix(in srgb, #f97316 5%, transparent)" : "color-mix(in srgb, #f59e0b 5%, transparent)", 
                               borderRadius: "var(--radius-md)",
-                              borderLeft: "2px solid #f59e0b",
+                              borderLeft: isPreOpen ? "2px solid #f97316" : "2px solid #f59e0b",
                             }}>
                               <p style={{ color: "var(--text-secondary)", lineHeight: 1.4, margin: 0, fontSize: "var(--text-sm)" }}
                                  dangerouslySetInnerHTML={{ __html: intel.trendSummary.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary)">$1</strong>') }} />
@@ -956,7 +961,7 @@ export const DailyGlance: React.FC = () => {
                   })}
 
                   {/* Standalone Latest Trend Intel Card (Only shown for intraday) */}
-                  {intelHistory.length > 0 && intelHistory[intelHistory.length - 1].type !== 'closing' && intelHistory[intelHistory.length - 1].trendSummary && (
+                  {intelHistory.length > 0 && intelHistory[intelHistory.length - 1].type === 'intraday' && intelHistory[intelHistory.length - 1].trendSummary && (
                       <div style={{ position: "relative", paddingLeft: 32 }}>
                         {/* Terminal Node */}
                         <div style={{

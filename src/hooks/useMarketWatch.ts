@@ -37,7 +37,7 @@ export interface MarketWatchSnapshot {
 
 export interface MarketIntel {
   capturedAt: string;
-  type: "intraday" | "closing";
+  type: "intraday" | "closing" | "pre-open";
   snapshotSummary: string;
   trendSummary: string;
 }
