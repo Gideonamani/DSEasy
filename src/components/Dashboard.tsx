@@ -5,9 +5,8 @@ import { MarketTable } from "./MarketTable";
 import { PriceChangeChart, TurnoverChart } from "./StockChart";
 import { DatePicker } from "./DatePicker";
 import { StockData, MarketDate, MarketIndex } from "../hooks/useMarketQuery";
-
 import { MarketEmptyState } from "./EmptyState";
-
+import { MarketStatusBanner } from "./MarketStatusBanner";
 export interface DashboardProps {
   marketData: StockData[];
   marketIndices: MarketIndex[] | null;
@@ -69,6 +68,11 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
           onChange={onDateChange}
         />
       </div>
+
+      <MarketStatusBanner 
+        latestAvailableDate={availableDates.length > 0 ? availableDates[0].date : null}
+        isDashboard={true}
+      />
 
       {isDataEmpty ? (
         <MarketEmptyState selectedDate={selectedDate} availableDates={availableDates} />

@@ -17,6 +17,7 @@ import {
   Sunrise,
 } from "lucide-react";
 import { formatNumber, formatLargeNumber } from "../utils/formatters";
+import { MarketStatusBanner } from "./MarketStatusBanner";
 
 export const DailyGlance: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -337,6 +338,11 @@ export const DailyGlance: React.FC = () => {
           />
         </div>
       </div>
+
+      <MarketStatusBanner 
+        latestAvailableDate={availableDates.length > 0 ? availableDates[0].date : null}
+        isDashboard={false}
+      />
 
       {metrics && (
         <>

@@ -5,8 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.8] - 2026-03-12
+## [1.1.9] - 2026-03-12
 
+### Added
+
+- **Hybrid Context Banners**: Deployed `<MarketStatusBanner />` on the Dashboard and Daily Glance pages.
+  - Dynamically educates users on why they are viewing historical data outside of active market hours (09:30–16:00).
+  - Cross-promotes the Dashboard metrics and Daily Glance live views based on the current market phase.
+
+## [1.1.8] - 2026-03-12
 ### Fixed
 
 - **Market Intel Display Logic**: 
