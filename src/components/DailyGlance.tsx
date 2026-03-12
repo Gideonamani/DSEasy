@@ -887,7 +887,7 @@ export const DailyGlance: React.FC = () => {
                     const isLatest = idx === intelHistory.length - 1;
                     const isClosing = intel.type === "closing";
                     const isPreOpen = intel.type === "pre-open";
-                    const timeEat = new Date(intel.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" });
+                    const timeEat = isClosing ? "16:00" : new Date(intel.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" });
 
                     return (
                       <div 

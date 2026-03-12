@@ -595,11 +595,11 @@ async function generateTrendIntel(dbInstance: admin.firestore.Firestore, dateStr
   const currentStocks = Object.entries(currentSnapshot.stocks);
   for (const [symbol, currDataAny] of currentStocks) {
     const currData = currDataAny as any;
-    const startData = startSnapshot.stocks[symbol];
-    if (startData && currData.marketPrice > 0 && startData.marketPrice > 0) {
-      if (currData.marketPrice !== startData.marketPrice) {
-        const pctMove = ((currData.marketPrice - startData.marketPrice) / startData.marketPrice) * 100;
-        const absMove = Math.abs(pctMove);
+    if (currData.marketPrice > 0 && currData.change !== 0) {
+      const prevClose = currData.marketPrice - currData.change;
+      if (prevClose > 0) {
+         const pctMove = (currData.change / prevClose) * 100;
+         const absMove = Math.abs(pctMove);
          if (absMove > maxAbsMovePct) {
             maxAbsMovePct = absMove;
             biggestMoverSymbol = symbol;
@@ -611,7 +611,7 @@ async function generateTrendIntel(dbInstance: admin.firestore.Firestore, dateStr
   }
 
   if (biggestMoverSymbol) {
-    txt += `**${biggestMoverSymbol}** is showing the strongest intraday momentum, having ${moveDir} **${movePctVal.toFixed(2)}%** since the opening bell.`;
+    txt += `**${biggestMoverSymbol}** is today's notable mover so far, having ${moveDir} **${movePctVal.toFixed(2)}%**.`;
   } else if (startSentiment === currSentiment) {
     txt = `Since the open at ${startTime}, the market has held a steady **${currSentiment}** posture with no distinct price shifts.`;
   }
@@ -687,13 +687,7 @@ async function generateGapDetection(dbInstance: admin.firestore.Firestore, curre
 // Runs every 15 minutes Mon-Fri during market hours (09:30 - 16:00)
 // Scrapes live prices, saves to Firestore, and checks alerts.
 // ------------------------------------------------------------------
-export const monitorIntradayMarket = onSchedule(
-  {
-    schedule: "every 15 minutes",
-    timeZone: "Africa/Dar_es_Salaam",
-    region: "europe-west1", // Cloud Scheduler not available in africa-south1
-  },
-  async (event) => {
+async function runIntradayMonitor() {
     const now = new Date();
 
     // Convert to EAT (UTC+3) explicitly to ensure correct market hour checks
@@ -714,9 +708,9 @@ export const monitorIntradayMarket = onSchedule(
       return;
     }
 
-    // Validation: Run only between 09:30 (570) and 16:00 (960)
+    // Validation: Run only between 09:30 (570) and 16:05 (965)
     // Aligned to official DSE timetable (effective 2 June 2025)
-    if (totalMins < 570 || totalMins > 960) {
+    if (totalMins < 570 || totalMins > 966) {
       console.log("Outside market hours - skipping alert check.");
       return;
     }
@@ -1098,9 +1092,30 @@ export const monitorIntradayMarket = onSchedule(
         }
       }
     } catch (error) {
-      console.error("Error in monitorIntradayMarket:", error);
+      console.error("Error in runIntradayMonitor:", error);
     }
+}
+
+export const monitorIntradayMarket = onSchedule(
+  {
+    schedule: "every 15 minutes",
+    timeZone: "Africa/Dar_es_Salaam",
+    region: "europe-west1",
   },
+  async () => {
+    await runIntradayMonitor();
+  }
+);
+
+export const monitorClosingAuction = onSchedule(
+  {
+    schedule: "5 16 * * 1-5",
+    timeZone: "Africa/Dar_es_Salaam",
+    region: "europe-west1",
+  },
+  async () => {
+    await runIntradayMonitor();
+  }
 );
 
 // ------------------------------------------------------------------
@@ -1613,7 +1628,7 @@ export const generatePreOpenSummary = onSchedule(
 // ------------------------------------------------------------------
 export const generateDailyCloseSummary = onSchedule(
   {
-    schedule: "15 16 * * 1-5", // 15 min after official 16:00 close
+    schedule: "10 16 * * 1-5", // 10 min after official 16:00 close to capture 16:05 snapshot
     timeZone: "Africa/Dar_es_Salaam",
     region: "europe-west1",
   },
@@ -1664,20 +1679,23 @@ export const generateDailyCloseSummary = onSchedule(
          
          for (const [symbol, currDataAny] of Object.entries(lastSnapshot.stocks)) {
             const currData = currDataAny as any;
-            const startData = firstSnapshot.stocks[symbol];
-            if (startData && currData.marketPrice > 0 && startData.marketPrice > 0 && currData.marketPrice !== startData.marketPrice) {
-               const pctMove = ((currData.marketPrice - startData.marketPrice) / startData.marketPrice) * 100;
-               const absMove = Math.abs(pctMove);
-               if (absMove > maxAbsMovePct) {
-                  maxAbsMovePct = absMove;
-                  biggestMoverSymbol = symbol;
-                  moveDir = pctMove > 0 ? "gained" : "dropped";
-                  movePctVal = absMove;
+            if (currData.marketPrice > 0 && currData.change !== 0) {
+               const prevClose = currData.marketPrice - currData.change;
+               if (prevClose > 0) {
+                  const pctMove = (currData.change / prevClose) * 100;
+                  const absMove = Math.abs(pctMove);
+                  if (absMove > maxAbsMovePct) {
+                     maxAbsMovePct = absMove;
+                     biggestMoverSymbol = symbol;
+                     moveDir = pctMove > 0 ? "gained" : "dropped";
+                     movePctVal = absMove;
+                  }
                }
             }
          }
+         
          if (biggestMoverSymbol && maxAbsMovePct > 0) {
-            txt += `**${biggestMoverSymbol}** was today's notable mover, having ${moveDir} **${movePctVal.toFixed(2)}%** from the open.`;
+            txt += `**${biggestMoverSymbol}** was today's notable mover, having ${moveDir} **${movePctVal.toFixed(2)}%** for the day.`;
          }
          trendSummary = txt;
       }
