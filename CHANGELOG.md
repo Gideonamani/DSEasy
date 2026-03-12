@@ -5,8 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.7] - 2026-03-12
+## [1.1.8] - 2026-03-12
 
+### Fixed
+
+- **Market Intel Display Logic**: 
+  - Hardcoded "09:30" as the official market open time in the latest trend insight instead of using the timestamp of the first daily snapshot, which could be misleading.
+  - Removed the redundant "Closing Wrap-Up" text from the newly added pre-open intel cards, as yesterday's close is already summarized in the main paragraph.
+
+## [1.1.7] - 2026-03-12
 ### Added
 
 - **Pre-Open Market Intel**: Added a new scheduled function (09:25 EAT) to summarize the previous day's closing sentiment and top movers before the market opens.
