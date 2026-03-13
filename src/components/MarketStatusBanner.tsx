@@ -3,7 +3,7 @@ import { Clock, AlertTriangle, TrendingUp, Presentation } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface MarketStatusBannerProps {
-  latestAvailableDate: string | null;
+  latestAvailableDate: Date | null;
   isDashboard: boolean;
 }
 
@@ -29,7 +29,12 @@ export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ latestAv
       const isBeforeClose = timeInMinutes < (16 * 60); // < 16:00
       
       const isMarketActive = isActiveDay && isOpenTime && isBeforeClose;
-      const hasTodayData = latestAvailableDate === eatDateStr;
+      
+      let hasTodayData = false;
+      if (latestAvailableDate) {
+          const latestStr = latestAvailableDate.toLocaleDateString("en-CA", { timeZone: "Africa/Dar_es_Salaam" });
+          hasTodayData = latestStr === eatDateStr;
+      }
 
       if (isMarketActive) {
         if (hasTodayData) {

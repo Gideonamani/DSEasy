@@ -323,7 +323,7 @@ export const DailyGlance: React.FC = () => {
                     fontWeight: "var(--font-semibold)",
                   }}
                 >
-                  {new Date(snapshot.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" })} EAT
+                  {new Date(snapshot.capturedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Africa/Dar_es_Salaam" })} {new Date(snapshot.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" })} EAT
                 </span>
               </>
             ) : (
