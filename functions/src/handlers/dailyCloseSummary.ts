@@ -86,7 +86,7 @@ export const generateDailyCloseSummary = onSchedule(
         
       await intelRef.set({
         capturedAt: timestamp,
-        type: "close",
+        type: "closing",
         snapshotSummary,
         trendSummary
       });
