@@ -688,18 +688,11 @@ async function generateGapDetection(dbInstance: admin.firestore.Firestore, curre
 // Scrapes live prices, saves to Firestore, and checks alerts.
 // ------------------------------------------------------------------
 async function runIntradayMonitor() {
-    const now = new Date();
+    const eatNow = moment().tz("Africa/Dar_es_Salaam");
 
-    // Convert to EAT (UTC+3) explicitly to ensure correct market hour checks
-    // Cloud Functions run in UTC by default
-    const eatTimeStr = now.toLocaleString("en-US", {
-      timeZone: "Africa/Dar_es_Salaam",
-    });
-    const eatDate = new Date(eatTimeStr);
-
-    const day = eatDate.getDay(); // 0 = Sun, 6 = Sat
-    const hour = eatDate.getHours();
-    const mins = eatDate.getMinutes();
+    const day = eatNow.day(); // 0 = Sun, 6 = Sat
+    const hour = eatNow.hour();
+    const mins = eatNow.minute();
     const totalMins = hour * 60 + mins;
 
     // Validation: Run only Mon-Fri (1-5)
@@ -708,10 +701,11 @@ async function runIntradayMonitor() {
       return;
     }
 
-    // Validation: Run only between 09:30 (570) and 16:05 (965)
+    // Validation: Run only between 09:30 (570) and 16:07 (967)
     // Aligned to official DSE timetable (effective 2 June 2025)
-    if (totalMins < 570 || totalMins > 966) {
-      console.log("Outside market hours - skipping alert check.");
+    // We allow until 16:07 to ensure the 16:05 closing capture completes.
+    if (totalMins < 570 || totalMins > 967) {
+      console.log(`Outside market hours (${eatNow.format("HH:mm")}) - skipping alert check.`);
       return;
     }
 
@@ -817,9 +811,7 @@ async function runIntradayMonitor() {
           });
 
           // Date string for document path: marketWatch/{date}/snapshots/{timestamp}
-          const dateStr = eatDate
-            .toISOString()
-            .split("T")[0]; // YYYY-MM-DD
+          const dateStr = eatNow.format("YYYY-MM-DD");
           const snapshotRef = db
             .collection("marketWatch")
             .doc(dateStr)

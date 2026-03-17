@@ -1,4 +1,5 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import * as moment from "moment-timezone";
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import axios from "axios";
@@ -18,16 +19,11 @@ export const monitorIntradayMarket = onSchedule(
     region: "europe-west1",
   },
   async (event) => {
-    const now = new Date();
+    const eatNow = moment().tz("Africa/Dar_es_Salaam");
 
-    const eatTimeStr = now.toLocaleString("en-US", {
-      timeZone: "Africa/Dar_es_Salaam",
-    });
-    const eatDate = new Date(eatTimeStr);
-
-    const day = eatDate.getDay(); // 0 = Sun, 6 = Sat
-    const hour = eatDate.getHours();
-    const mins = eatDate.getMinutes();
+    const day = eatNow.day(); // 0 = Sun, 6 = Sat
+    const hour = eatNow.hour();
+    const mins = eatNow.minute();
     const totalMins = hour * 60 + mins;
 
     if (day === 0 || day === 6) {
@@ -35,8 +31,11 @@ export const monitorIntradayMarket = onSchedule(
       return;
     }
 
-    if (totalMins < 570 || totalMins > 960) {
-      console.log("Outside market hours - skipping alert check.");
+    // Validation: Run only between 09:30 (570) and 16:07 (967)
+    // Aligned to official DSE timetable (effective 2 June 2025)
+    // We allow until 16:07 to ensure the 16:05 closing capture completes.
+    if (totalMins < 570 || totalMins > 967) {
+      console.log(`Outside market hours (${eatNow.format("HH:mm")}) - skipping alert check.`);
       return;
     }
 
@@ -128,7 +127,7 @@ export const monitorIntradayMarket = onSchedule(
             }
           });
 
-          const dateStr = eatDate.toISOString().split("T")[0];
+          const dateStr = eatNow.format("YYYY-MM-DD");
           const snapshotRef = db
             .collection("marketWatch")
             .doc(dateStr)
