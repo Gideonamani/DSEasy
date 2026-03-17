@@ -889,13 +889,21 @@ export const DailyGlance: React.FC = () => {
                 }} />
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                  {intelHistory.map((intel, idx) => {
-                    const isLatest = idx === intelHistory.length - 1;
-                    const isClosing = intel.type === "closing";
-                    const isPreOpen = intel.type === "pre-open";
-                    const timeEat = isClosing ? "16:00" : new Date(intel.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" });
+                  {intelHistory
+                    .filter((intel) => {
+                      if (intel.type !== "intraday") return true;
+                      const d = new Date(intel.capturedAt);
+                      const h = parseInt(d.toLocaleTimeString("en-GB", { hour: "2-digit", hour12: false, timeZone: "Africa/Dar_es_Salaam" }));
+                      const m = parseInt(d.toLocaleTimeString("en-GB", { minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" }));
+                      return (h * 60 + m) <= 960; // Keep only up to 16:00 for intraday
+                    })
+                    .map((intel, idx, filtered) => {
+                      const isLatest = idx === filtered.length - 1;
+                      const isClosing = intel.type === "closing";
+                      const isPreOpen = intel.type === "pre-open";
+                      const timeEat = isClosing ? "16:00" : new Date(intel.capturedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Dar_es_Salaam" });
 
-                    return (
+                      return (
                       <div 
                         key={`${intel.capturedAt}-${intel.type}-${idx}`} 
                         style={{ position: "relative", paddingLeft: 32 }}

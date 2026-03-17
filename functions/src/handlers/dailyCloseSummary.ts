@@ -14,20 +14,21 @@ export const generateDailyCloseSummary = onSchedule(
     const dateStr = now.format("YYYY-MM-DD");
     
     try {
-      // Get last snapshot of the day
-      const lastSnapQuery = await db.collection("marketWatch").doc(dateStr).collection("snapshots")
+      // Get last two snapshots of the day for comparative analysis
+      const lastSnapsQuery = await db.collection("marketWatch").doc(dateStr).collection("snapshots")
         .orderBy("capturedAt", "desc")
-        .limit(1)
+        .limit(2)
         .get();
         
-      if (lastSnapQuery.empty) {
+      if (lastSnapsQuery.empty) {
         console.log(`No snapshots found for ${dateStr} closing summary.`);
         return;
       }
       
-      const lastSnapshot = lastSnapQuery.docs[0].data();
-      const snapshotSummary = generateSnapshotIntel(lastSnapshot);
+      const lastSnapshot = lastSnapsQuery.docs[0].data();
+      const prevSnapshot = lastSnapsQuery.docs.length > 1 ? lastSnapsQuery.docs[1].data() : null;
       
+      const snapshotSummary = generateSnapshotIntel(lastSnapshot);
       let trendSummary = await generateTrendIntel(db, dateStr, lastSnapshot);
       
       // Compare daily open vs close
@@ -36,7 +37,7 @@ export const generateDailyCloseSummary = onSchedule(
         .limit(1)
         .get();
         
-      if (!firstSnapQuery.empty && firstSnapQuery.docs[0].id !== lastSnapQuery.docs[0].id) {
+      if (!firstSnapQuery.empty && firstSnapQuery.docs[0].id !== lastSnapsQuery.docs[0].id) {
          const firstSnapshot = firstSnapQuery.docs[0].data();
          
          let firstUp = 0; let firstDown = 0;
@@ -49,6 +50,24 @@ export const generateDailyCloseSummary = onSchedule(
          
          let txt = `Overall for the day, the market opened **${firstSentiment}** and closed **${lastSentiment}**. `;
          
+         // Late-session Highlight (Option C): Compare 16:00 vs 16:05
+         if (prevSnapshot) {
+           let highlights: string[] = [];
+           for (const [symbol, currDataAny] of Object.entries(lastSnapshot.stocks)) {
+             const currData = currDataAny as any;
+             const prevData = (prevSnapshot.stocks as any)[symbol];
+             
+             if (prevData && currData.marketPrice !== prevData.marketPrice) {
+               const diff = currData.marketPrice - prevData.marketPrice;
+               const moveDir = diff > 0 ? "surged" : "slipped";
+               highlights.push(`**${symbol}** ${moveDir} to ${currData.marketPrice} in the final minutes`);
+             }
+           }
+           if (highlights.length > 0) {
+             txt += `Late-session highlights: ${highlights.join(", ")}. `;
+           }
+         }
+
          let biggestMoverSymbol = "";
          let maxAbsMovePct = -1;
          let movePctVal = 0;
