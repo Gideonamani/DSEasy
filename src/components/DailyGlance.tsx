@@ -945,21 +945,14 @@ export const DailyGlance: React.FC = () => {
                             )}
                           </div>
 
-                          <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
-                             dangerouslySetInnerHTML={{ __html: intel.snapshotSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                          
-                          {/* Render trend context for closing bell cards */}
-                          {isClosing && intel.trendSummary && (
-                            <div style={{ 
-                              marginTop: 12,
-                              padding: "10px 14px", 
-                              background: "color-mix(in srgb, #f59e0b 5%, transparent)", 
-                              borderRadius: "var(--radius-md)",
-                              borderLeft: "2px solid #f59e0b",
-                            }}>
-                              <p style={{ color: "var(--text-secondary)", lineHeight: 1.4, margin: 0, fontSize: "var(--text-sm)" }}
-                                 dangerouslySetInnerHTML={{ __html: intel.trendSummary.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary)">$1</strong>') }} />
-                            </div>
+                          {!isClosing ? (
+                            <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
+                               dangerouslySetInnerHTML={{ __html: intel.snapshotSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                          ) : (
+                            intel.trendSummary && (
+                              <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
+                                 dangerouslySetInnerHTML={{ __html: intel.trendSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                            )
                           )}
                         </div>
                       </div>
