@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-03-17
+
+### Added
+
+- **Comparative Closing Intel**: The daily closing summary now compares the final two market snapshots (e.g., 16:00 vs 16:05) to pinpoint late-session price surges or drops.
+
+### Changed
+
+- **Clean Timeline UI**: Filtered out all intraday market snapshots captured after 16:00 EAT from the visual timeline to prevent distortion, while keeping 16:00 as the final intraday entry.
+
 ## [1.2.3] - 2026-03-17
 
 ### Added
