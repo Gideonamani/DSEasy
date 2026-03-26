@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, AlertTriangle, TrendingUp, Presentation } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useMarketWatchDates } from '../hooks/useMarketQuery';
 
 interface MarketStatusBannerProps {
-  latestAvailableDate: Date | null;
   isDashboard: boolean;
 }
 
 type MarketPhase = 'LIVE' | 'HOLIDAY' | 'CLOSED';
 
-export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ latestAvailableDate, isDashboard }) => {
+export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ isDashboard }) => {
   const [phase, setPhase] = useState<MarketPhase>('CLOSED');
+  const { data: marketWatchDates = [] } = useMarketWatchDates();
 
   useEffect(() => {
     const evaluateMarketPhase = () => {
@@ -30,7 +31,9 @@ export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ latestAv
       
       const isMarketActive = isActiveDay && isOpenTime && isBeforeClose;
       
+      // Use marketWatchDates (live intraday source) to determine if today has data
       let hasTodayData = false;
+      const latestAvailableDate = marketWatchDates.length > 0 ? marketWatchDates[0].date : null;
       if (latestAvailableDate) {
           const latestStr = latestAvailableDate.toLocaleDateString("en-CA", { timeZone: "Africa/Dar_es_Salaam" });
           hasTodayData = latestStr === eatDateStr;
@@ -51,7 +54,7 @@ export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ latestAv
     // Re-evaluate every minute just to be safe
     const interval = setInterval(evaluateMarketPhase, 60000);
     return () => clearInterval(interval);
-  }, [latestAvailableDate]);
+  }, [marketWatchDates]);
 
   if (phase === 'LIVE') {
     if (isDashboard) {

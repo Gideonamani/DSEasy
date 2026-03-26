@@ -70,7 +70,6 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
       </div>
 
       <MarketStatusBanner 
-        latestAvailableDate={availableDates.length > 0 ? availableDates[0].date : null}
         isDashboard={true}
       />
 

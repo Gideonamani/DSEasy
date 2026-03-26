@@ -340,7 +340,6 @@ export const DailyGlance: React.FC = () => {
       </div>
 
       <MarketStatusBanner 
-        latestAvailableDate={availableDates.length > 0 ? availableDates[0].date : null}
         isDashboard={false}
       />
 
