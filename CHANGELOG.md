@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-03-26
+
+### Fixed
+
+- **DSE SSL Bypass**: Implemented a temporary `https.Agent` workaround to bypass the expired SSL certificate on `dse.co.tz`, restoring automated scraping functionality.
+- **Market Status Logic**: Refined `MarketStatusBanner` and `DailyGlance` to use `marketWatchDates` for more reliable market phase evaluation.
+
+### Added
+
+- **Scraper Error Notifications**: Integrated `sendScraperAlert()` (email alerts via nodemailer) into all core scraper and monitor catch blocks to prevent silent failures.
+
+### Changed
+
+- **Complete Modular Refactor**: Fully eliminated the 1700-line monolithic `functions/src/index.ts`. All logic is now cleanly separated into `handlers/` and `services/`, with `index.ts` serving as a lean barrel export file.
+- **Intraday Logic Consolidation**: Extracted core monitor logic into a shared `runIntradayMonitor()` function and migrated `monitorClosingAuction` to the modular `monitorIntraday.ts` handler.
+
 ## [1.2.4] - 2026-03-17
 
 ### Added
