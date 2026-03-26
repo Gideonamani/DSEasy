@@ -1,5 +1,11 @@
 import axios, { AxiosError } from "axios";
+import * as https from "https";
 import { BROWSER_HEADERS, SYMBOL_MAPPINGS } from "../constants";
+
+// DSE website (dse.co.tz) has an expired SSL certificate.
+// This agent bypasses certificate validation so scraping can continue.
+// TODO: Remove this once DSE renews their SSL certificate.
+const insecureAgent = new https.Agent({ rejectUnauthorized: false });
 
 /**
  * Fetch a URL with automatic retry on 429 (Too Many Requests) errors.
@@ -20,6 +26,7 @@ export async function fetchWithRetry(
       const response = await axios.get(url, {
         headers: BROWSER_HEADERS,
         timeout,
+        httpsAgent: insecureAgent,
       });
       return response;
     } catch (error) {

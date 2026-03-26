@@ -249,6 +249,11 @@ export async function scrapeDSEAndWriteToFirestore(): Promise<{
     };
   } catch (error) {
     console.error("Error in scrapeDSEAndWriteToFirestore:", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    await sendScraperAlert(
+      `🚨 DSE Daily Closing Scraper Error`,
+      `The daily closing scraper failed.\n\nError: ${err.message}\n\nStack:\n${err.stack || "N/A"}`,
+    );
     return { success: false, message: `Error: ${error}` };
   }
 }
