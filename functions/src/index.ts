@@ -19,6 +19,7 @@ export {
   scrapeDailyClosing,
   scrapeDailyClosingHttp,
 } from "./handlers/dailyClosing";
+export { getTickerPrice } from "./handlers/prices";
 
 export { generatePreOpenSummary } from "./handlers/preOpenSummary";
 export { generateDailyCloseSummary } from "./handlers/dailyCloseSummary";

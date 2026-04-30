@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2026-04-30
+
+### Added
+
+- **Google Sheets Integration**: Re-introduced `google-scripts/` with a new `LatestPrice.gs` script, enabling real-time Firestore price lookups directly within Google Spreadsheets via custom functions.
+- **Price Lookup API**: Created a secure `getTickerPrice` Firebase Cloud Function with API key validation to serve live and closing market prices to external consumers.
+- **Manual Sheet Refresh**: Implemented a "Refresh All Prices" menu in Google Sheets to force-update portfolio valuations.
+
 ## [1.2.6] - 2026-04-30
 
 ### Added
