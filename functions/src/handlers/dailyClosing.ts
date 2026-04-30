@@ -29,7 +29,7 @@ export const scrapeDailyClosing = onSchedule(
     console.log(`Data for ${todayFormatted} missing. Attempting scrape...`);
 
     // 2. Attempt Scrape
-    const result = await scrapeDSEAndWriteToFirestore();
+    const result = await scrapeDSEAndWriteToFirestore("Scheduled");
     console.log("scrapeDailyClosing result:", result);
 
     // 3. Check for Failure / Stale Data
@@ -47,12 +47,12 @@ export const scrapeDailyClosing = onSchedule(
 
     if (currentHour >= 23) {
       console.log("Last attempt of the day failed. Sending alert...");
-      const subject = `⚠️ DSE Data Missing for ${todayFormatted}`;
+      const subject = `🚨 FINAL ALERT: DSE Data Missing for ${todayFormatted}`;
       const body =
-        `The scraper ran at ${now.format("HH:mm")} and could not find data for today.\n\n` +
+        `ATTENTION: The scraper has completed its final scheduled run for today (${now.format("HH:mm")}) and STILL could not find data for today.\n\n` +
         `Scraper Result: ${result.message}\n` +
         `Last Scraped Date: ${result.date || "Unknown"}\n\n` +
-        `Please check https://dse.co.tz manually.`;
+        `MANUAL ACTION REQUIRED: Please check https://dse.co.tz manually and upload if necessary.`;
 
       await sendScraperAlert(subject, body);
     }
@@ -72,7 +72,7 @@ export const scrapeDailyClosingHttp = onRequest(
       return;
     }
 
-    const result = await scrapeDSEAndWriteToFirestore();
+    const result = await scrapeDSEAndWriteToFirestore("Manual");
     res.json(result);
   },
 );

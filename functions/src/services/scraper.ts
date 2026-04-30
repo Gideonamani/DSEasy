@@ -10,7 +10,9 @@ import {
   parseNum,
 } from "../utils/helpers";
 
-export async function scrapeDSEAndWriteToFirestore(): Promise<{
+export async function scrapeDSEAndWriteToFirestore(
+  context: "Scheduled" | "Manual" = "Manual",
+): Promise<{
   success: boolean;
   message: string;
   date?: string;
@@ -19,7 +21,7 @@ export async function scrapeDSEAndWriteToFirestore(): Promise<{
   const url = "https://dse.co.tz";
 
   try {
-    console.log("Fetching DSE homepage...");
+    console.log(`[${context}] Fetching DSE homepage...`);
     const { data: html } = await fetchWithRetry(url);
 
     // 1. EXTRACT DATE
@@ -250,10 +252,23 @@ export async function scrapeDSEAndWriteToFirestore(): Promise<{
   } catch (error) {
     console.error("Error in scrapeDSEAndWriteToFirestore:", error);
     const err = error instanceof Error ? error : new Error(String(error));
-    await sendScraperAlert(
-      `🚨 DSE Daily Closing Scraper Error`,
-      `The daily closing scraper failed.\n\nError: ${err.message}\n\nStack:\n${err.stack || "N/A"}`,
-    );
+    const isScheduled = context === "Scheduled";
+
+    const subject = isScheduled
+      ? `[Scheduled Refresh] 🚨 DSE Scraper Error`
+      : `🚨 DSE Daily Closing Scraper Error (${context})`;
+
+    const body =
+      (isScheduled
+        ? "NOTE: This is an automated hourly attempt (17:00 - 23:00 EAT).\n" +
+          "If this is not the 23:00 run, it will automatically retry in an hour.\n" +
+          "No manual action is likely required unless this persists.\n\n"
+        : "") +
+      `The scraper failed during ${context} execution.\n\n` +
+      `Error: ${err.message}\n\n` +
+      `Stack:\n${err.stack || "N/A"}`;
+
+    await sendScraperAlert(subject, body);
     return { success: false, message: `Error: ${error}` };
   }
 }
