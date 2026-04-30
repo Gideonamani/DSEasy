@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2026-04-30
+
+### Added
+
+- **Context-Aware Scraping**: The `scrapeDSEAndWriteToFirestore` function now accepts a `context` parameter to distinguish between scheduled and manual runs, enabling more precise logging and alerting.
+
+### Changed
+
+- **Urgent Missing Data Alerts**: Upgraded final end-of-day missing data notifications to "🚨 FINAL ALERT" with explicit "MANUAL ACTION REQUIRED" instructions to ensure data integrity.
+- **Intelligent Scraper Alerts**: Scheduled scraper failures now include a note indicating it's an automated hourly attempt that will retry, preventing unnecessary manual interventions.
+
 ## [1.2.5] - 2026-03-26
 
 ### Fixed
