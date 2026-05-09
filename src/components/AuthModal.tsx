@@ -1,15 +1,13 @@
 import React, { useState, FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { X, LogIn, UserPlus, Mail, Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useAuthModal } from "../contexts/AuthModalContext";
 
 type View = "signin" | "signup" | "reset";
 
-interface AuthModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC = () => {
+  const { isOpen, close: onClose } = useAuthModal();
   const { loginWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
 
   const [view, setView] = useState<View>("signin");
@@ -105,7 +103,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  return (
+  return createPortal(
     <div
       onClick={handleClose}
       style={{
@@ -296,7 +294,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
