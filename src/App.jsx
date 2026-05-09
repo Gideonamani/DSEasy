@@ -5,6 +5,7 @@ import { Dashboard } from "./components/Dashboard";
 import { DailyGlance } from "./components/DailyGlance";
 import { DerivedAnalytics } from "./components/DerivedAnalytics";
 import { TickerTrends } from "./components/TickerTrends";
+import { CompareTickers } from "./components/CompareTickers";
 import { NotificationsManager } from "./components/NotificationsManager";
 import { Loader2, Lock, LogIn } from "lucide-react";
 import { useSettings } from "./contexts/SettingsContext";
@@ -97,6 +98,7 @@ const ROUTES = {
   "/glance": "Daily Glance",
   "/analytics": "Derived Analytics",
   "/trends": "Ticker Trends",
+  "/compare": "Compare Tickers",
   "/notifications": "Notifications",
   "/settings": "Settings",
 };
@@ -106,6 +108,7 @@ const TAB_TO_ROUTE = {
   "Daily Glance": "/glance",
   "Derived Analytics": "/analytics",
   "Ticker Trends": "/trends",
+  "Compare Tickers": "/compare",
   "Notifications": "/notifications",
   "Settings": "/settings",
 };
@@ -282,6 +285,7 @@ function App() {
           } 
         />
         <Route path="/trends/:symbol?" element={<TickerTrends />} />
+        <Route path="/compare" element={<CompareTickers />} />
         <Route path="/notifications" element={<NotificationsManager />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
