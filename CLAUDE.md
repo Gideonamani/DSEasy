@@ -6,9 +6,11 @@ Always branch off the latest `main` using this convention:
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| New feature | `feat/issue-<N>` | `feat/issue-3` |
-| Bug fix | `fix/issue-<N>` | `fix/issue-12` |
-| Other (docs, refactor, chore) | `chore/issue-<N>` | `chore/issue-7` |
+| New feature | `feat/issue-<N>-<short-description>` | `feat/issue-4-ticker-comparison` |
+| Bug fix | `fix/issue-<N>-<short-description>` | `fix/issue-12-volume-calc` |
+| Other (docs, refactor, chore) | `chore/issue-<N>-<short-description>` | `chore/issue-7-docs-update` |
+
+The short description should be kebab-case and summarise what the issue is about (2–3 words).
 
 Never push directly to `main`.
 
