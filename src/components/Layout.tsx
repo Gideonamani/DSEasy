@@ -528,6 +528,25 @@ export const Layout: React.FC<LayoutProps> = ({
         <main style={{ padding: isMobile ? "16px" : "32px", flex: 1 }}>
           {children}
         </main>
+
+        {/* Footer */}
+        <footer style={{
+          borderTop: "1px solid var(--border)",
+          padding: "12px 32px",
+          textAlign: "center",
+          color: "var(--text-secondary)",
+          fontSize: "13px",
+        }}>
+          DSEasy v{__APP_VERSION__} • Built by PuduKodkod •{" "}
+          <a
+            href="https://github.com/Gideonamani/DSEasy"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "inherit", textDecoration: "underline" }}
+          >
+            GitHub
+          </a>
+        </footer>
       </div>
     </div>
   );
