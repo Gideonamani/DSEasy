@@ -114,7 +114,7 @@ interface OverlayConfig {
 
 const VWAP_OVERLAYS: { key: string; label: string; period: number; color: string; borderDash: [number, number] }[] = [
   { key: "vwap20", label: "20-day VWAP", period: 20, color: "rgba(168, 85, 247, 0.85)", borderDash: [3, 2] },
-  { key: "vwap30", label: "30-day VWAP", period: 30, color: "rgba(236, 72, 153, 0.85)", borderDash: [5, 3] },
+  { key: "vwap50", label: "50-day VWAP", period: 50, color: "rgba(236, 72, 153, 0.85)", borderDash: [5, 3] },
 ];
 
 const SMA_OVERLAYS: OverlayConfig[] = [
