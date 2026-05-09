@@ -344,7 +344,7 @@ const inputStyle: React.CSSProperties = {
   border: "1px solid var(--border-subtle)",
   borderRadius: "var(--radius-md)",
   color: "var(--text-primary)",
-  fontSize: "var(--text-sm)",
+  fontSize: "16px",
   outline: "none",
   width: "100%",
   boxSizing: "border-box",

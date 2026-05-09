@@ -240,7 +240,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
+    <div style={{ display: "flex", minHeight: "100svh", position: "relative" }}>
       {/* Mobile Sidebar Overlay */}
       <div
         onClick={() => setIsSidebarOpen(false)}
@@ -261,7 +261,7 @@ export const Layout: React.FC<LayoutProps> = ({
         className="glass-panel"
         style={{
           width: "var(--sidebar-width)",
-          height: "100dvh",
+          height: "100svh",
           position: "fixed",
           left: isSidebarOpen ? 0 : "calc(var(--sidebar-width) * -1)",
           top: 0,
@@ -322,7 +322,7 @@ export const Layout: React.FC<LayoutProps> = ({
           )}
         </div>
 
-        <div style={{ flex: 1, padding: "12px 0" }}>
+        <div style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
           {[
             "Dashboard",
             ...(currentUser ? ["Daily Glance"] : []),
@@ -504,8 +504,8 @@ export const Layout: React.FC<LayoutProps> = ({
               <Bell size={20} />
             </button>
 
-            {/* Mobile sign-in shortcut — always reachable without opening the drawer */}
-            {isMobile && !currentUser && (
+            {/* Sign-in shortcut — always reachable regardless of sidebar state or orientation */}
+            {!currentUser && (
               <button
                 onClick={openAuthModal}
                 style={{
