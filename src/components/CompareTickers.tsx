@@ -5,11 +5,13 @@ import { useTickerSymbols, useTickerHistory, StockData } from "../hooks/useMarke
 import { Line } from "react-chartjs-2";
 import { getCommonChartOptions } from "../utils/chartTheme";
 import { CustomSelect } from "./CustomSelect";
-import { Loader2, GitCompare } from "lucide-react";
+import { Loader2, GitCompare, Plus, X } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 const SYMBOL_COLORS = ["#6366f1", "#10b981", "#f59e0b"];
+const MIN_SYMBOLS = 2;
+const MAX_SYMBOLS = 3;
 
 const PERIOD_OPTIONS = [
   { label: "1W", value: "1W" },
@@ -79,10 +81,14 @@ export const CompareTickers: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { settings } = useSettings();
 
+  // Parse initial symbols from URL, pad to MIN_SYMBOLS
   const urlSymbols = (searchParams.get("s") || "").split(",").filter(Boolean);
-  const [symbol1, setSymbol1] = useState(urlSymbols[0] || "");
-  const [symbol2, setSymbol2] = useState(urlSymbols[1] || "");
-  const [symbol3, setSymbol3] = useState(urlSymbols[2] || "");
+  const initSymbols = [
+    urlSymbols[0] || "",
+    urlSymbols[1] || "",
+    ...(urlSymbols[2] ? [urlSymbols[2]] : []),
+  ];
+  const [selectedSymbols, setSelectedSymbols] = useState<string[]>(initSymbols);
 
   const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "6M");
   const [customRange, setCustomRange] = useState<{ start: Date | null; end: Date | null }>({
@@ -90,11 +96,26 @@ export const CompareTickers: React.FC = () => {
     end: searchParams.get("end") ? new Date(searchParams.get("end")!) : null,
   });
 
+  // Symbol slot management
+  const addSymbol = () => {
+    if (selectedSymbols.length < MAX_SYMBOLS) {
+      setSelectedSymbols((prev) => [...prev, ""]);
+    }
+  };
+
+  const removeSymbol = (index: number) => {
+    setSelectedSymbols((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSymbol = (index: number, value: string) => {
+    setSelectedSymbols((prev) => prev.map((s, i) => (i === index ? value : s)));
+  };
+
   // Sync state back to URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
-    const symbols = [symbol1, symbol2, symbol3].filter(Boolean);
-    if (symbols.length) params.set("s", symbols.join(","));
+    const activeSymbols = selectedSymbols.filter(Boolean);
+    if (activeSymbols.length) params.set("s", activeSymbols.join(","));
     else params.delete("s");
 
     if (selectedPeriod === "6M") params.delete("period");
@@ -109,44 +130,41 @@ export const CompareTickers: React.FC = () => {
     }
 
     setSearchParams(params, { replace: true });
-  }, [symbol1, symbol2, symbol3, selectedPeriod, customRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedSymbols, selectedPeriod, customRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: symbols = [], isLoading: loadingSymbols } = useTickerSymbols();
   const symbolOptions = symbols.map((s) => ({ label: s, value: s }));
 
-  const { data: raw1 = [], isLoading: loading1 } = useTickerHistory(symbol1);
-  const { data: raw2 = [], isLoading: loading2 } = useTickerHistory(symbol2);
-  const { data: raw3 = [], isLoading: loading3 } = useTickerHistory(symbol3);
+  // Fixed hook calls for MAX_SYMBOLS slots — hooks must not be conditional
+  const { data: raw0 = [], isLoading: loading0 } = useTickerHistory(selectedSymbols[0] || "");
+  const { data: raw1 = [], isLoading: loading1 } = useTickerHistory(selectedSymbols[1] || "");
+  const { data: raw2 = [], isLoading: loading2 } = useTickerHistory(selectedSymbols[2] || "");
+
+  const rawSlots = [
+    { data: raw0, isLoading: loading0 },
+    { data: raw1, isLoading: loading1 },
+    { data: raw2, isLoading: loading2 },
+  ];
 
   const isLoading =
     loadingSymbols ||
-    (!!symbol1 && loading1) ||
-    (!!symbol2 && loading2) ||
-    (!!symbol3 && loading3);
+    rawSlots.some((slot, i) => !!selectedSymbols[i] && slot.isLoading);
 
-  const filtered1 = useMemo(
-    () => (symbol1 ? filterByPeriod(raw1, selectedPeriod, customRange) : []),
-    [raw1, symbol1, selectedPeriod, customRange]
-  );
-  const filtered2 = useMemo(
-    () => (symbol2 ? filterByPeriod(raw2, selectedPeriod, customRange) : []),
-    [raw2, symbol2, selectedPeriod, customRange]
-  );
-  const filtered3 = useMemo(
-    () => (symbol3 ? filterByPeriod(raw3, selectedPeriod, customRange) : []),
-    [raw3, symbol3, selectedPeriod, customRange]
+  const allFiltered = useMemo(
+    () =>
+      rawSlots.map((slot, i) =>
+        selectedSymbols[i] ? filterByPeriod(slot.data, selectedPeriod, customRange) : []
+      ),
+    [raw0, raw1, raw2, selectedSymbols, selectedPeriod, customRange] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const chartData = useMemo(() => {
-    const slots = [
-      { symbol: symbol1, data: filtered1 },
-      { symbol: symbol2, data: filtered2 },
-      { symbol: symbol3, data: filtered3 },
-    ].filter((s) => s.symbol && s.data.length > 0);
+    const slots = selectedSymbols
+      .map((symbol, i) => ({ symbol, data: allFiltered[i] }))
+      .filter((s) => s.symbol && s.data.length > 0);
 
     if (slots.length < 2) return null;
 
-    // Union of all dates across active symbols
     const dateSet = new Set<string>();
     slots.forEach((slot) => slot.data.forEach((d) => dateSet.add(d.date)));
     const allDates = Array.from(dateSet).sort(
@@ -179,8 +197,8 @@ export const CompareTickers: React.FC = () => {
         borderColor: color,
         backgroundColor: color + "20",
         borderWidth: 2,
-        pointRadius: allDates.length > 60 ? 0 : 3,
-        pointHoverRadius: 5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
         tension: 0.3,
         spanGaps: true,
         fill: false,
@@ -188,7 +206,7 @@ export const CompareTickers: React.FC = () => {
     });
 
     return { labels, datasets };
-  }, [symbol1, symbol2, symbol3, filtered1, filtered2, filtered3]);
+  }, [selectedSymbols, allFiltered]);
 
   const chartOptions = useMemo(() => {
     const base = getCommonChartOptions(settings.theme) as any;
@@ -196,6 +214,7 @@ export const CompareTickers: React.FC = () => {
       ...base,
       plugins: {
         ...base.plugins,
+        legend: { display: false }, // custom legend rendered manually
         tooltip: {
           ...base.plugins?.tooltip,
           callbacks: {
@@ -220,14 +239,14 @@ export const CompareTickers: React.FC = () => {
     };
   }, [settings.theme]);
 
-  // Build options for each picker, excluding symbols chosen in the other two slots
-  const optionsFor = (self: string) =>
+  // For each picker, exclude symbols chosen in other slots
+  const optionsFor = (currentIndex: number) =>
     symbolOptions.filter((o) => {
-      const others = [symbol1, symbol2, symbol3].filter((s) => s !== self);
-      return !others.includes(o.value as string);
+      const othersSelected = selectedSymbols.filter((_, i) => i !== currentIndex);
+      return !othersSelected.includes(o.value as string);
     });
 
-  const activeSymbolCount = [symbol1, symbol2, symbol3].filter(Boolean).length;
+  const activeSymbolCount = selectedSymbols.filter(Boolean).length;
 
   return (
     <div>
@@ -253,92 +272,156 @@ export const CompareTickers: React.FC = () => {
         className="glass-panel"
         style={{ padding: "20px", marginBottom: "24px", borderRadius: "var(--radius-xl)" }}
       >
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
-          {/* Symbol pickers */}
-          {(
-            [
-              { label: "Symbol 1", value: symbol1, set: setSymbol1, emptyLabel: "Select symbol...", optional: false },
-              { label: "Symbol 2", value: symbol2, set: setSymbol2, emptyLabel: "Select symbol...", optional: false },
-              { label: "Symbol 3", value: symbol3, set: setSymbol3, emptyLabel: "None", optional: true },
-            ] as { label: string; value: string; set: (v: string) => void; emptyLabel: string; optional: boolean }[]
-          ).map(({ label, value, set, emptyLabel, optional }) => (
-            <div key={label}>
-              <div
-                style={{
-                  fontSize: "var(--text-xs)",
-                  color: "var(--text-secondary)",
-                  marginBottom: "6px",
-                  fontWeight: "var(--font-medium)",
-                }}
-              >
-                {label}{optional && <span style={{ opacity: 0.6 }}> (optional)</span>}
-              </div>
-              <CustomSelect
-                value={value}
-                options={[{ label: emptyLabel, value: "" }, ...optionsFor(value)]}
-                onChange={(v) => set(v as string)}
-                placeholder={label}
-              />
-            </div>
-          ))}
-
-          {/* Visual divider */}
+        {/* Symbol pickers */}
+        <div style={{ marginBottom: "20px" }}>
           <div
             style={{
-              width: "1px",
-              height: "40px",
-              background: "var(--glass-border)",
-              alignSelf: "flex-end",
-              marginBottom: "2px",
+              fontSize: "var(--text-xs)",
+              color: "var(--text-secondary)",
+              fontWeight: "var(--font-medium)",
+              marginBottom: "10px",
             }}
-          />
-
-          {/* Period buttons */}
-          <div>
-            <div
-              style={{
-                fontSize: "var(--text-xs)",
-                color: "var(--text-secondary)",
-                marginBottom: "6px",
-                fontWeight: "var(--font-medium)",
-              }}
-            >
-              Period
-            </div>
-            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-              {PERIOD_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSelectedPeriod(opt.value)}
+          >
+            Symbols
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {selectedSymbols.map((symbol, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {/* Colored indicator dot */}
+                <div
                   style={{
-                    padding: "8px 12px",
-                    borderRadius: "var(--radius-md)",
-                    border: "1px solid",
-                    borderColor:
-                      selectedPeriod === opt.value ? "var(--accent-primary)" : "var(--glass-border)",
-                    background:
-                      selectedPeriod === opt.value
-                        ? "rgba(99,102,241,0.15)"
-                        : "var(--bg-elevated)",
-                    color:
-                      selectedPeriod === opt.value
-                        ? "var(--accent-primary)"
-                        : "var(--text-secondary)",
-                    cursor: "pointer",
-                    fontSize: "var(--text-xs)",
-                    fontWeight: "var(--font-medium)",
-                    transition: "all 0.2s",
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: SYMBOL_COLORS[i],
+                    flexShrink: 0,
                   }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+                />
+                <div style={{ flex: 1, maxWidth: "260px" }}>
+                  <CustomSelect
+                    value={symbol}
+                    options={[{ label: "Select symbol...", value: "" }, ...optionsFor(i)]}
+                    onChange={(v) => updateSymbol(i, v as string)}
+                    placeholder={`Symbol ${i + 1}`}
+                  />
+                </div>
+                {/* Remove button — only shown when above minimum */}
+                {selectedSymbols.length > MIN_SYMBOLS && (
+                  <button
+                    onClick={() => removeSymbol(i)}
+                    title="Remove symbol"
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: "var(--radius-md)",
+                      color: "var(--text-secondary)",
+                      cursor: "pointer",
+                      padding: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s",
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--accent-danger, #ef4444)";
+                      e.currentTarget.style.color = "var(--accent-danger, #ef4444)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--glass-border)";
+                      e.currentTarget.style.color = "var(--text-secondary)";
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {/* Add symbol button — only shown when below maximum */}
+            {selectedSymbols.length < MAX_SYMBOLS && (
+              <button
+                onClick={addSymbol}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 12px",
+                  background: "transparent",
+                  border: "1px dashed var(--glass-border)",
+                  borderRadius: "var(--radius-md)",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: "var(--font-medium)",
+                  transition: "all 0.2s",
+                  alignSelf: "flex-start",
+                  marginTop: "2px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--accent-primary)";
+                  e.currentTarget.style.color = "var(--accent-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--glass-border)";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                }}
+              >
+                <Plus size={13} />
+                Add symbol
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: "1px", background: "var(--glass-border)", marginBottom: "20px" }} />
+
+        {/* Period buttons */}
+        <div>
+          <div
+            style={{
+              fontSize: "var(--text-xs)",
+              color: "var(--text-secondary)",
+              fontWeight: "var(--font-medium)",
+              marginBottom: "10px",
+            }}
+          >
+            Period
+          </div>
+          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedPeriod(opt.value)}
+                style={{
+                  padding: "7px 12px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid",
+                  borderColor:
+                    selectedPeriod === opt.value ? "var(--accent-primary)" : "var(--glass-border)",
+                  background:
+                    selectedPeriod === opt.value
+                      ? "rgba(99,102,241,0.15)"
+                      : "var(--bg-elevated)",
+                  color:
+                    selectedPeriod === opt.value
+                      ? "var(--accent-primary)"
+                      : "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: "var(--font-medium)",
+                  transition: "all 0.2s",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
 
           {/* Custom date range pickers */}
           {selectedPeriod === "Custom" && (
-            <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
+            <div style={{ display: "flex", gap: "12px", marginTop: "12px", flexWrap: "wrap" }}>
               <div>
                 <div
                   style={{
@@ -446,8 +529,7 @@ export const CompareTickers: React.FC = () => {
               lineHeight: 1.6,
             }}
           >
-            Choose two or three tickers above to see their normalized price performance on the same
-            chart.
+            Choose two tickers above to see their normalized price performance on the same chart.
           </p>
         </div>
       ) : !chartData ? (
@@ -470,6 +552,7 @@ export const CompareTickers: React.FC = () => {
           className="glass-panel"
           style={{ padding: "24px", borderRadius: "var(--radius-xl)" }}
         >
+          {/* Custom legend */}
           <div
             style={{
               display: "flex",
@@ -507,6 +590,7 @@ export const CompareTickers: React.FC = () => {
               Normalized to 0% at start of period
             </span>
           </div>
+
           <div style={{ height: "420px" }}>
             <Line data={chartData} options={chartOptions} />
           </div>
