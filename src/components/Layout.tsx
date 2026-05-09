@@ -16,6 +16,7 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { AuthModal } from "./AuthModal";
 
 declare global {
   // Already declared in Settings.tsx, but harmless to redeclare
@@ -81,19 +82,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 };
 
 const UserProfileSection = () => {
-  const { currentUser, loginWithGoogle, logout } = useAuth();
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async () => {
-    try {
-      setLoading(true);
-      await loginWithGoogle();
-    } catch (error) {
-      console.error("Login failed", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { currentUser, logout } = useAuth();
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -194,28 +184,29 @@ const UserProfileSection = () => {
   }
 
   return (
-    <button
-      onClick={handleLogin}
-      disabled={loading}
-      style={{
-        width: "100%",
-        padding: "10px",
-        background: "var(--accent-primary)",
-        border: "none",
-        borderRadius: "var(--radius-md)",
-        color: "white",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: "var(--font-medium)",
-        opacity: loading ? 0.7 : 1,
-        transition: "opacity 0.2s",
-      }}
-    >
-      <LogIn size={16} style={{ marginRight: "8px" }} />
-      {loading ? "Signing In..." : "Sign In with Google"}
-    </button>
+    <>
+      <button
+        onClick={() => setModalOpen(true)}
+        style={{
+          width: "100%",
+          padding: "10px",
+          background: "var(--accent-primary)",
+          border: "none",
+          borderRadius: "var(--radius-md)",
+          color: "white",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: "var(--font-medium)",
+          transition: "opacity 0.2s",
+        }}
+      >
+        <LogIn size={16} style={{ marginRight: "8px" }} />
+        Sign In
+      </button>
+      <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+    </>
   );
 };
 
