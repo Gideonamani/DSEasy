@@ -83,19 +83,24 @@ const calculateSMA = (closes: (number | null | undefined)[], period: number): (n
   return result;
 };
 
-const calculateVWAP = (
+const calculateRollingVWAP = (
   closes: (number | null | undefined)[],
-  volumes: (number | null | undefined)[]
+  volumes: (number | null | undefined)[],
+  period: number
 ): (number | null)[] => {
-  let cumPV = 0;
-  let cumV = 0;
-  return closes.map((c, i) => {
-    const v = volumes[i];
-    if (c != null && !isNaN(c) && v != null && !isNaN(v) && v > 0) {
-      cumPV += c * v;
-      cumV += v;
+  return closes.map((_, i) => {
+    const start = Math.max(0, i - period + 1);
+    let pv = 0;
+    let v = 0;
+    for (let j = start; j <= i; j++) {
+      const c = closes[j];
+      const vol = volumes[j];
+      if (c != null && !isNaN(c) && vol != null && !isNaN(vol) && vol > 0) {
+        pv += c * vol;
+        v += vol;
+      }
     }
-    return cumV > 0 ? cumPV / cumV : null;
+    return v > 0 ? pv / v : null;
   });
 };
 
@@ -107,12 +112,10 @@ interface OverlayConfig {
   borderDash: [number, number];
 }
 
-const VWAP_CONFIG = {
-  key: "vwap",
-  label: "VWAP",
-  color: "rgba(168, 85, 247, 0.85)",
-  borderDash: [3, 2] as [number, number],
-};
+const VWAP_OVERLAYS: { key: string; label: string; period: number; color: string; borderDash: [number, number] }[] = [
+  { key: "vwap20", label: "20-day VWAP", period: 20, color: "rgba(168, 85, 247, 0.85)", borderDash: [3, 2] },
+  { key: "vwap30", label: "30-day VWAP", period: 30, color: "rgba(236, 72, 153, 0.85)", borderDash: [5, 3] },
+];
 
 const SMA_OVERLAYS: OverlayConfig[] = [
   { key: "sma20", label: "20-day SMA", period: 20, color: "rgba(245, 158, 11, 0.85)", borderDash: [4, 2] },
@@ -487,10 +490,14 @@ export const TickerTrends: React.FC = () => {
   const vwapByDate = useMemo(() => {
     const closes = timeseriesData.map(d => d.close);
     const volumes = timeseriesData.map(d => d.volume);
-    const series = calculateVWAP(closes, volumes);
-    const map = new Map<string, number | null>();
-    timeseriesData.forEach((d, i) => map.set(d.date, series[i]));
-    return map;
+    const result: Record<string, Map<string, number | null>> = {};
+    VWAP_OVERLAYS.forEach(overlay => {
+      const series = calculateRollingVWAP(closes, volumes, overlay.period);
+      const map = new Map<string, number | null>();
+      timeseriesData.forEach((d, i) => map.set(d.date, series[i]));
+      result[overlay.key] = map;
+    });
+    return result;
   }, [timeseriesData]);
 
   // RSI computed over full history so the visible window shows correct warm-up values
@@ -653,14 +660,16 @@ export const TickerTrends: React.FC = () => {
           order: 2,
         });
       });
-      if (activeOverlays.has(VWAP_CONFIG.key)) {
+      VWAP_OVERLAYS.forEach(overlay => {
+        if (!activeOverlays.has(overlay.key)) return;
+        const map = vwapByDate[overlay.key];
         datasets.push({
-          label: VWAP_CONFIG.label,
-          data: filteredData.map((d) => vwapByDate.get(d.date) ?? null),
-          borderColor: VWAP_CONFIG.color,
+          label: overlay.label,
+          data: filteredData.map((d) => map?.get(d.date) ?? null),
+          borderColor: overlay.color,
           backgroundColor: "transparent",
           borderWidth: 1.5,
-          borderDash: VWAP_CONFIG.borderDash,
+          borderDash: overlay.borderDash,
           fill: false,
           tension: 0,
           pointRadius: 0,
@@ -668,7 +677,7 @@ export const TickerTrends: React.FC = () => {
           spanGaps: true,
           order: 2,
         });
-      }
+      });
       return {
         labels: filteredData.map((d) => d.date),
         datasets,
@@ -1034,7 +1043,7 @@ export const TickerTrends: React.FC = () => {
                {metric.key === "close" && (
                  <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap", alignItems: "center" }}>
                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 500, marginRight: "4px" }}>Overlays:</span>
-                   {[...SMA_OVERLAYS, VWAP_CONFIG].map(overlay => {
+                   {[...SMA_OVERLAYS, ...VWAP_OVERLAYS].map(overlay => {
                      const active = activeOverlays.has(overlay.key);
                      const fillColor = overlay.color.replace(/[\d.]+\)$/, "0.18)");
                      return (
