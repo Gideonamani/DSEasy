@@ -296,14 +296,6 @@ export function Settings(): React.ReactElement {
         ))}
       </div>
       
-      <div style={{ textAlign: "center", marginTop: "32px", color: "var(--text-secondary)", fontSize: "14px" }}>
-        <p>DSEasy v{__APP_VERSION__} • Built with ❤️ by PuduKodkod</p>
-        <p style={{ marginTop: "8px", fontSize: "12px", opacity: 0.7 }}>
-             <a href="https://github.com/Gideonamani/DSEasy" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
-                 GitHub
-             </a>
-        </p>
-      </div>
     </div>
   );
 }
