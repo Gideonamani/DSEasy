@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect } from "react";
 import { Routes, Route, useLocation, useNavigate, useSearchParams, useNavigationType } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
@@ -9,6 +9,7 @@ import { CompareTickers } from "./components/CompareTickers";
 import { NotificationsManager } from "./components/NotificationsManager";
 import { Loader2, Lock } from "lucide-react";
 import { AuthModal } from "./components/AuthModal";
+import { AuthModalProvider, useAuthModal } from "./contexts/AuthModalContext";
 import { useSettings } from "./contexts/SettingsContext";
 import { Settings } from "./components/Settings";
 import { useMarketDates, useMarketData, useMarketIndices } from "./hooks/useMarketQuery";
@@ -20,7 +21,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 /** Gate screen shown to unauthenticated visitors on protected routes. */
 function ProtectedRoute({ children }) {
   const { currentUser } = useAuth();
-  const [modalOpen, setModalOpen] = useState(false);
+  const { open: openAuthModal } = useAuthModal();
 
   if (currentUser) return children;
 
@@ -71,7 +72,7 @@ function ProtectedRoute({ children }) {
           insights. Please sign in to access this section.
         </p>
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={openAuthModal}
           style={{
             marginTop: 8,
             padding: "12px 28px",
@@ -88,7 +89,6 @@ function ProtectedRoute({ children }) {
           Sign In
         </button>
       </div>
-      <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }
@@ -248,50 +248,53 @@ function App() {
   }
 
   return (
-    <Layout activeTab={activeTab} onTabChange={handleTabChange}>
-      <ErrorBoundary>
-        <Routes>
-        <Route path="/" element={
-            <Dashboard 
-               marketData={marketData}
-               marketIndices={marketIndices}
-               topGainer={topGainer}
-               topLoser={topLoser}
-               totalVolume={totalVolume}
-               totalTurnover={totalTurnover}
-               totalDeals={totalDeals}
-               totalMcap={totalMcap}
-               activeSymbolsCount={activeSymbolsCount}
-               tradedSymbolsCount={tradedSymbolsCount}
-               formattedDate={formattedDate}
-               selectedDate={effectiveDate}
-               availableDates={availableDates}
-               loadingData={loadingData}
-               onDateChange={handleDateChange}
-               formatLargeNumber={formatLargeNumberDisplay}
+    <AuthModalProvider>
+      <Layout activeTab={activeTab} onTabChange={handleTabChange}>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={
+              <Dashboard 
+                 marketData={marketData}
+                 marketIndices={marketIndices}
+                 topGainer={topGainer}
+                 topLoser={topLoser}
+                 totalVolume={totalVolume}
+                 totalTurnover={totalTurnover}
+                 totalDeals={totalDeals}
+                 totalMcap={totalMcap}
+                 activeSymbolsCount={activeSymbolsCount}
+                 tradedSymbolsCount={tradedSymbolsCount}
+                 formattedDate={formattedDate}
+                 selectedDate={effectiveDate}
+                 availableDates={availableDates}
+                 loadingData={loadingData}
+                 onDateChange={handleDateChange}
+                 formatLargeNumber={formatLargeNumberDisplay}
+              />
+            } />
+            <Route path="/glance" element={<ProtectedRoute><DailyGlance /></ProtectedRoute>} />
+            <Route 
+              path="/analytics" 
+              element={
+                <DerivedAnalytics 
+                  data={marketData}
+                  selectedDate={effectiveDate}
+                  formattedDate={formattedDate}
+                  availableDates={availableDates}
+                  loadingData={loadingData}
+                  onDateChange={handleDateChange}
+                />
+              } 
             />
-        } />
-        <Route path="/glance" element={<ProtectedRoute><DailyGlance /></ProtectedRoute>} />
-        <Route 
-          path="/analytics" 
-          element={
-            <DerivedAnalytics 
-              data={marketData}
-              selectedDate={effectiveDate}
-              formattedDate={formattedDate}
-              availableDates={availableDates}
-              loadingData={loadingData}
-              onDateChange={handleDateChange}
-            />
-          } 
-        />
-        <Route path="/trends/:symbol?" element={<TickerTrends />} />
-        <Route path="/compare" element={<CompareTickers />} />
-        <Route path="/notifications" element={<NotificationsManager />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-      </ErrorBoundary>
-    </Layout>
+            <Route path="/trends/:symbol?" element={<TickerTrends />} />
+            <Route path="/compare" element={<CompareTickers />} />
+            <Route path="/notifications" element={<NotificationsManager />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </ErrorBoundary>
+      </Layout>
+      <AuthModal />
+    </AuthModalProvider>
   );
 }
 

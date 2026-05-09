@@ -16,7 +16,7 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { AuthModal } from "./AuthModal";
+import { useAuthModal } from "../contexts/AuthModalContext";
 
 declare global {
   // Already declared in Settings.tsx, but harmless to redeclare
@@ -83,7 +83,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 
 const UserProfileSection = () => {
   const { currentUser, logout } = useAuth();
-  const [modalOpen, setModalOpen] = useState(false);
+  const { open: openAuthModal } = useAuthModal();
 
   const handleLogout = async () => {
     try {
@@ -184,29 +184,26 @@ const UserProfileSection = () => {
   }
 
   return (
-    <>
-      <button
-        onClick={() => setModalOpen(true)}
-        style={{
-          width: "100%",
-          padding: "10px",
-          background: "var(--accent-primary)",
-          border: "none",
-          borderRadius: "var(--radius-md)",
-          color: "white",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: "var(--font-medium)",
-          transition: "opacity 0.2s",
-        }}
-      >
-        <LogIn size={16} style={{ marginRight: "8px" }} />
-        Sign In
-      </button>
-      <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
-    </>
+    <button
+      onClick={openAuthModal}
+      style={{
+        width: "100%",
+        padding: "10px",
+        background: "var(--accent-primary)",
+        border: "none",
+        borderRadius: "var(--radius-md)",
+        color: "white",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: "var(--font-medium)",
+        transition: "opacity 0.2s",
+      }}
+    >
+      <LogIn size={16} style={{ marginRight: "8px" }} />
+      Sign In
+    </button>
   );
 };
 
@@ -222,28 +219,21 @@ export const Layout: React.FC<LayoutProps> = ({
   onTabChange,
 }) => {
   const { currentUser } = useAuth();
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < 768 : false,
-  );
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth >= 768 : true,
-  );
+  const getMobile = () =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  const [isMobile, setIsMobile] = useState(getMobile);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !getMobile());
 
-  // Handle responsiveness
+  // Track viewport breakpoint via matchMedia so transient mobile-keyboard
+  // resize events don't collapse the sidebar mid-typing.
   useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      setIsSidebarOpen(!e.matches);
     };
-
-    handleResize(); // Initial check
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
   }, []);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
