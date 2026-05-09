@@ -2,7 +2,7 @@
 
 ## Branch Naming
 
-Always branch off the latest `main` using this convention:
+Always branch off the latest `master` using this convention:
 
 | Type | Pattern | Example |
 |------|---------|---------|
@@ -12,7 +12,7 @@ Always branch off the latest `main` using this convention:
 
 The short description should be kebab-case and summarise what the issue is about (2–3 words).
 
-Never push directly to `main`.
+Never push directly to `master`.
 
 ## Commit Messages
 
