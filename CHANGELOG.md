@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Multi-Symbol Comparison Chart**: Normalized percentage (%) chart on Ticker Trends allowing users to overlay multiple tickers for relative performance analysis. Closes milestone v1.3 – Financial Indicators (issue #4).
+- **Compare Tickers**: Multi-symbol overlay on Ticker Trends with normalized % performance, rolling volatility, and relative turnover charts. Includes refined UX, chart hover interaction, and turnover normalized as % change from period start. Closes milestone v1.3 – Financial Indicators (issue #4).
 - **Global Footer**: Persistent footer rendered on every page via `Layout.tsx` showing version, attribution, and a GitHub link. Removed the duplicate inline footer that was previously only visible on the Settings page.
 
 ---
