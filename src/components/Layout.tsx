@@ -219,6 +219,7 @@ export const Layout: React.FC<LayoutProps> = ({
   onTabChange,
 }) => {
   const { currentUser } = useAuth();
+  const { open: openAuthModal } = useAuthModal();
   const getMobile = () =>
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
   const [isMobile, setIsMobile] = useState(getMobile);
@@ -260,7 +261,7 @@ export const Layout: React.FC<LayoutProps> = ({
         className="glass-panel"
         style={{
           width: "var(--sidebar-width)",
-          height: "100vh",
+          height: "100dvh",
           position: "fixed",
           left: isSidebarOpen ? 0 : "calc(var(--sidebar-width) * -1)",
           top: 0,
@@ -361,7 +362,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <div
           style={{
             padding: "24px",
-            paddingBottom: "calc(24px + env(safe-area-inset-bottom))", // Ensure clearance for mobile toolbars
+            paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
             borderTop: "1px solid var(--glass-border)",
           }}
         >
@@ -502,6 +503,66 @@ export const Layout: React.FC<LayoutProps> = ({
             >
               <Bell size={20} />
             </button>
+
+            {/* Mobile sign-in shortcut — always reachable without opening the drawer */}
+            {isMobile && !currentUser && (
+              <button
+                onClick={openAuthModal}
+                style={{
+                  background: "var(--accent-primary)",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  color: "white",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 12px",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: "var(--font-semibold)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <LogIn size={14} />
+                Sign In
+              </button>
+            )}
+
+            {/* Mobile avatar when logged in */}
+            {isMobile && currentUser && (
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "1px solid var(--glass-border)",
+                  flexShrink: 0,
+                }}
+              >
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || "User"}
+                    referrerPolicy="no-referrer"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      background: "var(--accent-primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <User size={16} color="#fff" />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </header>
 

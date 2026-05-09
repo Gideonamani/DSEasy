@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { X, LogIn, UserPlus, Mail, Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,6 +9,16 @@ type View = "signin" | "signup" | "reset";
 export const AuthModal: React.FC = () => {
   const { isOpen, close: onClose } = useAuthModal();
   const { loginWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
+  const [isSmallPhone, setIsSmallPhone] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 479px)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 479px)");
+    const handler = (e: MediaQueryListEvent) => setIsSmallPhone(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const [view, setView] = useState<View>("signin");
   const [displayName, setDisplayName] = useState("");
@@ -103,31 +113,43 @@ export const AuthModal: React.FC = () => {
     }
   };
 
+  const backdropStyle: React.CSSProperties = {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.7)",
+    backdropFilter: "blur(5px)",
+    display: "flex",
+    zIndex: "var(--z-modal)",
+    // Bottom-sheet on small phones, centered card otherwise
+    ...(isSmallPhone
+      ? { alignItems: "flex-end", justifyContent: "stretch", padding: 0 }
+      : { alignItems: "center", justifyContent: "center", padding: "16px" }),
+  };
+
+  const cardStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "var(--space-6)",
+    position: "relative",
+    ...(isSmallPhone
+      ? {
+          maxWidth: "100%",
+          borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+          paddingBottom: "calc(var(--space-6) + env(safe-area-inset-bottom))",
+          maxHeight: "90dvh",
+          overflowY: "auto",
+        }
+      : {
+          maxWidth: "400px",
+          borderRadius: "var(--radius-xl)",
+        }),
+  };
+
   return createPortal(
-    <div
-      onClick={handleClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.7)",
-        backdropFilter: "blur(5px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: "var(--z-modal)",
-        padding: "16px",
-      }}
-    >
+    <div onClick={handleClose} style={backdropStyle}>
       <div
         className="glass-panel"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%",
-          maxWidth: "400px",
-          padding: "var(--space-6)",
-          borderRadius: "var(--radius-xl)",
-          position: "relative",
-        }}
+        style={cardStyle}
       >
         {/* Close */}
         <button
