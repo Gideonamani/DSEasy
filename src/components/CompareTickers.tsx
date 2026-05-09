@@ -198,7 +198,8 @@ export const CompareTickers: React.FC = () => {
         backgroundColor: color + "20",
         borderWidth: 2,
         pointRadius: 0,
-        pointHoverRadius: 4,
+        pointHoverRadius: 5,
+        hitRadius: 20,
         tension: 0.3,
         spanGaps: true,
         fill: false,
@@ -212,6 +213,10 @@ export const CompareTickers: React.FC = () => {
     const base = getCommonChartOptions(settings.theme) as any;
     return {
       ...base,
+      interaction: {
+        mode: "index",
+        intersect: false,
+      },
       plugins: {
         ...base.plugins,
         legend: { display: false }, // custom legend rendered manually
