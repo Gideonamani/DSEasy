@@ -21,6 +21,46 @@ interface MetricConfig {
   color: string;
 }
 
+const calculateRSI = (closes: (number | null | undefined)[], period = 14): (number | null)[] => {
+  const len = closes.length;
+  if (len < period + 1) return Array(len).fill(null);
+
+  // Seed: compute initial avg gain/loss over first `period` changes
+  let avgGain = 0;
+  let avgLoss = 0;
+  for (let i = 1; i <= period; i++) {
+    const prev = closes[i - 1];
+    const curr = closes[i];
+    if (prev == null || curr == null || isNaN(prev as number) || isNaN(curr as number)) {
+      return Array(len).fill(null);
+    }
+    const change = (curr as number) - (prev as number);
+    if (change >= 0) avgGain += change;
+    else avgLoss += -change;
+  }
+  avgGain /= period;
+  avgLoss /= period;
+
+  const result: (number | null)[] = Array(period).fill(null);
+  const firstRS = avgLoss === 0 ? Infinity : avgGain / avgLoss;
+  result.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + firstRS));
+
+  for (let i = period + 1; i < len; i++) {
+    const prev = closes[i - 1];
+    const curr = closes[i];
+    if (prev == null || curr == null || isNaN(prev as number) || isNaN(curr as number)) {
+      result.push(null);
+      continue;
+    }
+    const change = (curr as number) - (prev as number);
+    avgGain = (avgGain * (period - 1) + Math.max(change, 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + Math.max(-change, 0)) / period;
+    const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
+    result.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + rs));
+  }
+  return result;
+};
+
 const calculateSMA = (closes: (number | null | undefined)[], period: number): (number | null)[] => {
   const result: (number | null)[] = [];
   for (let i = 0; i < closes.length; i++) {
@@ -239,6 +279,18 @@ export const TickerTrends: React.FC = () => {
     localStorage.setItem("dseasy_chart_overlays", JSON.stringify(Array.from(activeOverlays)));
   }, [activeOverlays]);
 
+  const [showRsi, setShowRsi] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("dseasy_show_rsi");
+      if (saved !== null) return JSON.parse(saved);
+    } catch (e) {}
+    return true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dseasy_show_rsi", JSON.stringify(showRsi));
+  }, [showRsi]);
+
   const toggleOverlay = (key: string): void => {
     setActiveOverlays(prev => {
       const next = new Set(prev);
@@ -409,6 +461,62 @@ export const TickerTrends: React.FC = () => {
     return result;
   }, [timeseriesData]);
 
+  // RSI computed over full history so the visible window shows correct warm-up values
+  const rsiByDate = useMemo(() => {
+    const closes = timeseriesData.map(d => d.close);
+    const series = calculateRSI(closes);
+    const map = new Map<string, number | null>();
+    timeseriesData.forEach((d, i) => map.set(d.date, series[i]));
+    return map;
+  }, [timeseriesData]);
+
+  const rsiData = useMemo(() => {
+    if (!filteredData.length) return null;
+    const labels = filteredData.map(d => d.date);
+    const rsiValues = filteredData.map(d => rsiByDate.get(d.date) ?? null);
+    if (!rsiValues.some(v => v !== null)) return null;
+    return {
+      labels,
+      datasets: [
+        {
+          label: "RSI (14)",
+          data: rsiValues,
+          borderColor: "#a855f7",
+          backgroundColor: "rgba(168, 85, 247, 0.08)",
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          spanGaps: true,
+          borderWidth: 2,
+          order: 1,
+        },
+        {
+          label: "Overbought (70)",
+          data: Array(labels.length).fill(70),
+          borderColor: "rgba(239, 68, 68, 0.7)",
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+          order: 2,
+        },
+        {
+          label: "Oversold (30)",
+          data: Array(labels.length).fill(30),
+          borderColor: "rgba(16, 185, 129, 0.7)",
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+          order: 3,
+        },
+      ],
+    };
+  }, [filteredData, rsiByDate]);
+
   const hasActiveOverlay = activeOverlays.size > 0;
 
   const chartOptions = {
@@ -443,6 +551,35 @@ export const TickerTrends: React.FC = () => {
       intersect: false,
       mode: "index",
     },
+  };
+
+  const rsiChartOptions = {
+    ...chartTheme,
+    plugins: {
+      ...chartTheme.plugins,
+      title: { display: false },
+      legend: {
+        ...chartTheme.plugins?.legend,
+        labels: {
+          ...chartTheme.plugins?.legend?.labels,
+          // hide the flat reference-line entries from the legend
+          filter: (item: any) => item.text === "RSI (14)",
+        },
+      },
+    },
+    scales: {
+      x: {
+        ...chartTheme.scales.x,
+        ticks: { ...chartTheme.scales.x.ticks, maxTicksLimit: 10 },
+      },
+      y: {
+        ...chartTheme.scales.y,
+        min: 0,
+        max: 100,
+        ticks: { ...chartTheme.scales.y.ticks, stepSize: 20 },
+      },
+    },
+    interaction: { intersect: false, mode: "index" },
   };
 
   // Helper to generate chart data for any metric
@@ -800,6 +937,25 @@ export const TickerTrends: React.FC = () => {
                 </button>
               )
           })}
+          {/* RSI indicator toggle */}
+          <button
+            onClick={() => setShowRsi(v => !v)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "20px",
+              border: showRsi ? "1px solid var(--glass-border)" : "1px dashed var(--text-secondary)",
+              background: showRsi ? "#a855f7" : "transparent",
+              color: showRsi ? "#fff" : "var(--text-secondary)",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 500,
+              transition: "all 0.2s ease",
+              textDecoration: showRsi ? "none" : "line-through",
+              opacity: showRsi ? 1 : 0.6,
+            }}
+          >
+            RSI (14)
+          </button>
         </div>
       </details>
 
@@ -860,6 +1016,41 @@ export const TickerTrends: React.FC = () => {
           );
         })}
       </div>
+
+      {/* RSI Sub-chart */}
+      {showRsi && (
+        <div style={{ marginTop: "24px" }}>
+          <TrendCard
+            title="RSI – Relative Strength Index (14)"
+            icon={Activity}
+            explanation="RSI measures momentum on a 0–100 scale over a 14-day lookback period — Wilder's original choice, representing half a 28-day market cycle. Each value reflects the average gain vs. average loss across the prior 14 closes. Readings above 70 suggest the asset may be overbought; below 30 suggests oversold."
+          >
+            <div style={{ height: "200px" }}>
+              {rsiData ? (
+                <Line data={rsiData} options={rsiChartOptions as any} />
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)", fontSize: "13px" }}>
+                  {loadingData
+                    ? <Loader2 size={28} className="animate-spin" />
+                    : "Not enough data — RSI requires at least 15 closing prices"}
+                </div>
+              )}
+            </div>
+            {rsiData && (
+              <div style={{ display: "flex", gap: "16px", marginTop: "10px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ display: "inline-block", width: "20px", borderTop: "2px dashed rgba(239,68,68,0.7)" }} />
+                  Overbought (70)
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ display: "inline-block", width: "20px", borderTop: "2px dashed rgba(16,185,129,0.7)" }} />
+                  Oversold (30)
+                </span>
+              </div>
+            )}
+          </TrendCard>
+        </div>
+      )}
 
       {/* High-Low-Close Analysis Chart */}
       {filteredData.length > 0 && (
