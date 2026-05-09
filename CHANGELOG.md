@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-05-09
+
+### Added
+
+- **Multi-Symbol Comparison Chart**: Normalized percentage (%) chart on Ticker Trends allowing users to overlay multiple tickers for relative performance analysis. Closes milestone v1.3 – Financial Indicators (issue #4).
+- **Global Footer**: Persistent footer rendered on every page via `Layout.tsx` showing version, attribution, and a GitHub link. Removed the duplicate inline footer that was previously only visible on the Settings page.
+
+---
+
+## [1.2.10] - 2026-05-09
+
+### Added
+
+- **VWAP Overlay**: 20/50-day rolling Volume-Weighted Average Price overlay on the Ticker Trends Close Price chart, toggleable from the Overlays panel. (issue #3)
+
+## [1.2.9] - 2026-05-09
+
+### Added
+
+- **RSI Indicator**: 14-day Relative Strength Index sub-chart added to Ticker Trends with overbought (70) and oversold (30) threshold lines for momentum analysis. (issue #2)
+
+## [1.2.8] - 2026-05-09
+
+### Added
+
+- **SMA/EMA Overlays**: Toggleable 20-day and 50-day Simple Moving Average and Exponential Moving Average overlays on the Ticker Trends Close Price chart. (issue #1)
+
 ## [1.2.7] - 2026-04-30
 
 ### Added
