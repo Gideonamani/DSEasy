@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   TrendingUp,
   LineChart,
+  GitCompare,
   Settings,
   Bell,
   Search,
@@ -345,6 +346,7 @@ export const Layout: React.FC<LayoutProps> = ({
             ...(currentUser ? ["Daily Glance"] : []),
             "Derived Analytics",
             "Ticker Trends",
+            "Compare Tickers",
             "Notifications",
             "Settings",
           ].map((tab) => (
@@ -359,9 +361,11 @@ export const Layout: React.FC<LayoutProps> = ({
                     ? TrendingUp
                     : tab === "Ticker Trends"
                       ? LineChart
-                      : tab === "Notifications"
-                        ? Bell
-                        : Settings
+                      : tab === "Compare Tickers"
+                        ? GitCompare
+                        : tab === "Notifications"
+                          ? Bell
+                          : Settings
               }
               label={tab}
               active={activeTab === tab}
