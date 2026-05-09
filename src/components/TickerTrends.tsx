@@ -21,6 +21,41 @@ interface MetricConfig {
   color: string;
 }
 
+const calculateSMA = (closes: (number | null | undefined)[], period: number): (number | null)[] => {
+  const result: (number | null)[] = [];
+  for (let i = 0; i < closes.length; i++) {
+    if (i < period - 1) {
+      result.push(null);
+      continue;
+    }
+    let sum = 0;
+    let valid = true;
+    for (let j = i - period + 1; j <= i; j++) {
+      const v = closes[j];
+      if (v == null || isNaN(v)) {
+        valid = false;
+        break;
+      }
+      sum += v;
+    }
+    result.push(valid ? sum / period : null);
+  }
+  return result;
+};
+
+interface OverlayConfig {
+  key: string;
+  label: string;
+  period: number;
+  color: string;
+  borderDash: [number, number];
+}
+
+const SMA_OVERLAYS: OverlayConfig[] = [
+  { key: "sma20", label: "20-day SMA", period: 20, color: "rgba(245, 158, 11, 0.85)", borderDash: [4, 2] },
+  { key: "sma50", label: "50-day SMA", period: 50, color: "rgba(14, 165, 233, 0.85)", borderDash: [6, 3] },
+];
+
 // Available metrics for visualization
 const METRICS: MetricConfig[] = [
   { key: "close", label: "Close Price", icon: DollarSign, color: "#6366f1" },
@@ -189,7 +224,33 @@ export const TickerTrends: React.FC = () => {
   useEffect(() => {
     localStorage.setItem("dseasy_hidden_metrics", JSON.stringify(Array.from(hiddenMetrics)));
   }, [hiddenMetrics]);
-  
+
+  const [activeOverlays, setActiveOverlays] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("dseasy_chart_overlays");
+      if (saved) return new Set(JSON.parse(saved));
+    } catch (e) {
+      console.warn("Failed to parse saved overlay state");
+    }
+    return new Set();
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dseasy_chart_overlays", JSON.stringify(Array.from(activeOverlays)));
+  }, [activeOverlays]);
+
+  const toggleOverlay = (key: string): void => {
+    setActiveOverlays(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   // NEW: Alert Modal State
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
@@ -334,6 +395,22 @@ export const TickerTrends: React.FC = () => {
 
   }, [timeseriesData, selectedPeriod, customRange]);
 
+  // SMA values are computed over the FULL history so the visible window
+  // shows correct values even when the period start has fewer than N prior days.
+  const smaByDate = useMemo(() => {
+    const closes = timeseriesData.map(d => d.close);
+    const result: Record<string, Map<string, number | null>> = {};
+    SMA_OVERLAYS.forEach(overlay => {
+      const series = calculateSMA(closes, overlay.period);
+      const map = new Map<string, number | null>();
+      timeseriesData.forEach((d, i) => map.set(d.date, series[i]));
+      result[overlay.key] = map;
+    });
+    return result;
+  }, [timeseriesData]);
+
+  const hasActiveOverlay = activeOverlays.size > 0;
+
   const chartOptions = {
     ...chartTheme,
     plugins: {
@@ -371,6 +448,47 @@ export const TickerTrends: React.FC = () => {
   // Helper to generate chart data for any metric
   const getMetricData = (metricKey: string, color: string) => {
     if (!filteredData.length) return null;
+
+    // Special handling for Close Price: pointRadius pinned to 1 to honour
+    // the discrete daily-snapshot affordance, with optional SMA overlays.
+    if (metricKey === "close") {
+      const datasets: any[] = [
+        {
+          label: "Close",
+          data: filteredData.map((d) => (d.close === undefined || d.close === null) ? null : d.close),
+          borderColor: color,
+          backgroundColor: `${color}20`,
+          fill: !hasActiveOverlay,
+          tension: 0.3,
+          pointRadius: 1,
+          pointHoverRadius: 5,
+          spanGaps: true,
+          order: 1,
+        },
+      ];
+      SMA_OVERLAYS.forEach(overlay => {
+        if (!activeOverlays.has(overlay.key)) return;
+        const map = smaByDate[overlay.key];
+        datasets.push({
+          label: overlay.label,
+          data: filteredData.map((d) => map?.get(d.date) ?? null),
+          borderColor: overlay.color,
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: overlay.borderDash,
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          spanGaps: true,
+          order: 2,
+        });
+      });
+      return {
+        labels: filteredData.map((d) => d.date),
+        datasets,
+      };
+    }
 
     // Special handling for Volume (Bar Chart with conditional colors)
     if (metricKey === "volume") {
@@ -694,9 +812,9 @@ export const TickerTrends: React.FC = () => {
           const ChartComponent = metric.key === "volume" ? Bar : Line;
 
           return (
-            <TrendCard 
-              key={metric.key} 
-              title={`${metric.label} Trend`} 
+            <TrendCard
+              key={metric.key}
+              title={`${metric.label} Trend`}
               icon={metric.icon}
               explanation={(METRIC_EXPLANATIONS as Record<string, string>)[metric.key]}
             >
@@ -709,6 +827,35 @@ export const TickerTrends: React.FC = () => {
                     </div>
                   )}
                </div>
+               {metric.key === "close" && (
+                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                   <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 500, marginRight: "4px" }}>Overlays:</span>
+                   {SMA_OVERLAYS.map(overlay => {
+                     const active = activeOverlays.has(overlay.key);
+                     const fillColor = overlay.color.replace(/[\d.]+\)$/, "0.18)");
+                     return (
+                       <button
+                         key={overlay.key}
+                         onClick={() => toggleOverlay(overlay.key)}
+                         style={{
+                           padding: "4px 12px",
+                           borderRadius: "16px",
+                           border: active ? `1px solid ${overlay.color}` : "1px dashed var(--text-secondary)",
+                           background: active ? fillColor : "transparent",
+                           color: active ? "var(--text-primary)" : "var(--text-secondary)",
+                           fontSize: "12px",
+                           fontWeight: 500,
+                           cursor: "pointer",
+                           transition: "all 0.2s ease",
+                           opacity: active ? 1 : 0.7,
+                         }}
+                       >
+                         {overlay.label}
+                       </button>
+                     );
+                   })}
+                 </div>
+               )}
             </TrendCard>
           );
         })}
