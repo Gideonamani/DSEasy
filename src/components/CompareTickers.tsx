@@ -305,10 +305,10 @@ export const CompareTickers: React.FC = () => {
     return { labels, datasets };
   }, [selectedSymbols, allFiltered, raw0, raw1, raw2]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Relative turnover chart data — each day's turnover as a multiple of that symbol's full-history average
+  // Turnover chart data — normalized % change from period start (same approach as price chart)
   const turnoverChartData = useMemo(() => {
     const slots = selectedSymbols
-      .map((symbol, i) => ({ symbol, full: rawSlots[i].data, filtered: allFiltered[i] }))
+      .map((symbol, i) => ({ symbol, filtered: allFiltered[i] }))
       .filter((s) => s.symbol && s.filtered.length > 0);
 
     if (slots.length < 2) return null;
@@ -324,38 +324,38 @@ export const CompareTickers: React.FC = () => {
     );
 
     const datasets = slots.map((slot, i) => {
-      const validTurnovers = slot.full.map((d) => d.turnover || 0).filter((t) => t > 0);
-      const avgTurnover =
-        validTurnovers.length > 0
-          ? validTurnovers.reduce((a, b) => a + b, 0) / validTurnovers.length
-          : null;
-
-      const turnoverByDate = new Map<string, number>(
+      const turnoverMap = new Map<string, number>(
         slot.filtered.map((d) => [d.date, d.turnover || 0])
       );
+
+      let firstTurnover: number | null = null;
+      for (const date of allDates) {
+        const t = turnoverMap.get(date);
+        if (t != null && t > 0) { firstTurnover = t; break; }
+      }
 
       const color = SYMBOL_COLORS[i];
       return {
         label: slot.symbol,
         data: allDates.map((date) => {
-          const t = turnoverByDate.get(date);
-          if (t == null || !avgTurnover) return null;
-          return t / avgTurnover;
+          const t = turnoverMap.get(date);
+          if (t == null || t <= 0 || firstTurnover == null) return null;
+          return ((t / firstTurnover) - 1) * 100;
         }),
         borderColor: color,
-        backgroundColor: color + "18",
+        backgroundColor: color + "20",
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 5,
         hitRadius: 20,
         tension: 0.2,
-        spanGaps: false,
-        fill: "origin",
+        spanGaps: true,
+        fill: false,
       };
     });
 
     return { labels, datasets };
-  }, [selectedSymbols, allFiltered, raw0, raw1, raw2]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedSymbols, allFiltered]);
 
   const volChartOptions = useMemo(() => {
     const base = getCommonChartOptions(settings.theme) as any;
@@ -403,7 +403,7 @@ export const CompareTickers: React.FC = () => {
             label: (ctx: any) => {
               const v = ctx.parsed.y;
               if (v == null) return `${ctx.dataset.label}: N/A`;
-              return `${ctx.dataset.label}: ${v.toFixed(2)}x avg`;
+              return `${ctx.dataset.label}: ${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
             },
           },
         },
@@ -412,10 +412,9 @@ export const CompareTickers: React.FC = () => {
         ...base.scales,
         y: {
           ...base.scales?.y,
-          min: 0,
           ticks: {
             ...base.scales?.y?.ticks,
-            callback: (v: number) => `${v.toFixed(1)}x`,
+            callback: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`,
           },
         },
       },
@@ -834,7 +833,7 @@ export const CompareTickers: React.FC = () => {
         </div>
       )}
 
-      {/* Relative Turnover chart */}
+      {/* Turnover chart */}
       {!isLoading && activeSymbolCount >= 2 && turnoverChartData && (
         <div
           className="glass-panel"
@@ -875,10 +874,10 @@ export const CompareTickers: React.FC = () => {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-                Relative Turnover
+                Turnover Change
               </div>
               <div style={{ fontSize: "11px", color: "var(--text-secondary)", opacity: 0.7, marginTop: "2px" }}>
-                Daily turnover as multiple of own historical avg — 1x = normal activity
+                Normalized to 0% at start of period
               </div>
             </div>
           </div>
