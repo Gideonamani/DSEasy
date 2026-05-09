@@ -34,6 +34,25 @@ const parseSheetDate = (str: string): Date => {
   return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
 };
 
+// Rolling 20-day volatility (std dev of daily % returns), computed over full history
+const calculateRollingVolatility = (closes: number[], period = 20): (number | null)[] => {
+  const returns: (number | null)[] = [null];
+  for (let i = 1; i < closes.length; i++) {
+    const prev = closes[i - 1];
+    const curr = closes[i];
+    returns.push(prev > 0 ? ((curr - prev) / prev) * 100 : null);
+  }
+
+  return returns.map((_, i) => {
+    if (i < period) return null;
+    const window = returns.slice(i - period + 1, i + 1).filter((r): r is number => r != null);
+    if (window.length < period) return null;
+    const mean = window.reduce((a, b) => a + b, 0) / window.length;
+    const variance = window.reduce((a, b) => a + (b - mean) ** 2, 0) / window.length;
+    return Math.sqrt(variance);
+  });
+};
+
 const filterByPeriod = (
   data: StockData[],
   period: string,
@@ -238,6 +257,165 @@ export const CompareTickers: React.FC = () => {
           ticks: {
             ...base.scales?.y?.ticks,
             callback: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`,
+          },
+        },
+      },
+    };
+  }, [settings.theme]);
+
+  // Rolling volatility chart data — computed over full history, displayed over filtered window
+  const volChartData = useMemo(() => {
+    const slots = selectedSymbols
+      .map((symbol, i) => ({ symbol, full: rawSlots[i].data, filtered: allFiltered[i] }))
+      .filter((s) => s.symbol && s.filtered.length > 0);
+
+    if (slots.length < 2) return null;
+
+    const dateSet = new Set<string>();
+    slots.forEach((slot) => slot.filtered.forEach((d) => dateSet.add(d.date)));
+    const allDates = Array.from(dateSet).sort(
+      (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
+    );
+
+    const labels = allDates.map((d) =>
+      parseSheetDate(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+    );
+
+    const datasets = slots.map((slot, i) => {
+      const volSeries = calculateRollingVolatility(slot.full.map((d) => d.close));
+      const volByDate = new Map<string, number | null>(
+        slot.full.map((d, idx) => [d.date, volSeries[idx]])
+      );
+      const color = SYMBOL_COLORS[i];
+      return {
+        label: slot.symbol,
+        data: allDates.map((date) => volByDate.get(date) ?? null),
+        borderColor: color,
+        backgroundColor: color + "20",
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        hitRadius: 20,
+        tension: 0.3,
+        spanGaps: true,
+        fill: false,
+      };
+    });
+
+    return { labels, datasets };
+  }, [selectedSymbols, allFiltered, raw0, raw1, raw2]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Relative turnover chart data — each day's turnover as a multiple of that symbol's full-history average
+  const turnoverChartData = useMemo(() => {
+    const slots = selectedSymbols
+      .map((symbol, i) => ({ symbol, full: rawSlots[i].data, filtered: allFiltered[i] }))
+      .filter((s) => s.symbol && s.filtered.length > 0);
+
+    if (slots.length < 2) return null;
+
+    const dateSet = new Set<string>();
+    slots.forEach((slot) => slot.filtered.forEach((d) => dateSet.add(d.date)));
+    const allDates = Array.from(dateSet).sort(
+      (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
+    );
+
+    const labels = allDates.map((d) =>
+      parseSheetDate(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+    );
+
+    const datasets = slots.map((slot, i) => {
+      const validTurnovers = slot.full.map((d) => d.turnover || 0).filter((t) => t > 0);
+      const avgTurnover =
+        validTurnovers.length > 0
+          ? validTurnovers.reduce((a, b) => a + b, 0) / validTurnovers.length
+          : null;
+
+      const turnoverByDate = new Map<string, number>(
+        slot.filtered.map((d) => [d.date, d.turnover || 0])
+      );
+
+      const color = SYMBOL_COLORS[i];
+      return {
+        label: slot.symbol,
+        data: allDates.map((date) => {
+          const t = turnoverByDate.get(date);
+          if (t == null || !avgTurnover) return null;
+          return t / avgTurnover;
+        }),
+        borderColor: color,
+        backgroundColor: color + "18",
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        hitRadius: 20,
+        tension: 0.2,
+        spanGaps: false,
+        fill: "origin",
+      };
+    });
+
+    return { labels, datasets };
+  }, [selectedSymbols, allFiltered, raw0, raw1, raw2]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const volChartOptions = useMemo(() => {
+    const base = getCommonChartOptions(settings.theme) as any;
+    return {
+      ...base,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        ...base.plugins,
+        legend: { display: false },
+        tooltip: {
+          ...base.plugins?.tooltip,
+          callbacks: {
+            label: (ctx: any) => {
+              const v = ctx.parsed.y;
+              if (v == null) return `${ctx.dataset.label}: N/A`;
+              return `${ctx.dataset.label}: ${v.toFixed(2)}%`;
+            },
+          },
+        },
+      },
+      scales: {
+        ...base.scales,
+        y: {
+          ...base.scales?.y,
+          ticks: {
+            ...base.scales?.y?.ticks,
+            callback: (v: number) => `${v.toFixed(1)}%`,
+          },
+        },
+      },
+    };
+  }, [settings.theme]);
+
+  const turnoverChartOptions = useMemo(() => {
+    const base = getCommonChartOptions(settings.theme) as any;
+    return {
+      ...base,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        ...base.plugins,
+        legend: { display: false },
+        tooltip: {
+          ...base.plugins?.tooltip,
+          callbacks: {
+            label: (ctx: any) => {
+              const v = ctx.parsed.y;
+              if (v == null) return `${ctx.dataset.label}: N/A`;
+              return `${ctx.dataset.label}: ${v.toFixed(2)}x avg`;
+            },
+          },
+        },
+      },
+      scales: {
+        ...base.scales,
+        y: {
+          ...base.scales?.y,
+          min: 0,
+          ticks: {
+            ...base.scales?.y?.ticks,
+            callback: (v: number) => `${v.toFixed(1)}x`,
           },
         },
       },
@@ -598,6 +776,114 @@ export const CompareTickers: React.FC = () => {
 
           <div style={{ height: "420px" }}>
             <Line data={chartData} options={chartOptions} />
+          </div>
+        </div>
+      )}
+
+      {/* Rolling Volatility chart */}
+      {!isLoading && activeSymbolCount >= 2 && volChartData && (
+        <div
+          className="glass-panel"
+          style={{ padding: "24px", borderRadius: "var(--radius-xl)", marginTop: "24px" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "16px",
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+              {volChartData.datasets.map((ds, i) => (
+                <div key={ds.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "3px",
+                      background: SYMBOL_COLORS[i],
+                      borderRadius: "2px",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "var(--text-sm)",
+                      fontWeight: "var(--font-semibold)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {ds.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+                20-day Rolling Volatility
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--text-secondary)", opacity: 0.7, marginTop: "2px" }}>
+                Std dev of daily % returns — higher = riskier
+              </div>
+            </div>
+          </div>
+          <div style={{ height: "280px" }}>
+            <Line data={volChartData} options={volChartOptions} />
+          </div>
+        </div>
+      )}
+
+      {/* Relative Turnover chart */}
+      {!isLoading && activeSymbolCount >= 2 && turnoverChartData && (
+        <div
+          className="glass-panel"
+          style={{ padding: "24px", borderRadius: "var(--radius-xl)", marginTop: "24px" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "16px",
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+              {turnoverChartData.datasets.map((ds, i) => (
+                <div key={ds.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "3px",
+                      background: SYMBOL_COLORS[i],
+                      borderRadius: "2px",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "var(--text-sm)",
+                      fontWeight: "var(--font-semibold)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {ds.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+                Relative Turnover
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--text-secondary)", opacity: 0.7, marginTop: "2px" }}>
+                Daily turnover as multiple of own historical avg — 1x = normal activity
+              </div>
+            </div>
+          </div>
+          <div style={{ height: "280px" }}>
+            <Line data={turnoverChartData} options={turnoverChartOptions} />
           </div>
         </div>
       )}
