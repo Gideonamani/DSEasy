@@ -1023,7 +1023,7 @@ export const TickerTrends: React.FC = () => {
           <TrendCard
             title="RSI – Relative Strength Index (14)"
             icon={Activity}
-            explanation="RSI measures momentum on a 0–100 scale using Wilder's smoothing. Readings above 70 suggest overbought conditions; below 30 suggest oversold."
+            explanation="RSI measures momentum on a 0–100 scale over a 14-day lookback period — Wilder's original choice, representing half a 28-day market cycle. Each value reflects the average gain vs. average loss across the prior 14 closes. Readings above 70 suggest the asset may be overbought; below 30 suggests oversold."
           >
             <div style={{ height: "200px" }}>
               {rsiData ? (
