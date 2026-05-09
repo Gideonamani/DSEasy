@@ -83,6 +83,22 @@ const calculateSMA = (closes: (number | null | undefined)[], period: number): (n
   return result;
 };
 
+const calculateVWAP = (
+  closes: (number | null | undefined)[],
+  volumes: (number | null | undefined)[]
+): (number | null)[] => {
+  let cumPV = 0;
+  let cumV = 0;
+  return closes.map((c, i) => {
+    const v = volumes[i];
+    if (c != null && !isNaN(c) && v != null && !isNaN(v) && v > 0) {
+      cumPV += c * v;
+      cumV += v;
+    }
+    return cumV > 0 ? cumPV / cumV : null;
+  });
+};
+
 interface OverlayConfig {
   key: string;
   label: string;
@@ -90,6 +106,13 @@ interface OverlayConfig {
   color: string;
   borderDash: [number, number];
 }
+
+const VWAP_CONFIG = {
+  key: "vwap",
+  label: "VWAP",
+  color: "rgba(168, 85, 247, 0.85)",
+  borderDash: [3, 2] as [number, number],
+};
 
 const SMA_OVERLAYS: OverlayConfig[] = [
   { key: "sma20", label: "20-day SMA", period: 20, color: "rgba(245, 158, 11, 0.85)", borderDash: [4, 2] },
@@ -461,6 +484,15 @@ export const TickerTrends: React.FC = () => {
     return result;
   }, [timeseriesData]);
 
+  const vwapByDate = useMemo(() => {
+    const closes = timeseriesData.map(d => d.close);
+    const volumes = timeseriesData.map(d => d.volume);
+    const series = calculateVWAP(closes, volumes);
+    const map = new Map<string, number | null>();
+    timeseriesData.forEach((d, i) => map.set(d.date, series[i]));
+    return map;
+  }, [timeseriesData]);
+
   // RSI computed over full history so the visible window shows correct warm-up values
   const rsiByDate = useMemo(() => {
     const closes = timeseriesData.map(d => d.close);
@@ -621,6 +653,22 @@ export const TickerTrends: React.FC = () => {
           order: 2,
         });
       });
+      if (activeOverlays.has(VWAP_CONFIG.key)) {
+        datasets.push({
+          label: VWAP_CONFIG.label,
+          data: filteredData.map((d) => vwapByDate.get(d.date) ?? null),
+          borderColor: VWAP_CONFIG.color,
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: VWAP_CONFIG.borderDash,
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          spanGaps: true,
+          order: 2,
+        });
+      }
       return {
         labels: filteredData.map((d) => d.date),
         datasets,
@@ -986,7 +1034,7 @@ export const TickerTrends: React.FC = () => {
                {metric.key === "close" && (
                  <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap", alignItems: "center" }}>
                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 500, marginRight: "4px" }}>Overlays:</span>
-                   {SMA_OVERLAYS.map(overlay => {
+                   {[...SMA_OVERLAYS, VWAP_CONFIG].map(overlay => {
                      const active = activeOverlays.has(overlay.key);
                      const fillColor = overlay.color.replace(/[\d.]+\)$/, "0.18)");
                      return (
