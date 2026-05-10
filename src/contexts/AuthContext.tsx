@@ -1,10 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { auth, messaging, db } from "../firebase";
-import { 
-  onAuthStateChanged, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
+import {
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
   signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
   User,
   UserCredential
 } from "firebase/auth";
@@ -14,6 +18,9 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 export interface AuthContextType {
   currentUser: User | null;
   loginWithGoogle: () => Promise<UserCredential>;
+  signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<UserCredential>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -70,6 +77,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return signInWithPopup(auth, provider);
   }
 
+  async function signUpWithEmail(email: string, password: string, displayName: string): Promise<void> {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(credential.user, { displayName });
+    // Force a refresh so currentUser picks up the new displayName
+    setCurrentUser({ ...credential.user, displayName });
+  }
+
+  function signInWithEmail(email: string, password: string): Promise<UserCredential> {
+    return signInWithEmailAndPassword(auth, email, password);
+  }
+
+  function resetPassword(email: string): Promise<void> {
+    return sendPasswordResetEmail(auth, email);
+  }
+
   function logout(): Promise<void> {
     return signOut(auth);
   }
@@ -91,7 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextType = {
     currentUser,
     loginWithGoogle,
-    logout
+    signUpWithEmail,
+    signInWithEmail,
+    resetPassword,
+    logout,
   };
 
   return (

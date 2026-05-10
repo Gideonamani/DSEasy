@@ -16,6 +16,7 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useAuthModal } from "../contexts/AuthModalContext";
 
 declare global {
   // Already declared in Settings.tsx, but harmless to redeclare
@@ -81,19 +82,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 };
 
 const UserProfileSection = () => {
-  const { currentUser, loginWithGoogle, logout } = useAuth();
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async () => {
-    try {
-      setLoading(true);
-      await loginWithGoogle();
-    } catch (error) {
-      console.error("Login failed", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { currentUser, logout } = useAuth();
+  const { open: openAuthModal } = useAuthModal();
 
   const handleLogout = async () => {
     try {
@@ -195,8 +185,7 @@ const UserProfileSection = () => {
 
   return (
     <button
-      onClick={handleLogin}
-      disabled={loading}
+      onClick={openAuthModal}
       style={{
         width: "100%",
         padding: "10px",
@@ -209,12 +198,11 @@ const UserProfileSection = () => {
         alignItems: "center",
         justifyContent: "center",
         fontWeight: "var(--font-medium)",
-        opacity: loading ? 0.7 : 1,
         transition: "opacity 0.2s",
       }}
     >
       <LogIn size={16} style={{ marginRight: "8px" }} />
-      {loading ? "Signing In..." : "Sign In with Google"}
+      Sign In
     </button>
   );
 };
@@ -231,34 +219,28 @@ export const Layout: React.FC<LayoutProps> = ({
   onTabChange,
 }) => {
   const { currentUser } = useAuth();
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < 768 : false,
-  );
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth >= 768 : true,
-  );
+  const { open: openAuthModal } = useAuthModal();
+  const getMobile = () =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  const [isMobile, setIsMobile] = useState(getMobile);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !getMobile());
 
-  // Handle responsiveness
+  // Track viewport breakpoint via matchMedia so transient mobile-keyboard
+  // resize events don't collapse the sidebar mid-typing.
   useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+      setIsSidebarOpen(!e.matches);
     };
-
-    handleResize(); // Initial check
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
   }, []);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
+    <div style={{ display: "flex", minHeight: "100svh", position: "relative" }}>
       {/* Mobile Sidebar Overlay */}
       <div
         onClick={() => setIsSidebarOpen(false)}
@@ -279,7 +261,7 @@ export const Layout: React.FC<LayoutProps> = ({
         className="glass-panel"
         style={{
           width: "var(--sidebar-width)",
-          height: "100vh",
+          height: "100svh",
           position: "fixed",
           left: isSidebarOpen ? 0 : "calc(var(--sidebar-width) * -1)",
           top: 0,
@@ -340,7 +322,7 @@ export const Layout: React.FC<LayoutProps> = ({
           )}
         </div>
 
-        <div style={{ flex: 1, padding: "12px 0" }}>
+        <div style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
           {[
             "Dashboard",
             ...(currentUser ? ["Daily Glance"] : []),
@@ -380,7 +362,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <div
           style={{
             padding: "24px",
-            paddingBottom: "calc(24px + env(safe-area-inset-bottom))", // Ensure clearance for mobile toolbars
+            paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
             borderTop: "1px solid var(--glass-border)",
           }}
         >
@@ -521,6 +503,66 @@ export const Layout: React.FC<LayoutProps> = ({
             >
               <Bell size={20} />
             </button>
+
+            {/* Sign-in shortcut — always reachable regardless of sidebar state or orientation */}
+            {!currentUser && (
+              <button
+                onClick={openAuthModal}
+                style={{
+                  background: "var(--accent-primary)",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  color: "white",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 12px",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: "var(--font-semibold)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <LogIn size={14} />
+                Sign In
+              </button>
+            )}
+
+            {/* Mobile avatar when logged in */}
+            {isMobile && currentUser && (
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "1px solid var(--glass-border)",
+                  flexShrink: 0,
+                }}
+              >
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || "User"}
+                    referrerPolicy="no-referrer"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      background: "var(--accent-primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <User size={16} color="#fff" />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
