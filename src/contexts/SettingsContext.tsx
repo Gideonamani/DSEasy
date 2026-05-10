@@ -1,4 +1,19 @@
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode,
+} from "react";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
+import { useAuth } from "./AuthContext";
+
+export type LandingPage = "/" | "/glance" | "/analytics" | "/trends" | "/compare" | "/notifications";
+export type RefreshInterval = 60 | 300 | 600 | 900;
 
 export interface Settings {
   theme: "dark" | "light" | "system";
@@ -6,37 +21,52 @@ export interface Settings {
   numberFormat: "abbreviated" | "full";
   showCurrency: boolean;
   defaultChartRange: "1W" | "1M" | "3M" | "6M" | "1Y" | "YTD" | "ALL";
+  landingPage: LandingPage;
+  refreshInterval: RefreshInterval;
+  notificationsEnabled: boolean;
 }
 
 export interface SettingsContextType {
   settings: Settings;
   updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
   resetSettings: () => void;
+  isSyncing: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 const DEFAULT_SETTINGS: Settings = {
-  theme: "dark", 
-  density: "comfortable", 
-  numberFormat: "abbreviated", 
-  showCurrency: true, 
-  defaultChartRange: "1M", 
+  theme: "dark",
+  density: "comfortable",
+  numberFormat: "abbreviated",
+  showCurrency: true,
+  defaultChartRange: "1M",
+  landingPage: "/",
+  refreshInterval: 300,
+  notificationsEnabled: true,
 };
 
-export function SettingsProvider({ children }: { children: ReactNode }) {
-  // Load from localStorage or use defaults
-  const [settings, setSettings] = useState<Settings>(() => {
-    try {
-      const saved = localStorage.getItem("dseasy-settings");
-      if (saved) {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
-      }
-    } catch (e) {
-      console.error("Failed to load settings:", e);
+const STORAGE_KEY = "dseasy-settings";
+
+function readLocalSettings(): Settings {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
     }
-    return DEFAULT_SETTINGS;
-  });
+  } catch (e) {
+    console.error("Failed to load settings:", e);
+  }
+  return DEFAULT_SETTINGS;
+}
+
+export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { currentUser } = useAuth();
+  const [settings, setSettings] = useState<Settings>(() => readLocalSettings());
+  const [isSyncing, setIsSyncing] = useState(false);
+  // Tracks the uid whose settings are currently loaded so we don't write
+  // before reading on first sign-in.
+  const loadedUidRef = useRef<string | null>(null);
 
   // Apply Theme Side-Effect
   useEffect(() => {
@@ -47,37 +77,79 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     if (isDark) {
-      // Remove data-theme to fallback to default (dark) variables in :root
       root.removeAttribute("data-theme");
     } else {
-      // Set data-theme="light" to activate light mode overrides
       root.setAttribute("data-theme", "light");
     }
   }, [settings.theme]);
 
-  // Persist to localStorage
+  // Persist to localStorage on every change (works for both auth + anon users)
   useEffect(() => {
-    localStorage.setItem("dseasy-settings", JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 
-  // Update a single setting
-  const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
+  // Load settings from Firestore on sign-in; reset tracking on sign-out
+  useEffect(() => {
+    if (!currentUser) {
+      loadedUidRef.current = null;
+      return;
+    }
 
-  // Reset to defaults
-  const resetSettings = () => {
+    let cancelled = false;
+    setIsSyncing(true);
+
+    (async () => {
+      try {
+        const ref = doc(db, "users", currentUser.uid, "profile", "settings");
+        const snap = await getDoc(ref);
+        if (cancelled) return;
+
+        if (snap.exists()) {
+          const remote = snap.data() as Partial<Settings>;
+          setSettings((prev) => ({ ...DEFAULT_SETTINGS, ...prev, ...remote }));
+        } else {
+          // First-time login: seed Firestore with whatever the user has locally
+          const local = readLocalSettings();
+          await setDoc(ref, { ...local, updatedAt: serverTimestamp() });
+        }
+        loadedUidRef.current = currentUser.uid;
+      } catch (err) {
+        console.error("Failed to load settings from Firestore:", err);
+      } finally {
+        if (!cancelled) setIsSyncing(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser]);
+
+  // Persist to Firestore when authenticated and settings change after load
+  useEffect(() => {
+    if (!currentUser) return;
+    if (loadedUidRef.current !== currentUser.uid) return;
+
+    const ref = doc(db, "users", currentUser.uid, "profile", "settings");
+    setDoc(ref, { ...settings, updatedAt: serverTimestamp() }, { merge: true })
+      .catch((err) => console.error("Failed to persist settings:", err));
+  }, [settings, currentUser]);
+
+  const updateSetting = useCallback(
+    <K extends keyof Settings>(key: K, value: Settings[K]) => {
+      setSettings((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
+
+  const resetSettings = useCallback(() => {
     setSettings(DEFAULT_SETTINGS);
-  };
+  }, []);
 
-  const value = useMemo(() => ({
-    settings,
-    updateSetting,
-    resetSettings,
-  }), [settings]);
+  const value = useMemo(
+    () => ({ settings, updateSetting, resetSettings, isSyncing }),
+    [settings, updateSetting, resetSettings, isSyncing],
+  );
 
   return (
     <SettingsContext.Provider value={value}>

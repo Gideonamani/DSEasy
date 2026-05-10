@@ -58,8 +58,9 @@ function getTodayDateStr(): string {
  * Fetch the latest (most recent) snapshot for a given date.
  * If no date provided, defaults to today (EAT).
  */
-export function useLatestSnapshot(date?: string) {
+export function useLatestSnapshot(date?: string, refetchIntervalMs?: number) {
   const dateStr = date || getTodayDateStr();
+  const interval = refetchIntervalMs ?? 5 * 60 * 1000;
 
   return useQuery<MarketWatchSnapshot | null>({
     queryKey: ["marketWatch", "latest", dateStr],
@@ -79,8 +80,8 @@ export function useLatestSnapshot(date?: string) {
       const doc = snap.docs[0];
       return doc.data() as MarketWatchSnapshot;
     },
-    refetchInterval: 5 * 60 * 1000, // Auto-refetch every 5 minutes during market hours
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: interval,
+    staleTime: Math.min(interval, 2 * 60 * 1000),
   });
 }
 
@@ -111,8 +112,9 @@ export function useAllSnapshots(date?: string) {
 /**
  * Fetch all market intels for a given date.
  */
-export function useMarketIntel(date?: string) {
+export function useMarketIntel(date?: string, refetchIntervalMs?: number) {
   const dateStr = date || getTodayDateStr();
+  const interval = refetchIntervalMs ?? 5 * 60 * 1000;
 
   return useQuery<MarketIntel[]>({
     queryKey: ["marketWatch", "intel", dateStr],
@@ -128,7 +130,7 @@ export function useMarketIntel(date?: string) {
 
       return snap.docs.map((doc) => doc.data() as MarketIntel);
     },
-    refetchInterval: 5 * 60 * 1000,
-    staleTime: 5 * 60 * 1000,
+    refetchInterval: interval,
+    staleTime: interval,
   });
 }

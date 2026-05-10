@@ -7,9 +7,14 @@ import {
   DollarSign,
   Info,
   Trash2,
+  Home,
+  Bell,
+  RefreshCw,
+  Cloud,
   LucideIcon,
 } from "lucide-react";
 import { useSettings, Settings as SettingsType } from "../contexts/SettingsContext";
+import { useAuth } from "../contexts/AuthContext";
 import { CustomSelect } from "./CustomSelect";
 
 // Global declaration for Vite injects
@@ -53,7 +58,8 @@ interface SettingSection {
 }
 
 export function Settings(): React.ReactElement {
-  const { settings, updateSetting, resetSettings } = useSettings();
+  const { settings, updateSetting, resetSettings, isSyncing } = useSettings();
+  const { currentUser } = useAuth();
 
   const sections: SettingSection[] = [
     {
@@ -83,6 +89,38 @@ export function Settings(): React.ReactElement {
       ],
     },
     {
+      title: "Navigation",
+      items: [
+        {
+          id: "landingPage",
+          label: "Default Landing Page",
+          icon: Home,
+          description: "Page shown when you open DSEasy",
+          type: "select",
+          options: [
+            { value: "/", label: "Dashboard" },
+            { value: "/glance", label: "Daily Glance" },
+            { value: "/analytics", label: "Derived Analytics" },
+            { value: "/trends", label: "Ticker Trends" },
+            { value: "/compare", label: "Compare Tickers" },
+            { value: "/notifications", label: "Notifications" },
+          ],
+        },
+      ],
+    },
+    {
+      title: "Notifications",
+      items: [
+        {
+          id: "notificationsEnabled",
+          label: "Price Alert Notifications",
+          icon: Bell,
+          description: "Receive push notifications when your alerts trigger",
+          type: "switch",
+        },
+      ],
+    },
+    {
       title: "Data Formatting",
       items: [
         {
@@ -98,9 +136,27 @@ export function Settings(): React.ReactElement {
         },
         {
           id: "showCurrency",
-          label: "Show Currency Symbol",
+          label: "Show Currency Symbol (TZS)",
           icon: DollarSign,
           type: "switch",
+        },
+      ],
+    },
+    {
+      title: "Daily Glance",
+      items: [
+        {
+          id: "refreshInterval",
+          label: "Auto-Refresh Interval",
+          icon: RefreshCw,
+          description: "How often Daily Glance reloads market data",
+          type: "select",
+          options: [
+            { value: "60", label: "Every 1 minute" },
+            { value: "300", label: "Every 5 minutes" },
+            { value: "600", label: "Every 10 minutes" },
+            { value: "900", label: "Every 15 minutes" },
+          ],
         },
       ],
     },
@@ -161,9 +217,29 @@ export function Settings(): React.ReactElement {
       <h2 style={{ fontSize: "var(--text-3xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
         Settings
       </h2>
-      <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-8)" }}>
+      <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-4)" }}>
         Customize your DSEasy experience.
       </p>
+
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: "var(--text-sm)",
+          color: "var(--text-secondary)",
+          marginBottom: "var(--space-8)",
+        }}
+      >
+        <Cloud size={16} />
+        {currentUser
+          ? isSyncing
+            ? "Syncing your settings…"
+            : "Synced to your account."
+          : "Sign in to sync settings across devices."}
+      </div>
 
       <div className="settings-sections" style={{ display: 'flex', flexDirection: 'column', gap: '32px'}}>
         {sections.map((section) => (
@@ -211,7 +287,12 @@ export function Settings(): React.ReactElement {
                         <CustomSelect
                             value={String(settings[item.id as keyof SettingsType])}
                             options={item.options}
-                            onChange={(newValue) => updateSetting(item.id as keyof SettingsType, newValue as any)}
+                            onChange={(newValue) => {
+                              const key = item.id as keyof SettingsType;
+                              const current = settings[key];
+                              const coerced = typeof current === "number" ? Number(newValue) : newValue;
+                              updateSetting(key, coerced as any);
+                            }}
                         />
                       </div>
                     )}
@@ -243,6 +324,9 @@ export function Settings(): React.ReactElement {
                     {item.type === "switch" && (
                       <button
                         onClick={() => updateSetting(item.id as keyof SettingsType, !settings[item.id as keyof SettingsType] as any)}
+                        role="switch"
+                        aria-checked={Boolean(settings[item.id as keyof SettingsType])}
+                        aria-label={item.label}
                         style={{
                           width: "48px",
                           height: "28px",

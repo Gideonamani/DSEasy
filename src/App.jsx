@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { Routes, Route, useLocation, useNavigate, useSearchParams, useNavigationType } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
@@ -15,6 +15,7 @@ import { Settings } from "./components/Settings";
 import { useMarketDates, useMarketData, useMarketIndices } from "./hooks/useMarketQuery";
 import { formatLargeNumber } from "./utils/formatters";
 import { useAuth } from "./contexts/AuthContext";
+import { useNotificationsSync } from "./hooks/useNotificationsSync";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -119,6 +120,7 @@ function App() {
   const navigate = useNavigate();
   const navType = useNavigationType();
   const { settings } = useSettings();
+  useNotificationsSync();
   const [searchParams, setSearchParams] = useSearchParams();
   const dateFromUrl = searchParams.get("date");
   
@@ -128,6 +130,25 @@ function App() {
       window.scrollTo(0, 0);
     }
   }, [location.pathname, navType]);
+
+  // Honor the user's "Default Landing Page" setting on first app load only.
+  // We only redirect when the user lands on "/" without a deep link (no query/hash).
+  const didApplyLandingRef = useRef(false);
+  useEffect(() => {
+    if (didApplyLandingRef.current) return;
+    didApplyLandingRef.current = true;
+
+    const target = settings.landingPage;
+    if (
+      target &&
+      target !== "/" &&
+      location.pathname === "/" &&
+      !location.search &&
+      !location.hash
+    ) {
+      navigate(target, { replace: true });
+    }
+  }, [settings.landingPage, location.pathname, location.search, location.hash, navigate]);
 
   // React Query Hooks
   const { data: availableDates = [], isLoading: loadingDates, error: datesError } = useMarketDates();
