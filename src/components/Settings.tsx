@@ -227,17 +227,8 @@ export function Settings(): React.ReactElement {
             </div>
             <div className="settings-list">
               {section.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "16px",
-                    padding: "20px 24px",
-                    borderBottom: "1px solid var(--glass-border)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
+                <div key={item.id} className="settings-row">
+                  <div className="settings-row-label" style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         padding: "10px",
@@ -249,8 +240,8 @@ export function Settings(): React.ReactElement {
                     >
                       <item.icon size={20} />
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: "var(--font-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</div>
+                    <div>
+                      <div style={{ fontWeight: "var(--font-medium)" }}>{item.label}</div>
                       {item.description && (
                         <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginTop: "2px" }}>
                           {item.description}
@@ -260,7 +251,7 @@ export function Settings(): React.ReactElement {
                   </div>
 
                   {/* Controls */}
-                  <div style={{ flexShrink: 0 }}>
+                  <div className="settings-row-control" style={{ flexShrink: 0 }}>
                     {item.type === "select" && (
                       <div style={{ width: "200px" }}>
                         <CustomSelect

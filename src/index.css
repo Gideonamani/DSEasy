@@ -322,3 +322,34 @@ a {
     font-size: var(--text-xs);
   }
 }
+
+/* Settings row: stack label + control vertically on small screens */
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+@media (max-width: 600px) {
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .settings-row .settings-row-label {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .settings-row .settings-row-control {
+    width: 100%;
+  }
+
+  .settings-row .settings-row-control > div {
+    width: 100% !important;
+  }
+}
