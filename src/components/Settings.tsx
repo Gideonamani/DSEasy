@@ -221,13 +221,13 @@ export function Settings(): React.ReactElement {
 
       <div className="settings-sections" style={{ display: 'flex', flexDirection: 'column', gap: '32px'}}>
         {sections.map((section) => (
-          <section key={section.title} className="glass-panel" style={{ borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--glass-border)", background: "var(--bg-elevated)" }}>
+          <section key={section.title} className="glass-panel" style={{ borderRadius: "var(--radius-xl)", overflow: "visible" }}>
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--glass-border)", background: "var(--bg-elevated)", borderRadius: "var(--radius-xl) var(--radius-xl) 0 0" }}>
                 <h3 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>{section.title}</h3>
             </div>
             <div className="settings-list">
               {section.items.map((item) => (
-                <div key={item.id} className="settings-row">
+                <div key={item.id} className={`settings-row${item.type === "select" || item.type === "toggle_group" ? " settings-row--stacks" : ""}`}>
                   <div className="settings-row-label" style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
                     <div
                       style={{
@@ -268,7 +268,7 @@ export function Settings(): React.ReactElement {
                     )}
 
                     {item.type === "toggle_group" && (
-                        <div style={{ display: "flex", gap: "4px", background: "var(--bg-elevated)", padding: "4px", borderRadius: "8px" }}>
+                        <div style={{ display: "flex", gap: "4px", background: "var(--bg-elevated)", padding: "4px", borderRadius: "8px", width: "100%" }}>
                             {item.options.map(opt => (
                                 <button
                                     key={opt.value}

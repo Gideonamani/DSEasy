@@ -323,7 +323,7 @@ a {
   }
 }
 
-/* Settings row: stack label + control vertically on small screens */
+/* Settings rows */
 .settings-row {
   display: flex;
   align-items: center;
@@ -332,24 +332,31 @@ a {
   border-bottom: 1px solid var(--glass-border);
 }
 
+.settings-list > .settings-row:last-child {
+  border-bottom: none;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+/* Only select + toggle_group controls stack below their label on mobile */
 @media (max-width: 600px) {
-  .settings-row {
+  .settings-row--stacks {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
 
-  .settings-row .settings-row-label {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-  }
-
-  .settings-row .settings-row-control {
+  .settings-row--stacks .settings-row-control {
     width: 100%;
   }
 
-  .settings-row .settings-row-control > div {
+  /* Dropdowns go full-width */
+  .settings-row--stacks .settings-row-control > div {
     width: 100% !important;
+  }
+
+  /* Toggle group buttons split 50/50 */
+  .settings-row--stacks .settings-row-control > div > button {
+    flex: 1;
+    justify-content: center;
   }
 }
