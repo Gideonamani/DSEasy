@@ -616,7 +616,7 @@ export const CompareTickers: React.FC = () => {
                 </div>
                 <DatePicker
                   selected={customRange.start}
-                  onChange={(date) => setCustomRange((prev) => ({ ...prev, start: date }))}
+                  onChange={(date: Date | null) => setCustomRange((prev) => ({ ...prev, start: date }))}
                   selectsStart
                   startDate={customRange.start}
                   endDate={customRange.end}
@@ -637,11 +637,11 @@ export const CompareTickers: React.FC = () => {
                 </div>
                 <DatePicker
                   selected={customRange.end}
-                  onChange={(date) => setCustomRange((prev) => ({ ...prev, end: date }))}
+                  onChange={(date: Date | null) => setCustomRange((prev) => ({ ...prev, end: date }))}
                   selectsEnd
                   startDate={customRange.start}
                   endDate={customRange.end}
-                  minDate={customRange.start}
+                  minDate={customRange.start ?? undefined}
                   dateFormat="dd MMM yyyy"
                   placeholderText="End date"
                   className="date-input"
