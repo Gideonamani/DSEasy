@@ -13,7 +13,6 @@ import { db } from "../firebase";
 import { useAuth } from "./AuthContext";
 
 export type LandingPage = "/" | "/glance" | "/analytics" | "/trends" | "/compare" | "/notifications";
-export type RefreshInterval = 60 | 300 | 600 | 900;
 
 export interface Settings {
   theme: "dark" | "light" | "system";
@@ -22,7 +21,6 @@ export interface Settings {
   showCurrency: boolean;
   defaultChartRange: "1W" | "1M" | "3M" | "6M" | "1Y" | "YTD" | "ALL";
   landingPage: LandingPage;
-  refreshInterval: RefreshInterval;
   notificationsEnabled: boolean;
 }
 
@@ -42,7 +40,6 @@ const DEFAULT_SETTINGS: Settings = {
   showCurrency: true,
   defaultChartRange: "1M",
   landingPage: "/",
-  refreshInterval: 300,
   notificationsEnabled: true,
 };
 

@@ -2,7 +2,6 @@ import React, { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLatestSnapshot, useMarketIntel } from "../hooks/useMarketWatch";
 import { useMarketWatchDates } from "../hooks/useMarketQuery";
-import { useSettings } from "../contexts/SettingsContext";
 import { DatePicker } from "./DatePicker";
 import { StatCard } from "./StatCard";
 import {
@@ -44,11 +43,8 @@ export const DailyGlance: React.FC = () => {
     });
   };
 
-  const { settings } = useSettings();
-  const refreshIntervalMs = settings.refreshInterval * 1000;
-
-  const { data: snapshot, isLoading: isLoadingSnapshot, error } = useLatestSnapshot(effectiveDate, refreshIntervalMs);
-  const { data: intelHistory, error: intelError } = useMarketIntel(effectiveDate, refreshIntervalMs);
+  const { data: snapshot, isLoading: isLoadingSnapshot, error } = useLatestSnapshot(effectiveDate);
+  const { data: intelHistory, error: intelError } = useMarketIntel(effectiveDate);
 
   const isLoading = isLoadingSnapshot || loadingDates;
 

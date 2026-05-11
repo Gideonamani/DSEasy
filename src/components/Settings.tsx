@@ -9,7 +9,6 @@ import {
   Trash2,
   Home,
   Bell,
-  RefreshCw,
   Cloud,
   LucideIcon,
 } from "lucide-react";
@@ -95,7 +94,6 @@ export function Settings(): React.ReactElement {
           id: "landingPage",
           label: "Default Landing Page",
           icon: Home,
-          description: "Page shown when you open DSEasy",
           type: "select",
           options: [
             { value: "/", label: "Dashboard" },
@@ -115,7 +113,7 @@ export function Settings(): React.ReactElement {
           id: "notificationsEnabled",
           label: "Price Alert Notifications",
           icon: Bell,
-          description: "Receive push notifications when your alerts trigger",
+          description: "Push notifications when your alerts trigger",
           type: "switch",
         },
       ],
@@ -127,7 +125,6 @@ export function Settings(): React.ReactElement {
           id: "numberFormat",
           label: "Number Format",
           icon: Hash,
-          description: "Choose how large numbers are displayed",
           type: "select",
           options: [
             { value: "abbreviated", label: "Abbreviated (10.5B)" },
@@ -139,24 +136,6 @@ export function Settings(): React.ReactElement {
           label: "Show Currency Symbol (TZS)",
           icon: DollarSign,
           type: "switch",
-        },
-      ],
-    },
-    {
-      title: "Daily Glance",
-      items: [
-        {
-          id: "refreshInterval",
-          label: "Auto-Refresh Interval",
-          icon: RefreshCw,
-          description: "How often Daily Glance reloads market data",
-          type: "select",
-          options: [
-            { value: "60", label: "Every 1 minute" },
-            { value: "300", label: "Every 5 minutes" },
-            { value: "600", label: "Every 10 minutes" },
-            { value: "900", label: "Every 15 minutes" },
-          ],
         },
       ],
     },
@@ -190,7 +169,6 @@ export function Settings(): React.ReactElement {
           type: "action",
           actionLabel: "Clear",
           onClick: () => {
-            // Placeholder for cache clearing logic if we implement service workers or persistent data
             alert("Cache cleared (Simulated). Refreshing page...");
             window.location.reload();
           },
@@ -199,7 +177,7 @@ export function Settings(): React.ReactElement {
         {
             id: "reset",
             label: "Reset All Settings",
-            icon: Info, // Generic icon
+            icon: Info,
             type: "action",
             actionLabel: "Reset",
             onClick: () => {
@@ -254,26 +232,27 @@ export function Settings(): React.ReactElement {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
+                    gap: "16px",
                     padding: "20px 24px",
                     borderBottom: "1px solid var(--glass-border)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         padding: "10px",
                         background: "rgba(99, 102, 241, 0.1)",
                         borderRadius: "10px",
                         color: "var(--accent-primary)",
+                        flexShrink: 0,
                       }}
                     >
                       <item.icon size={20} />
                     </div>
-                    <div>
-                      <div style={{ fontWeight: "var(--font-medium)" }}>{item.label}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: "var(--font-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</div>
                       {item.description && (
-                        <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginTop: "2px" }}>
                           {item.description}
                         </div>
                       )}
@@ -281,7 +260,7 @@ export function Settings(): React.ReactElement {
                   </div>
 
                   {/* Controls */}
-                  <div>
+                  <div style={{ flexShrink: 0 }}>
                     {item.type === "select" && (
                       <div style={{ width: "200px" }}>
                         <CustomSelect
