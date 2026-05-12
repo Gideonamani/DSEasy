@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 
 export interface SelectOption {
@@ -13,13 +14,20 @@ export interface CustomSelectProps {
   placeholder?: string;
 }
 
+interface DropdownPos {
+  top: number;
+  left: number;
+  width: number;
+}
+
 export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onChange, placeholder = "Select..." }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -31,20 +39,55 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onCh
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Keep portal position in sync when open (handles scroll/resize)
+  useEffect(() => {
+    if (!isOpen) return;
+    const update = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setDropdownPos({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [isOpen]);
+
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+    setIsOpen((prev) => !prev);
+  };
+
   const handleSelect = (optionValue: string | number) => {
     onChange(optionValue);
     setIsOpen(false);
   };
 
   return (
-    <div 
-      className="custom-select-container" 
+    <div
+      className="custom-select-container"
       ref={containerRef}
       style={{ position: "relative", minWidth: "180px" }}
     >
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         style={{
           width: "100%",
           display: "flex",
@@ -58,80 +101,82 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onCh
           cursor: "pointer",
           fontSize: "var(--text-sm)",
           transition: "all 0.2s",
-          outline: "none"
+          outline: "none",
         }}
-        onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--border-strong)"}
-        onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--glass-border)"}
+        onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-strong)")}
+        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--glass-border)")}
       >
         <span style={{ fontWeight: "var(--font-medium)" }}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown 
-          size={16} 
-          style={{ 
-            color: "var(--text-secondary)", 
-            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", 
-            transition: "transform 0.2s" 
-          }} 
+        <ChevronDown
+          size={16}
+          style={{
+            color: "var(--text-secondary)",
+            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s",
+          }}
         />
       </button>
 
-      {isOpen && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            zIndex: 200,
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-strong)",
-            borderRadius: "var(--radius-lg)",
-            padding: "4px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-            maxHeight: "240px",
-            overflowY: "auto"
-          }}
-        >
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => handleSelect(option.value)}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 12px",
-                background: option.value === value ? "var(--bg-hover)" : "transparent",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                color: option.value === value ? "var(--accent-primary)" : "var(--text-primary)",
-                cursor: "pointer",
-                fontSize: "var(--text-sm)",
-                textAlign: "left",
-                transition: "background 0.2s"
-              }}
-              onMouseEnter={(e) => {
-                if (option.value !== value) {
+      {isOpen && dropdownPos &&
+        createPortal(
+          <div
+            style={{
+              position: "absolute",
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              width: dropdownPos.width,
+              zIndex: 9999,
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border-strong)",
+              borderRadius: "var(--radius-lg)",
+              padding: "4px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+              maxHeight: "240px",
+              overflowY: "auto",
+            }}
+          >
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleSelect(option.value)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  background: option.value === value ? "var(--bg-hover)" : "transparent",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  color: option.value === value ? "var(--accent-primary)" : "var(--text-primary)",
+                  cursor: "pointer",
+                  fontSize: "var(--text-sm)",
+                  textAlign: "left",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  if (option.value !== value) {
                     e.currentTarget.style.background = "var(--bg-hover)";
                     e.currentTarget.style.color = "var(--text-primary)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                 if (option.value !== value) {
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (option.value !== value) {
                     e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.color = "var(--text-primary)";
-                 }
-              }}
-            >
-              <span>{option.label}</span>
-              {option.value === value && <Check size={14} />}
-            </button>
-          ))}
-        </div>
-      )}
+                  }
+                }}
+              >
+                <span>{option.value === value ? option.label : option.label}</span>
+                {option.value === value && <Check size={14} />}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
