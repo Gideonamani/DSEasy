@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { formatNumber, formatLargeNumber } from "../utils/formatters";
 import { MarketStatusBanner } from "./MarketStatusBanner";
+import { SkeletonStatCard, SkeletonGlanceHeatmap, SkeletonGlancePanel } from "./Skeleton";
 
 export const DailyGlance: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -181,15 +182,33 @@ export const DailyGlance: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="loading-container">
-        <Activity
-          size={48}
-          className="animate-spin"
-          color="var(--accent-primary)"
-        />
-        <p style={{ color: "var(--text-secondary)", marginTop: 16 }}>
-          Scanning order books...
-        </p>
+      <div>
+        {/* Header skeleton */}
+        <div className="dashboard-header" style={{ marginBottom: 24 }}>
+          <div>
+            <div className="skeleton" style={{ width: '160px', height: '28px', marginBottom: 8 }} />
+            <div className="skeleton" style={{ width: '260px', height: '16px' }} />
+          </div>
+        </div>
+
+        {/* Top stat cards */}
+        <div className="stats-grid" style={{ marginBottom: 24 }}>
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+
+        {/* Order book heatmap */}
+        <SkeletonGlanceHeatmap />
+
+        {/* Notable Movers */}
+        <SkeletonGlancePanel rows={7} />
+
+        {/* Circuit Breaker + Deal Finder side by side */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginTop: 24 }}>
+          <SkeletonGlancePanel rows={8} />
+          <SkeletonGlancePanel rows={8} />
+        </div>
       </div>
     );
   }

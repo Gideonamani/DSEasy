@@ -169,6 +169,7 @@ const RankingTable: React.FC<RankingTableProps> = ({
 };
 
 import { MarketEmptyState } from "./EmptyState";
+import { SkeletonChart, SkeletonTableSection } from "./Skeleton";
 
 export interface DerivedAnalyticsProps {
   data: StockData[];
@@ -484,7 +485,43 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         />
       </div>
 
-      {isDataEmpty ? (
+      {loadingData ? (
+        <>
+          {/* Rows 1 & 2 — chart cards (280px body) */}
+          <div className="charts-grid">
+            <SkeletonChart height={364} />
+            <SkeletonChart height={364} />
+          </div>
+          <div className="charts-grid">
+            <SkeletonChart height={364} />
+            <SkeletonTableSection rows={8} />
+          </div>
+
+          {/* Correlation section heading + scatter charts (320px body) */}
+          <div className="skeleton" style={{ width: '210px', height: '18px', margin: 'var(--space-8) 0 var(--space-6)' }} />
+          <div className="charts-grid">
+            <SkeletonChart height={404} />
+            <SkeletonChart height={404} />
+          </div>
+          <div className="charts-grid">
+            <SkeletonChart height={404} />
+            <SkeletonChart height={404} />
+          </div>
+          <div className="charts-grid">
+            <SkeletonChart height={404} />
+          </div>
+
+          {/* Rankings section heading + table cards */}
+          <div className="skeleton" style={{ width: '120px', height: '18px', margin: 'var(--space-8) 0 var(--space-6)' }} />
+          <div className="charts-grid">
+            <SkeletonTableSection rows={10} />
+            <SkeletonTableSection rows={10} />
+          </div>
+          <div style={{ marginTop: 'var(--space-2)' }}>
+            <SkeletonTableSection rows={10} />
+          </div>
+        </>
+      ) : isDataEmpty ? (
         <MarketEmptyState selectedDate={selectedDate} availableDates={availableDates} />
       ) : (
         <>
