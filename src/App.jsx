@@ -273,7 +273,7 @@ function App() {
     <AuthModalProvider>
       <Layout activeTab={activeTab} onTabChange={handleTabChange}>
         <ErrorBoundary>
-          <div key={location.key} className="page-transition">
+          <div key={location.pathname} className="page-transition">
           <Routes>
             <Route path="/" element={
               <Dashboard 
