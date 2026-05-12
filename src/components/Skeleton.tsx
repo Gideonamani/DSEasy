@@ -85,6 +85,14 @@ export const SkeletonTrendCard: React.FC = () => (
   </div>
 );
 
+// For TickerTrends hero stats strip (Latest Close / Period Change / High / Low)
+export const SkeletonMiniStat: React.FC = () => (
+  <div className="glass-panel" style={{ padding: '20px', borderRadius: '12px' }}>
+    <Bone style={{ width: '80px', height: '12px', marginBottom: '8px' }} />
+    <Bone style={{ width: '64px', height: '24px' }} />
+  </div>
+);
+
 // For DerivedAnalytics AnalyticsCards that contain ranking tables (not charts)
 export const SkeletonTableSection: React.FC<{ rows?: number }> = ({ rows = 7 }) => (
   <div className="glass-panel" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-xl)' }}>

@@ -9,7 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 
 import { Line, Bar } from "react-chartjs-2";
 import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, Bell, LucideIcon } from "lucide-react";
-import { SkeletonTrendCard } from "./Skeleton";
+import { SkeletonTrendCard, SkeletonMiniStat } from "./Skeleton";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
 import { getCommonChartOptions } from "../utils/chartTheme";
@@ -948,7 +948,12 @@ export const TickerTrends: React.FC = () => {
           )}
       </div>
 
-      {stats && (
+      {/* Hero stats — skeleton reserves space while data loads to prevent CLS */}
+      {loadingData ? (
+        <div className="stats-grid" style={{ marginBottom: "24px" }}>
+          {Array.from({ length: 4 }, (_, i) => <SkeletonMiniStat key={i} />)}
+        </div>
+      ) : stats ? (
         <div className="stats-grid" style={{ marginBottom: "24px" }}>
           <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Latest Close</p>
@@ -969,7 +974,7 @@ export const TickerTrends: React.FC = () => {
             <p style={{ fontSize: "24px", fontWeight: "bold", color: "var(--accent-danger)" }}>{formatNumber(stats.low)}</p>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Metric Visibility Toggles */}
       <details className="glass-panel" style={{ padding: "16px", borderRadius: "12px", marginBottom: "24px", transition: "all 0.3s ease" }}>
