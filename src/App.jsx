@@ -273,6 +273,7 @@ function App() {
     <AuthModalProvider>
       <Layout activeTab={activeTab} onTabChange={handleTabChange}>
         <ErrorBoundary>
+          <div key={location.key} className="page-transition">
           <Routes>
             <Route path="/" element={
               <Dashboard 
@@ -313,6 +314,7 @@ function App() {
             <Route path="/notifications" element={<NotificationsManager />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
+          </div>
         </ErrorBoundary>
       </Layout>
       <AuthModal />

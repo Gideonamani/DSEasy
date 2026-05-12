@@ -7,6 +7,7 @@ import { DatePicker } from "./DatePicker";
 import { StockData, MarketDate, MarketIndex } from "../hooks/useMarketQuery";
 import { MarketEmptyState } from "./EmptyState";
 import { MarketStatusBanner } from "./MarketStatusBanner";
+import { SkeletonStatCard, SkeletonChart } from "./Skeleton";
 export interface DashboardProps {
   marketData: StockData[];
   marketIndices: MarketIndex[] | null;
@@ -69,11 +70,33 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
         />
       </div>
 
-      <MarketStatusBanner 
+      <MarketStatusBanner
         isDashboard={true}
       />
 
-      {isDataEmpty ? (
+      {loadingData ? (
+        <>
+          {/* Skeleton stat cards — two rows of 4 */}
+          <div className="stats-grid">
+            {Array.from({ length: 4 }, (_, i) => <SkeletonStatCard key={i} />)}
+          </div>
+          <div className="stats-grid" style={{ marginTop: 'var(--space-4)' }}>
+            {Array.from({ length: 4 }, (_, i) => <SkeletonStatCard key={i} />)}
+          </div>
+
+          {/* Skeleton charts */}
+          <div className="charts-grid">
+            <SkeletonChart height={400} />
+            <SkeletonChart height={400} />
+          </div>
+
+          {/* Skeleton table */}
+          <div style={{ marginBottom: 'var(--space-8)' }}>
+            <h3 className="section-title">Detailed Market Data</h3>
+            <MarketTable data={[]} loading />
+          </div>
+        </>
+      ) : isDataEmpty ? (
         <MarketEmptyState selectedDate={selectedDate} availableDates={availableDates} />
       ) : (
         <>

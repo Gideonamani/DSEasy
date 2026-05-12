@@ -109,6 +109,12 @@
   --z-overlay: 70;
   --z-modal: 100;
   --z-tooltip: 110;
+
+  /* =========================================
+     7. SKELETON LOADER COLORS
+     ========================================= */
+  --skeleton-base: var(--color-slate-800);
+  --skeleton-highlight: var(--color-slate-700);
 }
 
 /* =========================================
@@ -121,6 +127,8 @@
   --bg-hover: var(--color-slate-100);
   --bg-sidebar: #ffffff;
   --bg-elevated: #ffffff;
+  --skeleton-base: var(--color-slate-200);
+  --skeleton-highlight: var(--color-slate-100);
 
   --text-primary: var(--color-slate-900);
   --text-secondary: var(--color-slate-500);
@@ -326,6 +334,38 @@ a {
     padding: var(--space-3) var(--space-2);
     font-size: var(--text-xs);
   }
+}
+
+/* =========================================
+   SKELETON LOADERS
+   ========================================= */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base)      25%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base)      75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+  border-radius: var(--radius-sm);
+}
+
+/* =========================================
+   PAGE TRANSITIONS
+   ========================================= */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-transition {
+  animation: page-enter 0.22s ease-out;
 }
 
 /* Settings rows */

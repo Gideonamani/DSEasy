@@ -9,6 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 
 import { Line, Bar } from "react-chartjs-2";
 import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, Bell, LucideIcon } from "lucide-react";
+import { SkeletonTrendCard } from "./Skeleton";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
 import { getCommonChartOptions } from "../utils/chartTheme";
@@ -752,9 +753,16 @@ export const TickerTrends: React.FC = () => {
   // Loading state (only for initial symbols load, not data switch)
   if (loadingSymbols && symbols.length === 0) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "400px", flexDirection: "column", gap: "16px" }}>
-        <Loader2 size={48} className="animate-spin" color="#6366f1" />
-        <p style={{ color: "var(--text-secondary)" }}>Loading symbols...</p>
+      <div>
+        <div style={{ marginBottom: "var(--space-8)" }}>
+          <div className="skeleton" style={{ width: "220px", height: "28px", marginBottom: "var(--space-2)" }} />
+          <div className="skeleton" style={{ width: "340px", height: "16px" }} />
+        </div>
+        <div className="charts-grid">
+          <SkeletonTrendCard />
+          <SkeletonTrendCard />
+          <SkeletonTrendCard />
+        </div>
       </div>
     );
   }
@@ -1035,9 +1043,9 @@ export const TickerTrends: React.FC = () => {
                   {data ? (
                      <ChartComponent data={data} options={chartOptions} />
                   ) : (
-                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)" }}>
-                      {loadingData ? <Loader2 size={32} className="animate-spin" /> : "No data available"}
-                    </div>
+                    loadingData
+                      ? <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-md)" }} />
+                      : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)" }}>No data available</div>
                   )}
                </div>
                {metric.key === "close" && (
@@ -1086,11 +1094,9 @@ export const TickerTrends: React.FC = () => {
               {rsiData ? (
                 <Line data={rsiData} options={rsiChartOptions as any} />
               ) : (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)", fontSize: "13px" }}>
-                  {loadingData
-                    ? <Loader2 size={28} className="animate-spin" />
-                    : "Not enough data — RSI requires at least 15 closing prices"}
-                </div>
+                loadingData
+                  ? <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-md)" }} />
+                  : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-secondary)", fontSize: "13px" }}>Not enough data — RSI requires at least 15 closing prices</div>
               )}
             </div>
             {rsiData && (

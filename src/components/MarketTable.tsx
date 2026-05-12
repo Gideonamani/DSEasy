@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatLargeNumber } from "../utils/formatters";
 import { StockData } from '../hooks/useMarketQuery';
+import { SkeletonTableRows } from './Skeleton';
 
 export interface MarketTableProps {
   data: StockData[];
+  loading?: boolean;
 }
 
-export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
+export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: string }>({ key: 'pctChange', direction: 'desc' });
@@ -52,7 +54,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
         return sortConfig.direction === 'asc' ? <span>↑</span> : <span>↓</span>;
     };
 
-    if (data.length === 0) {
+    if (!loading && data.length === 0) {
         return <div style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--text-secondary)' }}>No market data available</div>;
     }
 
@@ -138,7 +140,9 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedData.map((row) => (
+                        {loading ? (
+                          <SkeletonTableRows rows={8} />
+                        ) : sortedData.map((row) => (
                             <tr key={row.symbol} 
                                 className="market-table-row"
                                 style={{ transition: 'background-color 0.2s' }}
