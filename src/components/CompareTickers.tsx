@@ -656,12 +656,12 @@ export const CompareTickers: React.FC = () => {
       {/* Chart area */}
       {isLoading ? (
         <>
-          <SkeletonChart height={482} />
+          <SkeletonChart height={508} />
           <div style={{ marginTop: 24 }}>
-            <SkeletonChart height={340} />
+            <SkeletonChart height={380} />
           </div>
           <div style={{ marginTop: 24 }}>
-            <SkeletonChart height={340} />
+            <SkeletonChart height={380} />
           </div>
         </>
       ) : activeSymbolCount < 2 ? (

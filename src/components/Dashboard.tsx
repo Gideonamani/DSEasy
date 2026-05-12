@@ -23,6 +23,7 @@ export interface DashboardProps {
   selectedDate: string | null;
   availableDates: MarketDate[];
   loadingData: boolean;
+  loadingIndices?: boolean;
   onDateChange: (date: string) => void;
   formatLargeNumber: (num: number, spellOut?: boolean) => string;
 }
@@ -42,8 +43,9 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
   selectedDate,
   availableDates,
   loadingData,
+  loadingIndices = false,
   onDateChange,
-  formatLargeNumber 
+  formatLargeNumber
 }) => {
   const isDataEmpty = !loadingData && marketData.length === 0;
 
@@ -100,7 +102,15 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
         <MarketEmptyState selectedDate={selectedDate} availableDates={availableDates} />
       ) : (
         <>
-          {marketIndices && marketIndices.length > 0 && (
+          {loadingIndices ? (
+            <>
+              <h3 className="section-title">Market Indices</h3>
+              <div className="stats-grid" style={{ marginBottom: "var(--space-6)" }}>
+                <SkeletonStatCard />
+                <SkeletonStatCard />
+              </div>
+            </>
+          ) : marketIndices && marketIndices.length > 0 ? (
             <>
               <h3 className="section-title">Market Indices</h3>
               <div className="stats-grid" style={{ marginBottom: "var(--space-6)" }}>
@@ -112,12 +122,12 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
                     change={idx.Change?.toString() ?? null}
                     subtext={idx.Code}
                     type={(idx.Change ?? 0) > 0 ? "success" : (idx.Change ?? 0) < 0 ? "danger" : "neutral"}
-                    to={`/trends`} // No specific symbol view for index yet, linking to trends generally
+                    to={`/trends`}
                   />
                 ))}
               </div>
             </>
-          )}
+          ) : null}
 
           {/* Stats Grid */}
           <div className="stats-grid">

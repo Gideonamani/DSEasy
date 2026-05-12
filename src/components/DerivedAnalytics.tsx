@@ -503,11 +503,11 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
             <SkeletonChart height={404} />
             <SkeletonChart height={404} />
           </div>
-          <div className="charts-grid">
+          <div className="charts-grid" style={{ marginTop: 'var(--space-2)' }}>
             <SkeletonChart height={404} />
             <SkeletonChart height={404} />
           </div>
-          <div className="charts-grid">
+          <div className="charts-grid" style={{ marginTop: 'var(--space-2)' }}>
             <SkeletonChart height={404} />
           </div>
 

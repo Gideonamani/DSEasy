@@ -191,6 +191,8 @@ export const DailyGlance: React.FC = () => {
           </div>
         </div>
 
+        <MarketStatusBanner isDashboard={false} />
+
         {/* Top stat cards */}
         <div className="stats-grid" style={{ marginBottom: 24 }}>
           <SkeletonStatCard />
