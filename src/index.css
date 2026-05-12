@@ -263,6 +263,11 @@ a {
   transition: all 0.2s ease;
 }
 
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .hover-bg:hover {
   background-color: var(--bg-hover) !important;
 }
