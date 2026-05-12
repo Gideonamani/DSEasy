@@ -7,9 +7,13 @@ import {
   DollarSign,
   Info,
   Trash2,
+  Home,
+  Bell,
+  Cloud,
   LucideIcon,
 } from "lucide-react";
 import { useSettings, Settings as SettingsType } from "../contexts/SettingsContext";
+import { useAuth } from "../contexts/AuthContext";
 import { CustomSelect } from "./CustomSelect";
 
 // Global declaration for Vite injects
@@ -53,7 +57,8 @@ interface SettingSection {
 }
 
 export function Settings(): React.ReactElement {
-  const { settings, updateSetting, resetSettings } = useSettings();
+  const { settings, updateSetting, resetSettings, isSyncing } = useSettings();
+  const { currentUser } = useAuth();
 
   const sections: SettingSection[] = [
     {
@@ -83,13 +88,43 @@ export function Settings(): React.ReactElement {
       ],
     },
     {
+      title: "Navigation",
+      items: [
+        {
+          id: "landingPage",
+          label: "Default Landing Page",
+          icon: Home,
+          type: "select",
+          options: [
+            { value: "/", label: "Dashboard" },
+            { value: "/glance", label: "Daily Glance" },
+            { value: "/analytics", label: "Derived Analytics" },
+            { value: "/trends", label: "Ticker Trends" },
+            { value: "/compare", label: "Compare Tickers" },
+            { value: "/notifications", label: "Notifications" },
+          ],
+        },
+      ],
+    },
+    {
+      title: "Notifications",
+      items: [
+        {
+          id: "notificationsEnabled",
+          label: "Price Alert Notifications",
+          icon: Bell,
+          description: "Push notifications when your alerts trigger",
+          type: "switch",
+        },
+      ],
+    },
+    {
       title: "Data Formatting",
       items: [
         {
           id: "numberFormat",
           label: "Number Format",
           icon: Hash,
-          description: "Choose how large numbers are displayed",
           type: "select",
           options: [
             { value: "abbreviated", label: "Abbreviated (10.5B)" },
@@ -98,7 +133,7 @@ export function Settings(): React.ReactElement {
         },
         {
           id: "showCurrency",
-          label: "Show Currency Symbol",
+          label: "Show Currency Symbol (TZS)",
           icon: DollarSign,
           type: "switch",
         },
@@ -134,7 +169,6 @@ export function Settings(): React.ReactElement {
           type: "action",
           actionLabel: "Clear",
           onClick: () => {
-            // Placeholder for cache clearing logic if we implement service workers or persistent data
             alert("Cache cleared (Simulated). Refreshing page...");
             window.location.reload();
           },
@@ -143,7 +177,7 @@ export function Settings(): React.ReactElement {
         {
             id: "reset",
             label: "Reset All Settings",
-            icon: Info, // Generic icon
+            icon: Info,
             type: "action",
             actionLabel: "Reset",
             onClick: () => {
@@ -161,35 +195,47 @@ export function Settings(): React.ReactElement {
       <h2 style={{ fontSize: "var(--text-3xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
         Settings
       </h2>
-      <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-8)" }}>
+      <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-4)" }}>
         Customize your DSEasy experience.
       </p>
 
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: "var(--text-sm)",
+          color: "var(--text-secondary)",
+          marginBottom: "var(--space-8)",
+        }}
+      >
+        <Cloud size={16} />
+        {currentUser
+          ? isSyncing
+            ? "Syncing your settings…"
+            : "Synced to your account."
+          : "Sign in to sync settings across devices."}
+      </div>
+
       <div className="settings-sections" style={{ display: 'flex', flexDirection: 'column', gap: '32px'}}>
         {sections.map((section) => (
-          <section key={section.title} className="glass-panel" style={{ borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--glass-border)", background: "var(--bg-elevated)" }}>
+          <section key={section.title} className="glass-panel" style={{ borderRadius: "var(--radius-xl)", overflow: "visible" }}>
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--glass-border)", background: "var(--bg-elevated)", borderRadius: "var(--radius-xl) var(--radius-xl) 0 0" }}>
                 <h3 style={{ margin: 0, fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", color: "var(--text-primary)" }}>{section.title}</h3>
             </div>
             <div className="settings-list">
               {section.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "20px 24px",
-                    borderBottom: "1px solid var(--glass-border)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div key={item.id} className={`settings-row${item.type === "select" || item.type === "toggle_group" ? " settings-row--stacks" : ""}`}>
+                  <div className="settings-row-label" style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         padding: "10px",
                         background: "rgba(99, 102, 241, 0.1)",
                         borderRadius: "10px",
                         color: "var(--accent-primary)",
+                        flexShrink: 0,
                       }}
                     >
                       <item.icon size={20} />
@@ -197,7 +243,7 @@ export function Settings(): React.ReactElement {
                     <div>
                       <div style={{ fontWeight: "var(--font-medium)" }}>{item.label}</div>
                       {item.description && (
-                        <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginTop: "4px" }}>
+                        <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginTop: "2px" }}>
                           {item.description}
                         </div>
                       )}
@@ -205,19 +251,24 @@ export function Settings(): React.ReactElement {
                   </div>
 
                   {/* Controls */}
-                  <div>
+                  <div className="settings-row-control" style={{ flexShrink: 0 }}>
                     {item.type === "select" && (
                       <div style={{ width: "200px" }}>
                         <CustomSelect
                             value={String(settings[item.id as keyof SettingsType])}
                             options={item.options}
-                            onChange={(newValue) => updateSetting(item.id as keyof SettingsType, newValue as any)}
+                            onChange={(newValue) => {
+                              const key = item.id as keyof SettingsType;
+                              const current = settings[key];
+                              const coerced = typeof current === "number" ? Number(newValue) : newValue;
+                              updateSetting(key, coerced as any);
+                            }}
                         />
                       </div>
                     )}
 
                     {item.type === "toggle_group" && (
-                        <div style={{ display: "flex", gap: "4px", background: "var(--bg-elevated)", padding: "4px", borderRadius: "8px" }}>
+                        <div style={{ display: "flex", gap: "4px", background: "var(--bg-elevated)", padding: "4px", borderRadius: "8px", width: "100%" }}>
                             {item.options.map(opt => (
                                 <button
                                     key={opt.value}
@@ -243,6 +294,9 @@ export function Settings(): React.ReactElement {
                     {item.type === "switch" && (
                       <button
                         onClick={() => updateSetting(item.id as keyof SettingsType, !settings[item.id as keyof SettingsType] as any)}
+                        role="switch"
+                        aria-checked={Boolean(settings[item.id as keyof SettingsType])}
+                        aria-label={item.label}
                         style={{
                           width: "48px",
                           height: "28px",

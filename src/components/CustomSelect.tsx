@@ -77,18 +77,18 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onCh
       </button>
 
       {isOpen && (
-        <div 
-          className="glass-panel"
+        <div
           style={{
             position: "absolute",
             top: "calc(100% + 4px)",
             left: 0,
             right: 0,
-            zIndex: 50,
-            background: "var(--bg-card)",
+            zIndex: 200,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-strong)",
             borderRadius: "var(--radius-lg)",
             padding: "4px",
-            boxShadow: "var(--shadow-lg)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
             maxHeight: "240px",
             overflowY: "auto"
           }}
