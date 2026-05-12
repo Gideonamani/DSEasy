@@ -16,6 +16,7 @@ import { useMarketDates, useMarketData, useMarketIndices } from "./hooks/useMark
 import { formatLargeNumber } from "./utils/formatters";
 import { useAuth } from "./contexts/AuthContext";
 import { useNotificationsSync } from "./hooks/useNotificationsSync";
+import { ForegroundNotifications } from "./components/ForegroundNotifications";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -315,6 +316,7 @@ function App() {
         </ErrorBoundary>
       </Layout>
       <AuthModal />
+      <ForegroundNotifications />
     </AuthModalProvider>
   );
 }
