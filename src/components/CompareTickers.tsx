@@ -5,7 +5,8 @@ import { useTickerSymbols, useTickerHistory, StockData } from "../hooks/useMarke
 import { Line } from "react-chartjs-2";
 import { getCommonChartOptions } from "../utils/chartTheme";
 import { CustomSelect } from "./CustomSelect";
-import { Loader2, GitCompare, Plus, X } from "lucide-react";
+import { GitCompare, Plus, X } from "lucide-react";
+import { SkeletonChart } from "./Skeleton";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -654,16 +655,15 @@ export const CompareTickers: React.FC = () => {
 
       {/* Chart area */}
       {isLoading ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: "400px",
-          }}
-        >
-          <Loader2 size={32} className="animate-spin" color="var(--accent-primary)" />
-        </div>
+        <>
+          <SkeletonChart height={508} />
+          <div style={{ marginTop: 24 }}>
+            <SkeletonChart height={380} />
+          </div>
+          <div style={{ marginTop: 24 }}>
+            <SkeletonChart height={380} />
+          </div>
+        </>
       ) : activeSymbolCount < 2 ? (
         <div
           className="glass-panel"

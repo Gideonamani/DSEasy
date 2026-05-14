@@ -162,7 +162,7 @@ function App() {
   }, [dateFromUrl, availableDates]);
 
   const { data: marketData = [], isLoading: loadingData, error: dataError } = useMarketData(effectiveDate);
-  const { data: marketIndices = null } = useMarketIndices();
+  const { data: marketIndices = null, isLoading: loadingIndices } = useMarketIndices();
   
   const error = datesError ? `Dates Error: ${datesError.message}` : dataError ? `Data Error: ${dataError.message}` : null;
 
@@ -273,11 +273,13 @@ function App() {
     <AuthModalProvider>
       <Layout activeTab={activeTab} onTabChange={handleTabChange}>
         <ErrorBoundary>
+          <div key={location.pathname} className="page-transition">
           <Routes>
             <Route path="/" element={
-              <Dashboard 
+              <Dashboard
                  marketData={marketData}
                  marketIndices={marketIndices}
+                 loadingIndices={loadingIndices}
                  topGainer={topGainer}
                  topLoser={topLoser}
                  totalVolume={totalVolume}
@@ -313,6 +315,7 @@ function App() {
             <Route path="/notifications" element={<NotificationsManager />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
+          </div>
         </ErrorBoundary>
       </Layout>
       <AuthModal />
