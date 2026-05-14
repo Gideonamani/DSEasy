@@ -222,19 +222,29 @@ export const Layout: React.FC<LayoutProps> = ({
   const { open: openAuthModal } = useAuthModal();
   const getMobile = () =>
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  const getWide = () =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
   const [isMobile, setIsMobile] = useState(getMobile);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !getMobile());
+  // Sidebar open by default only on wide (≥1024px) viewports; collapsed on tablets.
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => getWide());
 
-  // Track viewport breakpoint via matchMedia so transient mobile-keyboard
+  // Track viewport breakpoints via matchMedia so transient mobile-keyboard
   // resize events don't collapse the sidebar mid-typing.
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handleChange = (e: MediaQueryListEvent) => {
+    const mqMobile = window.matchMedia("(max-width: 767px)");
+    const mqWide = window.matchMedia("(min-width: 1024px)");
+    const handleMobile = (e: MediaQueryListEvent) => {
       setIsMobile(e.matches);
-      setIsSidebarOpen(!e.matches);
     };
-    mq.addEventListener("change", handleChange);
-    return () => mq.removeEventListener("change", handleChange);
+    const handleWide = (e: MediaQueryListEvent) => {
+      setIsSidebarOpen(e.matches);
+    };
+    mqMobile.addEventListener("change", handleMobile);
+    mqWide.addEventListener("change", handleWide);
+    return () => {
+      mqMobile.removeEventListener("change", handleMobile);
+      mqWide.removeEventListener("change", handleWide);
+    };
   }, []);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -307,7 +317,7 @@ export const Layout: React.FC<LayoutProps> = ({
               DSEasy
             </h1>
           </div>
-          {isMobile && (
+          {isSidebarOpen && (
             <button
               onClick={toggleSidebar}
               style={{
@@ -426,7 +436,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 border: "none",
                 color: "var(--text-primary)",
                 cursor: "pointer",
-                display: isSidebarOpen && !isMobile ? "none" : "flex",
+                display: "flex",
               }}
             >
               <Menu size={24} />
