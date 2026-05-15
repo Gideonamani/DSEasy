@@ -1,19 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Loader2, Trash2, History, BellRing } from "lucide-react";
-
-// API URL (Same as App.jsx)
 import { db } from "../firebase";
-import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  Timestamp,
+} from "firebase/firestore";
 
-interface Alert {
-  id: string;
+interface AlertDoc {
   symbol: string;
   condition: "ABOVE" | "BELOW";
   targetPrice: number;
   status: string;
+  userId: string;
+  createdAt?: Timestamp;
+}
+
+interface Alert extends AlertDoc {
+  id: string;
   created: string;
-  [key: string]: any;
 }
 
 export function NotificationsManager(): React.ReactElement {
@@ -38,15 +49,16 @@ export function NotificationsManager(): React.ReactElement {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newAlerts: Alert[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-        // Convert timestamp to number for existing UI compatibility if needed, 
-        // or just use valid date objects. 
-        // The UI uses new Date(alert.created), so we need to map createdAt to created or update UI.
-        // Let's map createdAt (Firestore Timestamp) to 'created' (ISO string or number)
-        created: d.data().createdAt?.toDate ? d.data().createdAt.toDate().toISOString() : new Date().toISOString()
-      } as Alert));
+      const newAlerts: Alert[] = snapshot.docs.map((d) => {
+        const data = d.data() as AlertDoc;
+        return {
+          ...data,
+          id: d.id,
+          created: data.createdAt
+            ? data.createdAt.toDate().toISOString()
+            : new Date().toISOString(),
+        };
+      });
       setAlerts(newAlerts);
       setLoading(false);
     }, (error) => {
@@ -70,9 +82,10 @@ export function NotificationsManager(): React.ReactElement {
     try {
       await deleteDoc(doc(db, "alerts", alertId));
       // No need to fetchAlerts(), onSnapshot handles it
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting alert:", error);
-      window.alert("Delete failed: " + error.message);
+      const message = error instanceof Error ? error.message : String(error);
+      window.alert("Delete failed: " + message);
     } finally {
       setDeleting(null);
     }

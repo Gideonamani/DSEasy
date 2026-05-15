@@ -41,26 +41,28 @@ export const AlertModal: React.FC<AlertModalProps> = ({
     setStatus("idle");
 
     try {
-      // FCM tokens are now registered centrally in AuthContext on login,
-      // so alerts no longer need to carry a token.
-      const createAlert = httpsCallable(functions, "createAlert");
+      const createAlert = httpsCallable<
+        { symbol: string; targetPrice: number; condition: "ABOVE" | "BELOW" },
+        { success: boolean; error?: string }
+      >(functions, "createAlert");
       const result = await createAlert({
         symbol,
         targetPrice: parseFloat(targetPrice as string),
         condition,
       });
 
-      if (!(result.data as any).success)
-        throw new Error((result.data as any).error || "Unknown error");
+      if (!result.data.success)
+        throw new Error(result.data.error || "Unknown error");
 
       setStatus("success");
       setTimeout(() => {
         onClose();
         setStatus("idle");
-      }, 4000); // 4 seconds delay to allow reading summary/clicking link
-    } catch (err: any) {
+      }, 4000);
+    } catch (err: unknown) {
       console.error(err);
-      alert("Error: " + err.message);
+      const message = err instanceof Error ? err.message : String(err);
+      alert("Error: " + message);
       setStatus("error");
     } finally {
       setLoading(false);

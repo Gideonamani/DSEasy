@@ -1,6 +1,12 @@
 import React, { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useLatestSnapshot, useMarketIntel } from "../hooks/useMarketWatch";
+import {
+  useLatestSnapshot,
+  useMarketIntel,
+  type MarketWatchStock,
+} from "../hooks/useMarketWatch";
+
+type StockWithSymbol = MarketWatchStock & { symbol: string };
 import { useMarketWatchDates } from "../hooks/useMarketQuery";
 import { DatePicker } from "./DatePicker";
 import { StatCard } from "./StatCard";
@@ -434,7 +440,7 @@ export const DailyGlance: React.FC = () => {
               {[...stocks]
                 .sort((a, b) => {
                   // Sort logic: Strongest Buy (high Bid, 0 Offer) -> ... -> Neutral -> ... -> Strongest Sell (0 Bid, high Offer)
-                  const getRatio = (s: any) => {
+                  const getRatio = (s: StockWithSymbol): number => {
                     if (s.bestBidQuantity > 0 && s.bestOfferQuantity === 0)
                       return 1000 + s.bestBidQuantity; // Max Bull
                     if (s.bestOfferQuantity > 0 && s.bestBidQuantity === 0)

@@ -261,7 +261,7 @@ export function Settings(): React.ReactElement {
                               const key = item.id as keyof SettingsType;
                               const current = settings[key];
                               const coerced = typeof current === "number" ? Number(newValue) : newValue;
-                              updateSetting(key, coerced as any);
+                              updateSetting(key, coerced as SettingsType[typeof key]);
                             }}
                         />
                       </div>
@@ -272,7 +272,10 @@ export function Settings(): React.ReactElement {
                             {item.options.map(opt => (
                                 <button
                                     key={opt.value}
-                                    onClick={() => updateSetting(item.id as keyof SettingsType, opt.value as any)}
+                                    onClick={() => {
+                                      const key = item.id as keyof SettingsType;
+                                      updateSetting(key, opt.value as SettingsType[typeof key]);
+                                    }}
                                     style={{
                                         padding: "6px 12px",
                                         borderRadius: "6px",
@@ -293,7 +296,10 @@ export function Settings(): React.ReactElement {
 
                     {item.type === "switch" && (
                       <button
-                        onClick={() => updateSetting(item.id as keyof SettingsType, !settings[item.id as keyof SettingsType] as any)}
+                        onClick={() => {
+                          const key = item.id as keyof SettingsType;
+                          updateSetting(key, !settings[key] as SettingsType[typeof key]);
+                        }}
                         role="switch"
                         aria-checked={Boolean(settings[item.id as keyof SettingsType])}
                         aria-label={item.label}

@@ -13,6 +13,13 @@ import { SkeletonTrendCard, SkeletonMiniStat } from "./Skeleton";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
 import { getCommonChartOptions } from "../utils/chartTheme";
+import type {
+  ChartOptions,
+  ChartData,
+  ChartDataset,
+  LegendItem,
+} from "chart.js";
+import type { StockData } from "../types/market";
 // Chart.js registration handled globally in App.tsx
 
 interface MetricConfig {
@@ -268,7 +275,9 @@ export const TickerTrends: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { settings } = useSettings(); // Use settings hook
-  const chartTheme = getCommonChartOptions(settings.theme);
+  const chartTheme = getCommonChartOptions<"line">(settings.theme);
+  const themeScales = chartTheme.scales ?? {};
+  const themePluginOptions = chartTheme.plugins ?? {};
 
   
   // Track hidden metrics and persist to localStorage
@@ -567,17 +576,17 @@ export const TickerTrends: React.FC = () => {
     },
     scales: {
       x: {
-        ...chartTheme.scales.x,
-        ticks: { 
-          ...chartTheme.scales.x.ticks,
+        ...themeScales.x,
+        ticks: {
+          ...themeScales.x?.ticks,
           maxTicksLimit: 10,
         },
       },
       y: {
-        ...chartTheme.scales.y,
-        ticks: { 
-          ...chartTheme.scales.y.ticks,
-          callback: (value: any) => {
+        ...themeScales.y,
+        ticks: {
+          ...themeScales.y?.ticks,
+          callback: (value: number | string) => {
             const v = Number(value);
             if (v >= 1000000000) return (v / 1000000000).toFixed(1) + "B";
             if (v >= 1000000) return (v / 1000000).toFixed(1) + "M";
@@ -589,37 +598,36 @@ export const TickerTrends: React.FC = () => {
     },
     interaction: {
       intersect: false,
-      mode: "index",
+      mode: "index" as const,
     },
   };
 
   const rsiChartOptions = {
     ...chartTheme,
     plugins: {
-      ...chartTheme.plugins,
+      ...themePluginOptions,
       title: { display: false },
       legend: {
-        ...chartTheme.plugins?.legend,
+        ...themePluginOptions.legend,
         labels: {
-          ...chartTheme.plugins?.legend?.labels,
-          // hide the flat reference-line entries from the legend
-          filter: (item: any) => item.text === "RSI (14)",
+          ...themePluginOptions.legend?.labels,
+          filter: (item: LegendItem) => item.text === "RSI (14)",
         },
       },
     },
     scales: {
       x: {
-        ...chartTheme.scales.x,
-        ticks: { ...chartTheme.scales.x.ticks, maxTicksLimit: 10 },
+        ...themeScales.x,
+        ticks: { ...themeScales.x?.ticks, maxTicksLimit: 10 },
       },
       y: {
-        ...chartTheme.scales.y,
+        ...themeScales.y,
         min: 0,
         max: 100,
-        ticks: { ...chartTheme.scales.y.ticks, stepSize: 20 },
+        ticks: { ...themeScales.y?.ticks, stepSize: 20 },
       },
     },
-    interaction: { intersect: false, mode: "index" },
+    interaction: { intersect: false, mode: "index" as const },
   };
 
   // Helper to generate chart data for any metric
@@ -629,7 +637,7 @@ export const TickerTrends: React.FC = () => {
     // Special handling for Close Price: pointRadius pinned to 1 to honour
     // the discrete daily-snapshot affordance, with optional SMA overlays.
     if (metricKey === "close") {
-      const datasets: any[] = [
+      const datasets: ChartDataset<"line", Array<number | null>>[] = [
         {
           label: "Close",
           data: filteredData.map((d) => (d.close === undefined || d.close === null) ? null : d.close),
@@ -715,8 +723,8 @@ export const TickerTrends: React.FC = () => {
         {
           label: metricKey.charAt(0).toUpperCase() + metricKey.slice(1),
           data: filteredData.map((d) => {
-             const val = (d as any)[metricKey];
-             if (val === undefined || val === null) return null; // Pass null for missing data to avoid false '0' dip
+             const val = d[metricKey as keyof StockData];
+             if (val === undefined || val === null || typeof val !== "number") return null;
              return metricKey === 'turnoverPct' ? val * 100 : val;
           }),
           borderColor: color,
@@ -1033,9 +1041,9 @@ export const TickerTrends: React.FC = () => {
       <div className="charts-grid">
         {METRICS.map((metric) => {
           if (hiddenMetrics.has(metric.key)) return null;
-          
+
           const data = getMetricData(metric.key, metric.color);
-          const ChartComponent = metric.key === "volume" ? Bar : Line;
+          const isVolume = metric.key === "volume";
 
           return (
             <TrendCard
@@ -1046,7 +1054,11 @@ export const TickerTrends: React.FC = () => {
             >
                <div style={{ height: "320px" }}>
                   {data ? (
-                     <ChartComponent data={data} options={chartOptions} />
+                     isVolume ? (
+                       <Bar data={data as ChartData<"bar">} options={chartOptions as ChartOptions<"bar">} />
+                     ) : (
+                       <Line data={data as ChartData<"line">} options={chartOptions} />
+                     )
                   ) : (
                     loadingData
                       ? <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-md)" }} />
@@ -1097,7 +1109,7 @@ export const TickerTrends: React.FC = () => {
           >
             <div style={{ height: "200px" }}>
               {rsiData ? (
-                <Line data={rsiData} options={rsiChartOptions as any} />
+                <Line data={rsiData} options={rsiChartOptions as ChartOptions<"line">} />
               ) : (
                 loadingData
                   ? <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-md)" }} />
@@ -1171,7 +1183,7 @@ export const TickerTrends: React.FC = () => {
                       grouped: false, // Prevent lateral offset
                       order: 3
                     }
-                  ] as any
+                  ] as ChartData<"bar">["datasets"],
                 }}
                 options={{
                   ...chartOptions,
@@ -1182,7 +1194,7 @@ export const TickerTrends: React.FC = () => {
                       intersect: false,
                     }
                   }
-                }}
+                } as ChartOptions<"bar">}
               />
             </div>
           </TrendCard>

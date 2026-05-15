@@ -7,6 +7,18 @@ import { formatLargeNumber } from "../utils/formatters";
 import { useSettings } from "../contexts/SettingsContext";
 import { getCommonChartOptions, getChartTheme } from "../utils/chartTheme";
 import { StockData, MarketDate } from "../hooks/useMarketQuery";
+import type { ChartOptions, TooltipItem } from "chart.js";
+
+type StockNumericKey = {
+  [K in keyof StockData]-?: NonNullable<StockData[K]> extends number ? K : never;
+}[keyof StockData];
+
+interface ScatterPoint {
+  x: number;
+  y: number;
+  symbol: string;
+  mcap?: number;
+}
 
 interface AnalyticsCardProps {
   title: string;
@@ -58,7 +70,7 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({ title, icon, children, su
 
 interface RankingTableProps {
   data: StockData[];
-  valueKey: string;
+  valueKey: StockNumericKey;
   label: string;
   formatter?: (v: number) => string;
 }
@@ -72,8 +84,11 @@ const RankingTable: React.FC<RankingTableProps> = ({
 }) => {
   const sorted = useMemo(() => {
     return [...data]
-      .filter((d) => (d as any)[valueKey] && (d as any)[valueKey] !== 0)
-      .sort((a, b) => (b as any)[valueKey] - (a as any)[valueKey])
+      .filter((d) => {
+        const v = d[valueKey];
+        return typeof v === "number" && v !== 0;
+      })
+      .sort((a, b) => (b[valueKey] ?? 0) - (a[valueKey] ?? 0))
       .slice(0, 10);
   }, [data, valueKey]);
 
@@ -158,7 +173,7 @@ const RankingTable: React.FC<RankingTableProps> = ({
                   color: "var(--accent-primary)",
                 }}
               >
-                {formatter((item as any)[valueKey])}
+                {formatter(item[valueKey] ?? 0)}
               </td>
             </tr>
           ))}
@@ -189,7 +204,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   onDateChange 
 }) => {
   const { settings } = useSettings();
-  const themeOptions = getCommonChartOptions(settings.theme);
+  const themeOptions = getCommonChartOptions<"line">(settings.theme);
+  const themePlugins = themeOptions.plugins ?? {};
+  const themeScales = themeOptions.scales ?? {};
   const { textColorHex } = getChartTheme(settings.theme);
   const isDataEmpty = !loadingData && data.length === 0;
   
@@ -399,9 +416,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
     scales: {},
     cutout: "65%",
     plugins: {
-        ...themeOptions.plugins,
+        ...themePlugins,
         legend: {
-            ...themeOptions.plugins.legend,
+            ...themePlugins.legend,
             position: "right",
             labels: {
               color: textColorHex,
@@ -411,9 +428,10 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
             },
         },
         tooltip: {
-            ...themeOptions.plugins.tooltip,
+            ...themePlugins.tooltip,
             callbacks: {
-              label: (ctx: any) => `${ctx.label}: ${ctx.raw.toFixed(2)}%`,
+              label: (ctx: TooltipItem<"doughnut">) =>
+                `${ctx.label}: ${Number(ctx.raw).toFixed(2)}%`,
             },
         }
     }
@@ -423,20 +441,21 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   const scatterOptions = (xLabel: string, yLabel: string) => ({
     ...themeOptions,
     plugins: {
-      ...themeOptions.plugins,
+      ...themePlugins,
       legend: { display: false },
       tooltip: {
-        ...themeOptions.plugins.tooltip,
+        ...themePlugins.tooltip,
         callbacks: {
-          title: (ctx: any) => ctx[0]?.raw?.symbol || '',
-          label: (ctx: any) => {
+          title: (ctx: TooltipItem<"scatter">[]) =>
+            (ctx[0]?.raw as ScatterPoint | undefined)?.symbol || "",
+          label: (ctx: TooltipItem<"scatter">) => {
+            const raw = ctx.raw as ScatterPoint;
             const lines = [
-              `${xLabel}: ${typeof ctx.raw.x === 'number' ? ctx.raw.x.toLocaleString(undefined, {maximumFractionDigits: 2}) : ctx.raw.x}`,
-              `${yLabel}: ${typeof ctx.raw.y === 'number' ? ctx.raw.y.toLocaleString(undefined, {maximumFractionDigits: 2}) : ctx.raw.y}`,
+              `${xLabel}: ${typeof raw.x === "number" ? raw.x.toLocaleString(undefined, { maximumFractionDigits: 2 }) : raw.x}`,
+              `${yLabel}: ${typeof raw.y === "number" ? raw.y.toLocaleString(undefined, { maximumFractionDigits: 2 }) : raw.y}`,
             ];
-            // Add MCAP if available
-            if (ctx.raw.mcap) {
-              lines.push(`Market Cap: ${formatLargeNumber(ctx.raw.mcap)} TZS`);
+            if (raw.mcap) {
+              lines.push(`Market Cap: ${formatLargeNumber(raw.mcap)} TZS`);
             }
             return lines;
           },
@@ -445,11 +464,11 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
     },
     scales: {
       x: {
-        ...themeOptions.scales.x,
+        ...themeScales.x,
         title: { display: true, text: xLabel, color: textColorHex, font: { size: 12, family: "'Inter', sans-serif" } },
       },
       y: {
-        ...themeOptions.scales.y,
+        ...themeScales.y,
         title: { display: true, text: yLabel, color: textColorHex, font: { size: 12, family: "'Inter', sans-serif" } },
       },
     },
@@ -529,7 +548,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Volatility: High/Low Spread" icon={Activity}>
           <div style={{ height: "280px" }}>
             {volatilityData.labels.length > 0 ? (
-              <Bar data={volatilityData} options={themeOptions} />
+              <Bar data={volatilityData} options={themeOptions as ChartOptions<"bar">} />
             ) : (
               <p
                 style={{
@@ -555,11 +574,11 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
                   scales: {
                     ...themeOptions.scales,
                     x: {
-                      ...themeOptions.scales.x,
+                      ...themeScales.x,
                       min: 0,
                     },
                   },
-                }}
+                } as ChartOptions<"bar">}
               />
             ) : (
               <p
@@ -592,7 +611,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Market Share: Turnover %" icon={PieChart}>
           <div style={{ height: "280px" }}>
             {marketShareData.labels.length > 0 ? (
-              <Doughnut data={marketShareData} options={doughnutOptions} />
+              <Doughnut data={marketShareData} options={doughnutOptions as ChartOptions<"doughnut">} />
             ) : (
               <p
                 style={{
@@ -631,9 +650,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {riskReturnBubbleData.datasets[0].data.length > 0 ? (
-              <Bubble 
-                data={riskReturnBubbleData} 
-                options={scatterOptions("Volatility: High/Low Spread (%)", "Price Change (TZS)")} 
+              <Bubble
+                data={riskReturnBubbleData}
+                options={scatterOptions("Volatility: High/Low Spread (%)", "Price Change (TZS)") as unknown as ChartOptions<"bubble">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -650,9 +669,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {volumeChangeData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={volumeChangeData} 
-                options={scatterOptions("Volume (Shares)", "Change (TZS)")} 
+              <Scatter
+                data={volumeChangeData}
+                options={scatterOptions("Volume (Shares)", "Change (TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -672,9 +691,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {tradePatternData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={tradePatternData} 
-                options={scatterOptions("Vol/Deal (Shares)", "Turnover/Deal (M TZS)")} 
+              <Scatter
+                data={tradePatternData}
+                options={scatterOptions("Vol/Deal (Shares)", "Turnover/Deal (M TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -691,9 +710,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {pressureOutcomeData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={pressureOutcomeData} 
-                options={scatterOptions("Bid/Offer Ratio", "Change (TZS)")} 
+              <Scatter
+                data={pressureOutcomeData}
+                options={scatterOptions("Bid/Offer Ratio", "Change (TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -713,9 +732,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {volatilityActivityData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={volatilityActivityData} 
-                options={scatterOptions("High/Low Spread (%)", "Turnover (M TZS)")} 
+              <Scatter
+                data={volatilityActivityData}
+                options={scatterOptions("High/Low Spread (%)", "Turnover (M TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>

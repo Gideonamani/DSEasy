@@ -12,7 +12,7 @@ import {
   ArcElement
 } from "chart.js";
 
-export const registerChartJS = () => {
+export const registerChartJS = (): void => {
     ChartJS.register(
       CategoryScale,
       LinearScale,

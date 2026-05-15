@@ -1,4 +1,4 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, ChartOptions } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, type ChartOptions, type ChartType } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -31,16 +31,18 @@ export const getChartTheme = (theme: 'light' | 'dark' | string): ChartTheme => {
     };
 };
 
-export const getCommonChartOptions = (theme: 'light' | 'dark' | string): ChartOptions<any> => {
+export const getCommonChartOptions = <T extends ChartType = ChartType>(
+    theme: 'light' | 'dark' | string,
+): ChartOptions<T> => {
     const { textColorHex, gridColor, tooltipBg, tooltipBorder, tooltipTitle, tooltipBody, fontFamily } = getChartTheme(theme);
 
-    return {
+    const options = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                position: 'top',
-                labels: { 
+                position: 'top' as const,
+                labels: {
                     color: textColorHex,
                     font: { family: fontFamily, size: 12 }
                 }
@@ -56,20 +58,20 @@ export const getCommonChartOptions = (theme: 'light' | 'dark' | string): ChartOp
                 bodyColor: tooltipBody,
                 padding: 12,
                 cornerRadius: 8,
-                titleFont: { family: fontFamily, weight: '600' },
+                titleFont: { family: fontFamily, weight: 600 as const },
                 bodyFont: { family: fontFamily }
             }
         },
         scales: {
             x: {
-                ticks: { 
+                ticks: {
                     color: textColorHex,
                     font: { family: fontFamily, size: 11 }
                 },
                 grid: { color: gridColor, drawBorder: false }
             },
             y: {
-                ticks: { 
+                ticks: {
                     color: textColorHex,
                     font: { family: fontFamily, size: 11 }
                 },
@@ -77,4 +79,6 @@ export const getCommonChartOptions = (theme: 'light' | 'dark' | string): ChartOp
             }
         }
     };
+
+    return options as ChartOptions<T>;
 };

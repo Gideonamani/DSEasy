@@ -4,6 +4,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useTickerSymbols, useTickerHistory, StockData } from "../hooks/useMarketQuery";
 import { Line } from "react-chartjs-2";
 import { getCommonChartOptions } from "../utils/chartTheme";
+import type { ChartOptions, TooltipItem } from "chart.js";
 import { CustomSelect } from "./CustomSelect";
 import { GitCompare, Plus, X } from "lucide-react";
 import { SkeletonChart } from "./Skeleton";
@@ -24,7 +25,8 @@ const PERIOD_OPTIONS = [
   { label: "Custom", value: "Custom" },
 ];
 
-const parseSheetDate = (str: string): Date => {
+const parseSheetDate = (str: string | undefined): Date => {
+  if (!str) return new Date(NaN);
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
   const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
   if (!match) return new Date(str);
@@ -186,7 +188,11 @@ export const CompareTickers: React.FC = () => {
     if (slots.length < 2) return null;
 
     const dateSet = new Set<string>();
-    slots.forEach((slot) => slot.data.forEach((d) => dateSet.add(d.date)));
+    slots.forEach((slot) =>
+      slot.data.forEach((d) => {
+        if (d.date) dateSet.add(d.date);
+      }),
+    );
     const allDates = Array.from(dateSet).sort(
       (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
     );
@@ -196,7 +202,11 @@ export const CompareTickers: React.FC = () => {
     );
 
     const datasets = slots.map((slot, i) => {
-      const closeMap = new Map<string, number>(slot.data.map((d) => [d.date, d.close]));
+      const closeMap = new Map<string, number>(
+        slot.data
+          .filter((d): d is StockData & { date: string } => Boolean(d.date))
+          .map((d) => [d.date, d.close]),
+      );
 
       let firstClose: number | null = null;
       for (const date of allDates) {
@@ -229,8 +239,8 @@ export const CompareTickers: React.FC = () => {
     return { labels, datasets };
   }, [selectedSymbols, allFiltered]);
 
-  const chartOptions = useMemo(() => {
-    const base = getCommonChartOptions(settings.theme) as any;
+  const chartOptions = useMemo<ChartOptions<"line">>(() => {
+    const base = getCommonChartOptions<"line">(settings.theme);
     return {
       ...base,
       interaction: {
@@ -243,7 +253,7 @@ export const CompareTickers: React.FC = () => {
         tooltip: {
           ...base.plugins?.tooltip,
           callbacks: {
-            label: (ctx: any) => {
+            label: (ctx: TooltipItem<"line">) => {
               const v = ctx.parsed.y;
               if (v == null) return `${ctx.dataset.label}: N/A`;
               return `${ctx.dataset.label}: ${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
@@ -257,7 +267,10 @@ export const CompareTickers: React.FC = () => {
           ...base.scales?.y,
           ticks: {
             ...base.scales?.y?.ticks,
-            callback: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`,
+            callback: (v: number | string) => {
+              const n = Number(v);
+              return `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
+            },
           },
         },
       },
@@ -273,7 +286,11 @@ export const CompareTickers: React.FC = () => {
     if (slots.length < 2) return null;
 
     const dateSet = new Set<string>();
-    slots.forEach((slot) => slot.filtered.forEach((d) => dateSet.add(d.date)));
+    slots.forEach((slot) =>
+      slot.filtered.forEach((d) => {
+        if (d.date) dateSet.add(d.date);
+      }),
+    );
     const allDates = Array.from(dateSet).sort(
       (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
     );
@@ -285,7 +302,9 @@ export const CompareTickers: React.FC = () => {
     const datasets = slots.map((slot, i) => {
       const volSeries = calculateRollingVolatility(slot.full.map((d) => d.close));
       const volByDate = new Map<string, number | null>(
-        slot.full.map((d, idx) => [d.date, volSeries[idx]])
+        slot.full
+          .map((d, idx) => [d.date, volSeries[idx]] as const)
+          .filter((entry): entry is readonly [string, number | null] => Boolean(entry[0])),
       );
       const color = SYMBOL_COLORS[i];
       return {
@@ -315,7 +334,11 @@ export const CompareTickers: React.FC = () => {
     if (slots.length < 2) return null;
 
     const dateSet = new Set<string>();
-    slots.forEach((slot) => slot.filtered.forEach((d) => dateSet.add(d.date)));
+    slots.forEach((slot) =>
+      slot.filtered.forEach((d) => {
+        if (d.date) dateSet.add(d.date);
+      }),
+    );
     const allDates = Array.from(dateSet).sort(
       (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
     );
@@ -326,7 +349,9 @@ export const CompareTickers: React.FC = () => {
 
     const datasets = slots.map((slot, i) => {
       const turnoverMap = new Map<string, number>(
-        slot.filtered.map((d) => [d.date, d.turnover || 0])
+        slot.filtered
+          .filter((d): d is StockData & { date: string } => Boolean(d.date))
+          .map((d) => [d.date, d.turnover || 0]),
       );
 
       let firstTurnover: number | null = null;
@@ -358,8 +383,8 @@ export const CompareTickers: React.FC = () => {
     return { labels, datasets };
   }, [selectedSymbols, allFiltered]);
 
-  const volChartOptions = useMemo(() => {
-    const base = getCommonChartOptions(settings.theme) as any;
+  const volChartOptions = useMemo<ChartOptions<"line">>(() => {
+    const base = getCommonChartOptions<"line">(settings.theme);
     return {
       ...base,
       interaction: { mode: "index", intersect: false },
@@ -369,7 +394,7 @@ export const CompareTickers: React.FC = () => {
         tooltip: {
           ...base.plugins?.tooltip,
           callbacks: {
-            label: (ctx: any) => {
+            label: (ctx: TooltipItem<"line">) => {
               const v = ctx.parsed.y;
               if (v == null) return `${ctx.dataset.label}: N/A`;
               return `${ctx.dataset.label}: ${v.toFixed(2)}%`;
@@ -383,15 +408,15 @@ export const CompareTickers: React.FC = () => {
           ...base.scales?.y,
           ticks: {
             ...base.scales?.y?.ticks,
-            callback: (v: number) => `${v.toFixed(1)}%`,
+            callback: (v: number | string) => `${Number(v).toFixed(1)}%`,
           },
         },
       },
     };
   }, [settings.theme]);
 
-  const turnoverChartOptions = useMemo(() => {
-    const base = getCommonChartOptions(settings.theme) as any;
+  const turnoverChartOptions = useMemo<ChartOptions<"line">>(() => {
+    const base = getCommonChartOptions<"line">(settings.theme);
     return {
       ...base,
       interaction: { mode: "index", intersect: false },
@@ -401,7 +426,7 @@ export const CompareTickers: React.FC = () => {
         tooltip: {
           ...base.plugins?.tooltip,
           callbacks: {
-            label: (ctx: any) => {
+            label: (ctx: TooltipItem<"line">) => {
               const v = ctx.parsed.y;
               if (v == null) return `${ctx.dataset.label}: N/A`;
               return `${ctx.dataset.label}: ${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
@@ -415,7 +440,10 @@ export const CompareTickers: React.FC = () => {
           ...base.scales?.y,
           ticks: {
             ...base.scales?.y?.ticks,
-            callback: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`,
+            callback: (v: number | string) => {
+              const n = Number(v);
+              return `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
+            },
           },
         },
       },
