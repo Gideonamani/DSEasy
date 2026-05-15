@@ -225,7 +225,8 @@ export const Layout: React.FC<LayoutProps> = ({
   const getWide = () =>
     typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
   const [isMobile, setIsMobile] = useState(getMobile);
-  // Sidebar open by default only on wide (≥1024px) viewports; collapsed on tablets.
+  const [isWide, setIsWide] = useState(getWide);
+  // Sidebar open by default only on wide (≥1024px) viewports; collapsed on tablets/phones.
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => getWide());
 
   // Track viewport breakpoints via matchMedia so transient mobile-keyboard
@@ -237,6 +238,7 @@ export const Layout: React.FC<LayoutProps> = ({
       setIsMobile(e.matches);
     };
     const handleWide = (e: MediaQueryListEvent) => {
+      setIsWide(e.matches);
       setIsSidebarOpen(e.matches);
     };
     mqMobile.addEventListener("change", handleMobile);
@@ -260,8 +262,8 @@ export const Layout: React.FC<LayoutProps> = ({
           backgroundColor: "rgba(0,0,0,0.5)",
           zIndex: "var(--z-overlay)",
           backdropFilter: "blur(4px)",
-          opacity: isMobile && isSidebarOpen ? 1 : 0,
-          pointerEvents: isMobile && isSidebarOpen ? "auto" : "none",
+          opacity: !isWide && isSidebarOpen ? 1 : 0,
+          pointerEvents: !isWide && isSidebarOpen ? "auto" : "none",
           transition: "opacity 0.3s ease",
         }}
       />
@@ -363,7 +365,7 @@ export const Layout: React.FC<LayoutProps> = ({
               active={activeTab === tab}
               onClick={() => {
                 onTabChange(tab);
-                if (isMobile) setIsSidebarOpen(false);
+                if (!isWide) setIsSidebarOpen(false);
               }}
             />
           ))}
@@ -408,7 +410,7 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Main Content Wrapper */}
       <div
         style={{
-          marginLeft: !isMobile && isSidebarOpen ? "var(--sidebar-width)" : "0",
+          marginLeft: isWide && isSidebarOpen ? "var(--sidebar-width)" : "0",
           flex: 1,
           display: "flex",
           flexDirection: "column",
