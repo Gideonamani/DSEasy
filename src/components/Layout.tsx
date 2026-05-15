@@ -222,25 +222,42 @@ export const Layout: React.FC<LayoutProps> = ({
   const { open: openAuthModal } = useAuthModal();
   const getMobile = () =>
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  const getWide = () =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+  const getShort = () =>
+    typeof window !== "undefined" && window.matchMedia("(max-height: 500px)").matches;
   const [isMobile, setIsMobile] = useState(getMobile);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !getMobile());
+  const [isWide, setIsWide] = useState(getWide);
+  const [isShort, setIsShort] = useState(getShort);
+  // Sidebar open by default only on wide (≥1024px) viewports; collapsed on tablets/phones.
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => getWide());
 
-  // Track viewport breakpoint via matchMedia so transient mobile-keyboard
+  // Track viewport breakpoints via matchMedia so transient mobile-keyboard
   // resize events don't collapse the sidebar mid-typing.
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsMobile(e.matches);
-      setIsSidebarOpen(!e.matches);
+    const mqMobile = window.matchMedia("(max-width: 767px)");
+    const mqWide = window.matchMedia("(min-width: 1024px)");
+    const mqShort = window.matchMedia("(max-height: 500px)");
+    const handleMobile = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    const handleWide = (e: MediaQueryListEvent) => {
+      setIsWide(e.matches);
+      setIsSidebarOpen(e.matches);
     };
-    mq.addEventListener("change", handleChange);
-    return () => mq.removeEventListener("change", handleChange);
+    const handleShort = (e: MediaQueryListEvent) => setIsShort(e.matches);
+    mqMobile.addEventListener("change", handleMobile);
+    mqWide.addEventListener("change", handleWide);
+    mqShort.addEventListener("change", handleShort);
+    return () => {
+      mqMobile.removeEventListener("change", handleMobile);
+      mqWide.removeEventListener("change", handleWide);
+      mqShort.removeEventListener("change", handleShort);
+    };
   }, []);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div style={{ display: "flex", minHeight: "100svh", position: "relative" }}>
+    <div style={{ display: "flex", minHeight: "100dvh", position: "relative" }}>
       {/* Mobile Sidebar Overlay */}
       <div
         onClick={() => setIsSidebarOpen(false)}
@@ -250,8 +267,8 @@ export const Layout: React.FC<LayoutProps> = ({
           backgroundColor: "rgba(0,0,0,0.5)",
           zIndex: "var(--z-overlay)",
           backdropFilter: "blur(4px)",
-          opacity: isMobile && isSidebarOpen ? 1 : 0,
-          pointerEvents: isMobile && isSidebarOpen ? "auto" : "none",
+          opacity: !isWide && isSidebarOpen ? 1 : 0,
+          pointerEvents: !isWide && isSidebarOpen ? "auto" : "none",
           transition: "opacity 0.3s ease",
         }}
       />
@@ -261,7 +278,7 @@ export const Layout: React.FC<LayoutProps> = ({
         className="glass-panel"
         style={{
           width: "var(--sidebar-width)",
-          height: "100svh",
+          height: "100dvh",
           position: "fixed",
           left: isSidebarOpen ? 0 : "calc(var(--sidebar-width) * -1)",
           top: 0,
@@ -278,7 +295,7 @@ export const Layout: React.FC<LayoutProps> = ({
       >
         <div
           style={{
-            padding: "24px",
+            padding: isShort ? "12px 16px" : "24px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -307,7 +324,7 @@ export const Layout: React.FC<LayoutProps> = ({
               DSEasy
             </h1>
           </div>
-          {isMobile && (
+          {isSidebarOpen && (
             <button
               onClick={toggleSidebar}
               style={{
@@ -322,7 +339,8 @@ export const Layout: React.FC<LayoutProps> = ({
           )}
         </div>
 
-        <div style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+          <div style={{ maxHeight: "100%", padding: "12px 0", overflowY: "auto" }}>
           {[
             "Dashboard",
             ...(currentUser ? ["Daily Glance"] : []),
@@ -353,16 +371,31 @@ export const Layout: React.FC<LayoutProps> = ({
               active={activeTab === tab}
               onClick={() => {
                 onTabChange(tab);
-                if (isMobile) setIsSidebarOpen(false);
+                if (!isWide) setIsSidebarOpen(false);
               }}
             />
           ))}
+          </div>
+          {/* Scroll hint fade — always rendered, only visible when items overflow */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "32px",
+              background: "linear-gradient(to bottom, transparent, var(--bg-sidebar))",
+              pointerEvents: "none",
+            }}
+          />
         </div>
 
         <div
           style={{
-            padding: "24px",
-            paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
+            padding: isShort ? "10px 16px" : "24px",
+            paddingBottom: isShort
+              ? "calc(10px + env(safe-area-inset-bottom))"
+              : "calc(24px + env(safe-area-inset-bottom))",
             borderTop: "1px solid var(--glass-border)",
           }}
         >
@@ -398,7 +431,7 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Main Content Wrapper */}
       <div
         style={{
-          marginLeft: !isMobile && isSidebarOpen ? "var(--sidebar-width)" : "0",
+          marginLeft: isWide && isSidebarOpen ? "var(--sidebar-width)" : "0",
           flex: 1,
           display: "flex",
           flexDirection: "column",
@@ -426,7 +459,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 border: "none",
                 color: "var(--text-primary)",
                 cursor: "pointer",
-                display: isSidebarOpen && !isMobile ? "none" : "flex",
+                display: "flex",
               }}
             >
               <Menu size={24} />
