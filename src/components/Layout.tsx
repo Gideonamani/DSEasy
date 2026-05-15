@@ -224,8 +224,11 @@ export const Layout: React.FC<LayoutProps> = ({
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
   const getWide = () =>
     typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+  const getShort = () =>
+    typeof window !== "undefined" && window.matchMedia("(max-height: 500px)").matches;
   const [isMobile, setIsMobile] = useState(getMobile);
   const [isWide, setIsWide] = useState(getWide);
+  const [isShort, setIsShort] = useState(getShort);
   // Sidebar open by default only on wide (≥1024px) viewports; collapsed on tablets/phones.
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => getWide());
 
@@ -234,18 +237,20 @@ export const Layout: React.FC<LayoutProps> = ({
   useEffect(() => {
     const mqMobile = window.matchMedia("(max-width: 767px)");
     const mqWide = window.matchMedia("(min-width: 1024px)");
-    const handleMobile = (e: MediaQueryListEvent) => {
-      setIsMobile(e.matches);
-    };
+    const mqShort = window.matchMedia("(max-height: 500px)");
+    const handleMobile = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     const handleWide = (e: MediaQueryListEvent) => {
       setIsWide(e.matches);
       setIsSidebarOpen(e.matches);
     };
+    const handleShort = (e: MediaQueryListEvent) => setIsShort(e.matches);
     mqMobile.addEventListener("change", handleMobile);
     mqWide.addEventListener("change", handleWide);
+    mqShort.addEventListener("change", handleShort);
     return () => {
       mqMobile.removeEventListener("change", handleMobile);
       mqWide.removeEventListener("change", handleWide);
+      mqShort.removeEventListener("change", handleShort);
     };
   }, []);
 
@@ -290,7 +295,7 @@ export const Layout: React.FC<LayoutProps> = ({
       >
         <div
           style={{
-            padding: "24px",
+            padding: isShort ? "12px 16px" : "24px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -334,7 +339,8 @@ export const Layout: React.FC<LayoutProps> = ({
           )}
         </div>
 
-        <div style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+          <div style={{ height: "100%", padding: "12px 0", overflowY: "auto" }}>
           {[
             "Dashboard",
             ...(currentUser ? ["Daily Glance"] : []),
@@ -369,12 +375,27 @@ export const Layout: React.FC<LayoutProps> = ({
               }}
             />
           ))}
+          </div>
+          {/* Scroll hint fade — always rendered, only visible when items overflow */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "32px",
+              background: "linear-gradient(to bottom, transparent, var(--bg-sidebar))",
+              pointerEvents: "none",
+            }}
+          />
         </div>
 
         <div
           style={{
-            padding: "24px",
-            paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
+            padding: isShort ? "10px 16px" : "24px",
+            paddingBottom: isShort
+              ? "calc(10px + env(safe-area-inset-bottom))"
+              : "calc(24px + env(safe-area-inset-bottom))",
             borderTop: "1px solid var(--glass-border)",
           }}
         >
