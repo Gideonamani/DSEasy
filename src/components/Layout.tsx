@@ -340,7 +340,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </div>
 
         <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
-          <div style={{ height: "100%", padding: "12px 0", overflowY: "auto" }}>
+          <div style={{ maxHeight: "100%", padding: "12px 0", overflowY: "auto" }}>
           {[
             "Dashboard",
             ...(currentUser ? ["Daily Glance"] : []),
