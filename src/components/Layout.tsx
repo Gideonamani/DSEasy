@@ -257,7 +257,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div style={{ display: "flex", minHeight: "100svh", position: "relative" }}>
+    <div style={{ display: "flex", minHeight: "100dvh", position: "relative" }}>
       {/* Mobile Sidebar Overlay */}
       <div
         onClick={() => setIsSidebarOpen(false)}
@@ -278,7 +278,7 @@ export const Layout: React.FC<LayoutProps> = ({
         className="glass-panel"
         style={{
           width: "var(--sidebar-width)",
-          height: "100svh",
+          height: "100dvh",
           position: "fixed",
           left: isSidebarOpen ? 0 : "calc(var(--sidebar-width) * -1)",
           top: 0,
