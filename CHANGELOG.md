@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-15
+
+### Added
+
+- **Real User Authentication**: Replaced the hardcoded "Keon Top Trader" placeholder with full Firebase Authentication. Supports email/password sign-up, sign-in, and password reset alongside the existing Google OAuth flow. A new `AuthModal` component handles all auth views in a single overlay. Closes #5.
+- **PWA Push Notifications**: Integrated Firebase Cloud Messaging for browser push notifications on price alerts. Added `useForegroundNotifications` hook and `ForegroundNotifications` component to display in-app toast banners when the app is open in the foreground. Closes #6.
+- **Settings Menu**: Implemented meaningful user-configurable settings — default landing page, notification preferences, and Daily Glance refresh interval. Settings sync to Firestore under `users/{uid}/profile/settings` when authenticated, with `localStorage` fallback for anonymous users. Closes #7.
+- **Skeleton Loaders & Page Transitions**: Added shimmer skeleton placeholders for Dashboard stat cards, MarketTable rows, TickerTrends charts, DerivedAnalytics, CompareTickers, and DailyGlance. Added a fade/slide-up page transition animation on route changes. Eliminates blank-flash and layout shift (CLS) during data hydration. Closes #8.
+
+### Fixed
+
+- **CustomSelect Dropdown Clipping**: Dropdown option lists in Settings were clipped behind sibling section cards due to `backdrop-filter` creating a new CSS stacking context on `.glass-panel`. Fixed by rendering the dropdown list via `createPortal` into `document.body` and positioning it with `getBoundingClientRect`. Closes #30.
+- **Sidebar Responsiveness at Mid-Range Viewports**: At 768–1023 px the sidebar was always open with no way to collapse it, clipping dashboard card content. Introduced a `1024 px` wide breakpoint — sidebar now defaults to closed on tablets and can be toggled at any viewport width via a always-visible hamburger button. Reduced stats-grid and charts-grid `minmax` minimums to prevent overflow. Closes #33.
+
+---
+
 ## [1.3.0] - 2026-05-09
 
 ### Added
