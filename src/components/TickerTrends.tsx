@@ -12,6 +12,7 @@ import { TrendingUp, Loader2, BarChart3, Activity, DollarSign, Info, Calendar, B
 import { SkeletonTrendCard, SkeletonMiniStat } from "./Skeleton";
 import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
+import { CustomSelect } from "./CustomSelect";
 import { getCommonChartOptions } from "../utils/chartTheme";
 import type {
   ChartOptions,
@@ -810,25 +811,16 @@ export const TickerTrends: React.FC = () => {
 
              <div className="glass-panel" style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 16px", borderRadius: "12px" }}>
               <TrendingUp size={18} color="var(--text-secondary)" />
-              <select
+              <CustomSelect
                 value={currentSymbol}
-                onChange={(e) => handleSymbolChange(e.target.value)}
-                className="date-select"
-                disabled={loadingData}
-                style={{ minWidth: "120px", background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none' }}
-              >
-                {/* If the current selected symbol isn't in the list yet (optimistic), show it anyway */}
-                {currentSymbol && !symbols.includes(currentSymbol) && (
-                     <option key={currentSymbol} value={currentSymbol} style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}>
-                        {currentSymbol}
-                     </option>
-                )}
-                {symbols.map((symbol) => (
-                  <option key={symbol} value={symbol} style={{ background: "var(--bg-elevated)", color: "var(--text-primary)" }}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  ...(currentSymbol && !symbols.includes(currentSymbol)
+                    ? [{ label: currentSymbol, value: currentSymbol }]
+                    : []),
+                  ...symbols.map((s) => ({ label: s, value: s })),
+                ]}
+                onChange={(v) => handleSymbolChange(v as string)}
+              />
               {loadingData && <Loader2 size={16} className="animate-spin" />}
             </div>
         </div>
