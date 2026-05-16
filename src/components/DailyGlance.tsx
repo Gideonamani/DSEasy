@@ -5,9 +5,9 @@ import {
   useMarketIntel,
   type MarketWatchStock,
 } from "../hooks/useMarketWatch";
+import { useMarketWatchDates } from "../hooks/useMarketQuery";
 
 type StockWithSymbol = MarketWatchStock & { symbol: string };
-import { useMarketWatchDates } from "../hooks/useMarketQuery";
 import { DatePicker } from "./DatePicker";
 import { StatCard } from "./StatCard";
 import {

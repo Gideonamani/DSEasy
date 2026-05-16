@@ -1,6 +1,4 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement, type ChartOptions, type ChartType } from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement);
+import { type ChartOptions, type ChartType } from 'chart.js';
 
 export interface ChartTheme {
     isLight: boolean;
