@@ -45,55 +45,47 @@ const parseSheetDate = (sheetName: string): Date | null => {
   return new Date(year, months[monthStr], day);
 };
 
+// Shape of the config/app Firestore document
+interface AppConfig {
+  availableDates?: string[];
+  marketWatchDates?: string[];
+}
+
+const fetchAppConfig = async (): Promise<AppConfig | null> => {
+  const snapshot = await getDoc(doc(db, "config", "app"));
+  if (!snapshot.exists()) return null;
+  return snapshot.data() as AppConfig;
+};
+
+const toSortedMarketDates = (raw: string[] | undefined): MarketDate[] => {
+  const dates: MarketDate[] = (raw ?? []).map((d) => ({
+    sheetName: d,
+    date: parseSheetDate(d),
+  }));
+  dates.sort((a, b) => {
+    const dateA = a.date ? a.date.getTime() : 0;
+    const dateB = b.date ? b.date.getTime() : 0;
+    return dateB - dateA;
+  });
+  return dates;
+};
+
 // Fetch available dates from config/app
 export const useMarketDates = () => {
-  return useQuery<MarketDate[]>({
-    queryKey: ["marketDates"],
-    queryFn: async () => {
-      const docRef = doc(db, "config", "app");
-      const snapshot = await getDoc(docRef);
-
-      if (!snapshot.exists()) return [];
-
-      const data = snapshot.data() as { availableDates?: string[] };
-      const dates: MarketDate[] = (data.availableDates || []).map((d) => ({
-        sheetName: d,
-        date: parseSheetDate(d),
-      }));
-
-      dates.sort((a, b) => {
-        const dateA = a.date ? a.date.getTime() : 0;
-        const dateB = b.date ? b.date.getTime() : 0;
-        return dateB - dateA;
-      });
-      return dates;
-    },
+  return useQuery<AppConfig | null, Error, MarketDate[]>({
+    queryKey: ["appConfig"],
+    queryFn: fetchAppConfig,
+    select: (config) => toSortedMarketDates(config?.availableDates),
   });
 };
 
-// Fetch available Market Watch dates from config/app
+// Shares queryKey with useMarketDates — React Query deduplicates the network
+// request; select runs client-side against the same cached snapshot.
 export const useMarketWatchDates = () => {
-  return useQuery<MarketDate[]>({
-    queryKey: ["marketWatchDates"],
-    queryFn: async () => {
-      const docRef = doc(db, "config", "app");
-      const snapshot = await getDoc(docRef);
-
-      if (!snapshot.exists()) return [];
-
-      const data = snapshot.data() as { marketWatchDates?: string[] };
-      const dates: MarketDate[] = (data.marketWatchDates || []).map((d) => ({
-        sheetName: d,
-        date: parseSheetDate(d),
-      }));
-
-      dates.sort((a, b) => {
-        const dateA = a.date ? a.date.getTime() : 0;
-        const dateB = b.date ? b.date.getTime() : 0;
-        return dateB - dateA;
-      });
-      return dates;
-    },
+  return useQuery<AppConfig | null, Error, MarketDate[]>({
+    queryKey: ["appConfig"],
+    queryFn: fetchAppConfig,
+    select: (config) => toSortedMarketDates(config?.marketWatchDates),
   });
 };
 
