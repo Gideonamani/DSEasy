@@ -14,5 +14,7 @@ export const METRIC_EXPLANATIONS = {
   turnoverMcap: "Velocity. % of company changing hands. High = 'hot' stock/repricing. <0.1% = dormant/insider-held.",
   volDeal: "Avg trade size. High = Institutional/Smart Money. Low = Retail/Noise Traders.",
   turnoverDeal: "Avg trade value. Helps identify if big money is moving the stock or just small retail orders.",
-  changeVol: "Amihud Illiquidity Proxy. Price impact measure. High = Thin market (small vol moves price). Low = Deep market (resilient)."
-};
+  changeVol: "Amihud Illiquidity Proxy. Price impact measure. High = Thin market (small vol moves price). Low = Deep market (resilient).",
+} as const;
+
+export type MetricKey = keyof typeof METRIC_EXPLANATIONS;

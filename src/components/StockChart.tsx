@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { getCommonChartOptions, getChartTheme } from '../utils/chartTheme';
 import { StockData } from '../hooks/useMarketQuery';
+import type { ChartOptions } from 'chart.js';
 
 export interface StockChartProps {
   data: StockData[];
@@ -11,7 +12,7 @@ export interface StockChartProps {
 
 export const PriceChangeChart: React.FC<StockChartProps> = ({ data }) => {
     const { settings } = useSettings();
-    const commonOptions = getCommonChartOptions(settings.theme);
+    const commonOptions = getCommonChartOptions<"bar">(settings.theme);
 
     // Top 10 by absolute change
     const sortedData = useMemo(() => {
@@ -72,16 +73,17 @@ export const TurnoverChart: React.FC<StockChartProps> = ({ data }) => {
     const { settings } = useSettings();
     const { textColorHex } = getChartTheme(settings.theme);
 
-    const doughnutOptions = {
-        ...getCommonChartOptions(settings.theme),
-        scales: {}, // No scales for doughnut
+    const baseOptions = getCommonChartOptions<"doughnut">(settings.theme);
+    const doughnutOptions: ChartOptions<"doughnut"> = {
+        ...baseOptions,
+        scales: {},
         cutout: '70%',
         plugins: {
             legend: {
                 position: 'right',
                 labels: { color: textColorHex, padding: 20, font: { family: "'Inter', sans-serif", size: 12 } }
             },
-            tooltip: getCommonChartOptions(settings.theme).plugins.tooltip
+            tooltip: baseOptions.plugins?.tooltip,
         }
     };
 

@@ -14,7 +14,7 @@ export interface MarketTableProps {
 export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
-    const [sortConfig, setSortConfig] = useState<{ key: string; direction: string }>({ key: 'pctChange', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: keyof StockData; direction: "asc" | "desc" }>({ key: 'pctChange', direction: 'desc' });
     const [searchTerm, setSearchTerm] = useState('');
 
     const sortedData = useMemo(() => {
@@ -27,8 +27,10 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false 
         }
 
         sortableData.sort((a, b) => {
-            const aVal = (a as any)[sortConfig.key] || 0;
-            const bVal = (b as any)[sortConfig.key] || 0;
+            const aRaw = a[sortConfig.key];
+            const bRaw = b[sortConfig.key];
+            const aVal = typeof aRaw === "number" ? aRaw : typeof aRaw === "string" ? aRaw : 0;
+            const bVal = typeof bRaw === "number" ? bRaw : typeof bRaw === "string" ? bRaw : 0;
 
             if (aVal < bVal) {
                 return sortConfig.direction === 'asc' ? -1 : 1;
@@ -41,15 +43,13 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false 
         return sortableData;
     }, [data, sortConfig, searchTerm]);
 
-    const requestSort = (key: string): void => {
-        let direction = 'desc';
-        if (sortConfig.key === key && sortConfig.direction === 'desc') {
-            direction = 'asc';
-        }
+    const requestSort = (key: keyof StockData): void => {
+        const direction: "asc" | "desc" =
+            sortConfig.key === key && sortConfig.direction === "desc" ? "asc" : "desc";
         setSortConfig({ key, direction });
     };
 
-    const getSortIcon = (key: string): React.ReactElement => {
+    const getSortIcon = (key: keyof StockData): React.ReactElement => {
         if (sortConfig.key !== key) return <span style={{ opacity: 0.3 }}>⇅</span>;
         return sortConfig.direction === 'asc' ? <span>↑</span> : <span>↓</span>;
     };
@@ -180,8 +180,8 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false 
                                     </span>
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{row.close.toLocaleString()}</td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{row.high.toLocaleString()}</td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{row.low.toLocaleString()}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{(row.high ?? 0).toLocaleString()}</td>
+                                <td style={{...tdStyle, textAlign: 'right'}}>{(row.low ?? 0).toLocaleString()}</td>
                                 <td style={{...tdStyle, textAlign: 'right', color: row.change > 0 ? 'var(--accent-success)' : row.change < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)'}}>
                                     {row.change > 0 ? '+' : ''}{formatLargeNumber(row.change)}
                                 </td>

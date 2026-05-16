@@ -7,6 +7,18 @@ import { formatLargeNumber } from "../utils/formatters";
 import { useSettings } from "../contexts/SettingsContext";
 import { getCommonChartOptions, getChartTheme } from "../utils/chartTheme";
 import { StockData, MarketDate } from "../hooks/useMarketQuery";
+import type { ChartOptions, TooltipItem } from "chart.js";
+
+type StockNumericKey = {
+  [K in keyof StockData]-?: NonNullable<StockData[K]> extends number ? K : never;
+}[keyof StockData];
+
+interface ScatterPoint {
+  x: number;
+  y: number;
+  symbol: string;
+  mcap?: number;
+}
 
 interface AnalyticsCardProps {
   title: string;
@@ -58,7 +70,7 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({ title, icon, children, su
 
 interface RankingTableProps {
   data: StockData[];
-  valueKey: string;
+  valueKey: StockNumericKey;
   label: string;
   formatter?: (v: number) => string;
 }
@@ -72,8 +84,11 @@ const RankingTable: React.FC<RankingTableProps> = ({
 }) => {
   const sorted = useMemo(() => {
     return [...data]
-      .filter((d) => (d as any)[valueKey] && (d as any)[valueKey] !== 0)
-      .sort((a, b) => (b as any)[valueKey] - (a as any)[valueKey])
+      .filter((d) => {
+        const v = d[valueKey];
+        return typeof v === "number" && v !== 0;
+      })
+      .sort((a, b) => (b[valueKey] ?? 0) - (a[valueKey] ?? 0))
       .slice(0, 10);
   }, [data, valueKey]);
 
@@ -158,7 +173,7 @@ const RankingTable: React.FC<RankingTableProps> = ({
                   color: "var(--accent-primary)",
                 }}
               >
-                {formatter((item as any)[valueKey])}
+                {formatter(item[valueKey] ?? 0)}
               </td>
             </tr>
           ))}
@@ -189,7 +204,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   onDateChange 
 }) => {
   const { settings } = useSettings();
-  const themeOptions = getCommonChartOptions(settings.theme);
+  const themeOptions = getCommonChartOptions<"line">(settings.theme);
+  const themePlugins = themeOptions.plugins ?? {};
+  const themeScales = themeOptions.scales ?? {};
   const { textColorHex } = getChartTheme(settings.theme);
   const isDataEmpty = !loadingData && data.length === 0;
   
@@ -197,8 +214,8 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   // Volatility Chart: High/Low Spread
   const volatilityData = useMemo(() => {
     const sorted = [...data]
-      .filter((d) => d.highLowSpread && d.highLowSpread > 0)
-      .sort((a, b) => b.highLowSpread! - a.highLowSpread!)
+      .filter((d) => d.spread && d.spread > 0)
+      .sort((a, b) => b.spread! - a.spread!)
       .slice(0, 10);
 
     return {
@@ -206,7 +223,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
       datasets: [
         {
           label: "High/Low Spread (%)",
-          data: sorted.map((d) => d.highLowSpread! * 100),
+          data: sorted.map((d) => d.spread! * 100),
           backgroundColor: sorted.map(
             (_, i) => `hsla(${280 - i * 20}, 70%, 60%, 0.8)`,
           ),
@@ -219,9 +236,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   // Bid/Offer Ratio Chart
   const bidOfferData = useMemo(() => {
     const filtered = [...data]
-      .filter((d) => d.bidOfferRatio && d.bidOfferRatio !== 0)
+      .filter((d) => d.bidOffer && d.bidOffer !== 0)
       .sort(
-        (a, b) => Math.abs(b.bidOfferRatio! - 1) - Math.abs(a.bidOfferRatio! - 1),
+        (a, b) => Math.abs(b.bidOffer! - 1) - Math.abs(a.bidOffer! - 1),
       )
       .slice(0, 10);
 
@@ -230,9 +247,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
       datasets: [
         {
           label: "Bid/Offer Ratio",
-          data: filtered.map((d) => d.bidOfferRatio),
+          data: filtered.map((d) => d.bidOffer),
           backgroundColor: filtered.map((d) =>
-            d.bidOfferRatio! > 1
+            d.bidOffer! > 1
               ? "rgba(16, 185, 129, 0.8)"
               : "rgba(239, 68, 68, 0.8)",
           ),
@@ -245,17 +262,17 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   // Market Share: Turnover % Daily (Doughnut)
   const marketShareData = useMemo(() => {
     const sorted = [...data]
-      .filter((d) => d.turnoverPctDaily && d.turnoverPctDaily > 0)
-      .sort((a, b) => b.turnoverPctDaily! - a.turnoverPctDaily!)
+      .filter((d) => d.turnoverPct && d.turnoverPct > 0)
+      .sort((a, b) => b.turnoverPct! - a.turnoverPct!)
       .slice(0, 8);
 
     const othersTotal = data
-      .filter((d) => !sorted.includes(d) && d.turnoverPctDaily)
-      .reduce((sum, d) => sum + (d.turnoverPctDaily ?? 0), 0);
+      .filter((d) => !sorted.includes(d) && d.turnoverPct)
+      .reduce((sum, d) => sum + (d.turnoverPct ?? 0), 0);
 
     const labels = [...sorted.map((d) => d.symbol), "Others"];
     const values = [
-      ...sorted.map((d) => d.turnoverPctDaily! * 100),
+      ...sorted.map((d) => d.turnoverPct! * 100),
       othersTotal * 100,
     ];
 
@@ -285,7 +302,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
 
   // 1. Risk vs Return (Bubble plot) - Volatility vs Change, sized by MCAP
   const riskReturnBubbleData = useMemo(() => {
-    const filtered = data.filter(d => d.highLowSpread && (d.mcap ?? 0) > 0);
+    const filtered = data.filter(d => d.spread && (d.mcap ?? 0) > 0);
     // Calculate min/max for better scaling
     const mcaps = filtered.map(d => d.mcap ?? 0);
     const minMcap = Math.min(...mcaps);
@@ -299,7 +316,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
           const normalized = ((d.mcap ?? 0) - minMcap) / (maxMcap - minMcap || 1);
           const bubbleSize = 8 + Math.pow(normalized, 0.5) * 40; // Range: 8-48px
           return {
-            x: d.highLowSpread! * 100, // Volatility as percentage
+            x: d.spread! * 100, // Volatility as percentage
             y: d.change, // Price change in TZS
             r: bubbleSize,
             symbol: d.symbol,
@@ -342,13 +359,13 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
 
   // 3. Vol/Deal vs Turnover/Deal
   const tradePatternData = useMemo(() => {
-    const filtered = data.filter(d => (d.volPerDeal ?? 0) > 0 && (d.turnoverPerDeal ?? 0) > 0);
+    const filtered = data.filter(d => (d.volDeal ?? 0) > 0 && (d.turnoverDeal ?? 0) > 0);
     return {
       datasets: [{
         label: 'Stocks',
         data: filtered.map(d => ({
-          x: d.volPerDeal,
-          y: (d.turnoverPerDeal ?? 0) / 1000000, // In millions
+          x: d.volDeal,
+          y: (d.turnoverDeal ?? 0) / 1000000, // In millions
           symbol: d.symbol,
         })),
         backgroundColor: 'rgba(99, 102, 241, 0.7)',
@@ -359,12 +376,12 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
 
   // 4. Bid/Offer Ratio vs Change
   const pressureOutcomeData = useMemo(() => {
-    const filtered = data.filter(d => d.bidOfferRatio && d.bidOfferRatio !== 0);
+    const filtered = data.filter(d => d.bidOffer && d.bidOffer !== 0);
     return {
       datasets: [{
         label: 'Stocks',
         data: filtered.map(d => ({
-          x: d.bidOfferRatio,
+          x: d.bidOffer,
           y: d.change,
           symbol: d.symbol,
         })),
@@ -379,12 +396,12 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
 
   // 5. High/Low Spread vs Turnover
   const volatilityActivityData = useMemo(() => {
-    const filtered = data.filter(d => d.highLowSpread && (d.turnover ?? 0) > 0);
+    const filtered = data.filter(d => d.spread && (d.turnover ?? 0) > 0);
     return {
       datasets: [{
         label: 'Stocks',
         data: filtered.map(d => ({
-          x: d.highLowSpread! * 100, // Percentage
+          x: d.spread! * 100, // Percentage
           y: (d.turnover ?? 0) / 1000000, // In millions
           symbol: d.symbol,
         })),
@@ -399,9 +416,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
     scales: {},
     cutout: "65%",
     plugins: {
-        ...themeOptions.plugins,
+        ...themePlugins,
         legend: {
-            ...themeOptions.plugins.legend,
+            ...themePlugins.legend,
             position: "right",
             labels: {
               color: textColorHex,
@@ -411,9 +428,10 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
             },
         },
         tooltip: {
-            ...themeOptions.plugins.tooltip,
+            ...themePlugins.tooltip,
             callbacks: {
-              label: (ctx: any) => `${ctx.label}: ${ctx.raw.toFixed(2)}%`,
+              label: (ctx: TooltipItem<"doughnut">) =>
+                `${ctx.label}: ${Number(ctx.raw).toFixed(2)}%`,
             },
         }
     }
@@ -423,20 +441,21 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
   const scatterOptions = (xLabel: string, yLabel: string) => ({
     ...themeOptions,
     plugins: {
-      ...themeOptions.plugins,
+      ...themePlugins,
       legend: { display: false },
       tooltip: {
-        ...themeOptions.plugins.tooltip,
+        ...themePlugins.tooltip,
         callbacks: {
-          title: (ctx: any) => ctx[0]?.raw?.symbol || '',
-          label: (ctx: any) => {
+          title: (ctx: TooltipItem<"scatter">[]) =>
+            (ctx[0]?.raw as ScatterPoint | undefined)?.symbol || "",
+          label: (ctx: TooltipItem<"scatter">) => {
+            const raw = ctx.raw as ScatterPoint;
             const lines = [
-              `${xLabel}: ${typeof ctx.raw.x === 'number' ? ctx.raw.x.toLocaleString(undefined, {maximumFractionDigits: 2}) : ctx.raw.x}`,
-              `${yLabel}: ${typeof ctx.raw.y === 'number' ? ctx.raw.y.toLocaleString(undefined, {maximumFractionDigits: 2}) : ctx.raw.y}`,
+              `${xLabel}: ${typeof raw.x === "number" ? raw.x.toLocaleString(undefined, { maximumFractionDigits: 2 }) : raw.x}`,
+              `${yLabel}: ${typeof raw.y === "number" ? raw.y.toLocaleString(undefined, { maximumFractionDigits: 2 }) : raw.y}`,
             ];
-            // Add MCAP if available
-            if (ctx.raw.mcap) {
-              lines.push(`Market Cap: ${formatLargeNumber(ctx.raw.mcap)} TZS`);
+            if (raw.mcap) {
+              lines.push(`Market Cap: ${formatLargeNumber(raw.mcap)} TZS`);
             }
             return lines;
           },
@@ -445,11 +464,11 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
     },
     scales: {
       x: {
-        ...themeOptions.scales.x,
+        ...themeScales.x,
         title: { display: true, text: xLabel, color: textColorHex, font: { size: 12, family: "'Inter', sans-serif" } },
       },
       y: {
-        ...themeOptions.scales.y,
+        ...themeScales.y,
         title: { display: true, text: yLabel, color: textColorHex, font: { size: 12, family: "'Inter', sans-serif" } },
       },
     },
@@ -529,7 +548,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Volatility: High/Low Spread" icon={Activity}>
           <div style={{ height: "280px" }}>
             {volatilityData.labels.length > 0 ? (
-              <Bar data={volatilityData} options={themeOptions} />
+              <Bar data={volatilityData} options={themeOptions as ChartOptions<"bar">} />
             ) : (
               <p
                 style={{
@@ -555,11 +574,11 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
                   scales: {
                     ...themeOptions.scales,
                     x: {
-                      ...themeOptions.scales.x,
+                      ...themeScales.x,
                       min: 0,
                     },
                   },
-                }}
+                } as ChartOptions<"bar">}
               />
             ) : (
               <p
@@ -592,7 +611,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Market Share: Turnover %" icon={PieChart}>
           <div style={{ height: "280px" }}>
             {marketShareData.labels.length > 0 ? (
-              <Doughnut data={marketShareData} options={doughnutOptions} />
+              <Doughnut data={marketShareData} options={doughnutOptions as ChartOptions<"doughnut">} />
             ) : (
               <p
                 style={{
@@ -610,7 +629,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Liquidity: Turnover / MCAP" icon={Zap}>
           <RankingTable
             data={data}
-            valueKey="turnoverMcapRatio"
+            valueKey="turnoverMcap"
             label="Ratio"
             formatter={(v) => (v * 100).toFixed(4) + "%"}
           />
@@ -631,9 +650,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {riskReturnBubbleData.datasets[0].data.length > 0 ? (
-              <Bubble 
-                data={riskReturnBubbleData} 
-                options={scatterOptions("Volatility: High/Low Spread (%)", "Price Change (TZS)")} 
+              <Bubble
+                data={riskReturnBubbleData}
+                options={scatterOptions("Volatility: High/Low Spread (%)", "Price Change (TZS)") as unknown as ChartOptions<"bubble">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -650,9 +669,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {volumeChangeData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={volumeChangeData} 
-                options={scatterOptions("Volume (Shares)", "Change (TZS)")} 
+              <Scatter
+                data={volumeChangeData}
+                options={scatterOptions("Volume (Shares)", "Change (TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -672,9 +691,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {tradePatternData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={tradePatternData} 
-                options={scatterOptions("Vol/Deal (Shares)", "Turnover/Deal (M TZS)")} 
+              <Scatter
+                data={tradePatternData}
+                options={scatterOptions("Vol/Deal (Shares)", "Turnover/Deal (M TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -691,9 +710,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {pressureOutcomeData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={pressureOutcomeData} 
-                options={scatterOptions("Bid/Offer Ratio", "Change (TZS)")} 
+              <Scatter
+                data={pressureOutcomeData}
+                options={scatterOptions("Bid/Offer Ratio", "Change (TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -713,9 +732,9 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         >
           <div style={{ height: "320px" }}>
             {volatilityActivityData.datasets[0].data.length > 0 ? (
-              <Scatter 
-                data={volatilityActivityData} 
-                options={scatterOptions("High/Low Spread (%)", "Turnover (M TZS)")} 
+              <Scatter
+                data={volatilityActivityData}
+                options={scatterOptions("High/Low Spread (%)", "Turnover (M TZS)") as unknown as ChartOptions<"scatter">}
               />
             ) : (
               <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "100px" }}>
@@ -735,7 +754,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Trade Size: Vol/Deal" icon={Activity}>
           <RankingTable
             data={data}
-            valueKey="volPerDeal"
+            valueKey="volDeal"
             label="Shares/Deal"
             formatter={(v) =>
               v.toLocaleString(undefined, { maximumFractionDigits: 0 })
@@ -746,7 +765,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Deal Value: Turnover/Deal" icon={TrendingUp}>
           <RankingTable
             data={data}
-            valueKey="turnoverPerDeal"
+            valueKey="turnoverDeal"
             label="TZS/Deal"
             formatter={(v) => formatLargeNumber(v)}
           />
@@ -761,7 +780,7 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
         <AnalyticsCard title="Momentum: Price Change / Volume" icon={Zap}>
           <RankingTable
             data={data}
-            valueKey="changePerVol"
+            valueKey="changeVol"
             label="Change/Vol"
             formatter={(v) => v.toExponential(2)}
           />

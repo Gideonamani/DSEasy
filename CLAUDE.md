@@ -25,11 +25,19 @@ fix(issue-12): correct volume calculation for turnover chart
 
 ## Project Overview
 
-- **Stack**: React + TypeScript, Chart.js (`react-chartjs-2`), Firebase Firestore
-- **Entry**: `src/main.jsx` — registers Chart.js globals via `chartRegistry.js`
+- **Stack**: React + TypeScript (strict, no `allowJs`), Chart.js (`react-chartjs-2`), Firebase Firestore
+- **Entry**: `src/main.tsx` — mounts React root; Chart.js globals registered via `src/lib/chartRegistry.ts`
 - **Main page**: `src/components/TickerTrends.tsx` — historical trends, indicators, overlays
-- **Data**: `src/hooks/useMarketQuery.ts` — Firestore queries (`trends/{symbol}/dailyClosingHistory`)
-- **Charting helpers**: `src/utils/chartTheme.ts`, `src/lib/chartRegistry.js`
+- **Data**: `src/hooks/useMarketQuery.ts` — Firestore queries (`trends/{symbol}/dailyClosingHistory`). The private `toStockData(raw, symbol)` function is the single mapping point from `RawStockDoc` → `StockData`; all field renames happen there and nowhere else.
+
+## Data conventions
+
+**`StockData` field names** — canonical names follow the labels used in `TickerTrends` and `src/data/metricExplanations.ts` (e.g. `spread`, `bidOffer`, `turnoverPct`, `volDeal`). The raw Firestore names (e.g. `highLowSpread`, `bidOfferRatio`) live only in `RawStockDoc`. Never add a duplicate field to `StockData` that maps to the same raw value under a different name.
+
+**`config/app` Firestore document** — `useMarketDates` and `useMarketWatchDates` share `queryKey: ["appConfig"]` so React Query issues one network request regardless of how many components call either hook. If you need a third field from this document, add it to the `AppConfig` interface in `useMarketQuery.ts` and supply a new `select` using the same key — do not create a separate `queryFn`.
+- **Shared types**: `src/types/market.ts` — canonical `RawStockDoc`, `StockData`, `MarketDate`, `MarketIndex`, `TrendDataPoint` — import from here, not from hooks
+- **Env types**: `src/vite-env.d.ts` — declares all `VITE_FIREBASE_*` vars so `import.meta.env.*` is `string` (not `string | undefined`)
+- **Charting helpers**: `src/utils/chartTheme.ts` (generic `getCommonChartOptions<T extends ChartType>`), `src/lib/chartRegistry.ts`
 
 ## Indicators & Overlays Pattern
 

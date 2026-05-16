@@ -5,6 +5,7 @@ import {
   query,
   orderBy,
   limit,
+  type Timestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -32,7 +33,7 @@ export interface MarketWatchSnapshot {
   capturedAt: string;
   stockCount: number;
   stocks: { [symbol: string]: MarketWatchStock };
-  timestamp: any; // Firestore server timestamp
+  timestamp: Timestamp;
 }
 
 export interface MarketIntel {

@@ -25,12 +25,16 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onCh
   const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const inTrigger = containerRef.current?.contains(target);
+      const inDropdown = dropdownRef.current?.contains(target);
+      if (!inTrigger && !inDropdown) {
         setIsOpen(false);
       }
     };
@@ -122,6 +126,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, options, onCh
       {isOpen && dropdownPos &&
         createPortal(
           <div
+            ref={dropdownRef}
             style={{
               position: "absolute",
               top: dropdownPos.top,
