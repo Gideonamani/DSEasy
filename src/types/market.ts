@@ -58,22 +58,15 @@ export interface StockData {
   bidOffer?: number;
   yearHigh?: number;
   yearLow?: number;
-  highLowSpread?: number;
-  bidOfferRatio?: number;
-  turnoverPctDaily?: number;
-  turnoverMcapRatio?: number;
+  spread?: number;
   turnoverMcap?: number;
-  volPerDeal?: number;
-  turnoverPerDeal?: number;
-  changePerVol?: number;
+  volDeal?: number;
+  turnoverDeal?: number;
+  changeVol?: number;
   volume?: number;
   deals?: number;
   turnover?: number;
   mcap?: number;
-  spread?: number;
-  volDeal?: number;
-  turnoverDeal?: number;
-  changeVol?: number;
 }
 
 export interface MarketIndex {
