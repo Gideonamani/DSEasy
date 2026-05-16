@@ -25,11 +25,13 @@ fix(issue-12): correct volume calculation for turnover chart
 
 ## Project Overview
 
-- **Stack**: React + TypeScript, Chart.js (`react-chartjs-2`), Firebase Firestore
-- **Entry**: `src/main.jsx` — registers Chart.js globals via `chartRegistry.js`
+- **Stack**: React + TypeScript (strict, no `allowJs`), Chart.js (`react-chartjs-2`), Firebase Firestore
+- **Entry**: `src/main.tsx` — mounts React root; Chart.js globals registered via `src/lib/chartRegistry.ts`
 - **Main page**: `src/components/TickerTrends.tsx` — historical trends, indicators, overlays
 - **Data**: `src/hooks/useMarketQuery.ts` — Firestore queries (`trends/{symbol}/dailyClosingHistory`)
-- **Charting helpers**: `src/utils/chartTheme.ts`, `src/lib/chartRegistry.js`
+- **Shared types**: `src/types/market.ts` — canonical `RawStockDoc`, `StockData`, `MarketDate`, `MarketIndex`, `TrendDataPoint` — import from here, not from hooks
+- **Env types**: `src/vite-env.d.ts` — declares all `VITE_FIREBASE_*` vars so `import.meta.env.*` is `string` (not `string | undefined`)
+- **Charting helpers**: `src/utils/chartTheme.ts` (generic `getCommonChartOptions<T extends ChartType>`), `src/lib/chartRegistry.ts`
 
 ## Indicators & Overlays Pattern
 
