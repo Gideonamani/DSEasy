@@ -14,6 +14,10 @@ The short description should be kebab-case and summarise what the issue is about
 
 Never push directly to `master`.
 
+## Merging PRs
+
+Always ask before squash-merging a PR, regardless of commit count. Default to a regular merge or rebase unless I confirm squash.
+
 ## Commit Messages
 
 Follow the same prefix convention:
