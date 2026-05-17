@@ -14,6 +14,7 @@ import { METRIC_EXPLANATIONS } from "../data/metricExplanations";
 import { AlertModal } from "./AlertModal";
 import { CustomSelect } from "./CustomSelect";
 import { getCommonChartOptions } from "../utils/chartTheme";
+import { calculateRSI, calculateSMA, calculateRollingVWAP } from "../utils/indicators";
 import type {
   ChartOptions,
   ChartData,
@@ -29,89 +30,6 @@ interface MetricConfig {
   icon: LucideIcon;
   color: string;
 }
-
-const calculateRSI = (closes: (number | null | undefined)[], period = 14): (number | null)[] => {
-  const len = closes.length;
-  if (len < period + 1) return Array(len).fill(null);
-
-  // Seed: compute initial avg gain/loss over first `period` changes
-  let avgGain = 0;
-  let avgLoss = 0;
-  for (let i = 1; i <= period; i++) {
-    const prev = closes[i - 1];
-    const curr = closes[i];
-    if (prev == null || curr == null || isNaN(prev as number) || isNaN(curr as number)) {
-      return Array(len).fill(null);
-    }
-    const change = (curr as number) - (prev as number);
-    if (change >= 0) avgGain += change;
-    else avgLoss += -change;
-  }
-  avgGain /= period;
-  avgLoss /= period;
-
-  const result: (number | null)[] = Array(period).fill(null);
-  const firstRS = avgLoss === 0 ? Infinity : avgGain / avgLoss;
-  result.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + firstRS));
-
-  for (let i = period + 1; i < len; i++) {
-    const prev = closes[i - 1];
-    const curr = closes[i];
-    if (prev == null || curr == null || isNaN(prev as number) || isNaN(curr as number)) {
-      result.push(null);
-      continue;
-    }
-    const change = (curr as number) - (prev as number);
-    avgGain = (avgGain * (period - 1) + Math.max(change, 0)) / period;
-    avgLoss = (avgLoss * (period - 1) + Math.max(-change, 0)) / period;
-    const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
-    result.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + rs));
-  }
-  return result;
-};
-
-const calculateSMA = (closes: (number | null | undefined)[], period: number): (number | null)[] => {
-  const result: (number | null)[] = [];
-  for (let i = 0; i < closes.length; i++) {
-    if (i < period - 1) {
-      result.push(null);
-      continue;
-    }
-    let sum = 0;
-    let valid = true;
-    for (let j = i - period + 1; j <= i; j++) {
-      const v = closes[j];
-      if (v == null || isNaN(v)) {
-        valid = false;
-        break;
-      }
-      sum += v;
-    }
-    result.push(valid ? sum / period : null);
-  }
-  return result;
-};
-
-const calculateRollingVWAP = (
-  closes: (number | null | undefined)[],
-  volumes: (number | null | undefined)[],
-  period: number
-): (number | null)[] => {
-  return closes.map((_, i) => {
-    const start = Math.max(0, i - period + 1);
-    let pv = 0;
-    let v = 0;
-    for (let j = start; j <= i; j++) {
-      const c = closes[j];
-      const vol = volumes[j];
-      if (c != null && !isNaN(c) && vol != null && !isNaN(vol) && vol > 0) {
-        pv += c * vol;
-        v += vol;
-      }
-    }
-    return v > 0 ? pv / v : null;
-  });
-};
 
 interface OverlayConfig {
   key: string;
