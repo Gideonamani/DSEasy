@@ -606,8 +606,8 @@ export const Layout: React.FC<LayoutProps> = ({
 
         {/* Footer */}
         <footer style={{
-          borderTop: "1px solid var(--border)",
-          padding: "12px 32px",
+          borderTop: "1px solid var(--glass-border)",
+          padding: isMobile ? "12px 16px" : "12px 32px",
           textAlign: "center",
           color: "var(--text-secondary)",
           fontSize: "13px",
