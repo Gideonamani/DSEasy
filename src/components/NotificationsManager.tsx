@@ -1,31 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Loader2, Trash2, History, BellRing } from "lucide-react";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  deleteDoc,
-  doc,
-  Timestamp,
-} from "firebase/firestore";
-
-interface AlertDoc {
-  symbol: string;
-  condition: "ABOVE" | "BELOW";
-  targetPrice: number;
-  status: string;
-  userId: string;
-  createdAt?: Timestamp;
-}
-
-interface Alert extends AlertDoc {
-  id: string;
-  created: string;
-}
+import { deleteAlert, subscribeToUserAlerts } from "../services/alerts.service";
+import type { Alert } from "../types/market";
 
 export function NotificationsManager(): React.ReactElement {
   const { currentUser } = useAuth();
@@ -42,29 +19,24 @@ export function NotificationsManager(): React.ReactElement {
     }
 
     setLoading(true);
-    const q = query(
-      collection(db, "alerts"),
-      where("userId", "==", currentUser.uid),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newAlerts: Alert[] = snapshot.docs.map((d) => {
-        const data = d.data() as AlertDoc;
-        return {
+    const unsubscribe = subscribeToUserAlerts(
+      currentUser.uid,
+      (entries) => {
+        const newAlerts: Alert[] = entries.map(({ id, data }) => ({
           ...data,
-          id: d.id,
+          id,
           created: data.createdAt
             ? data.createdAt.toDate().toISOString()
             : new Date().toISOString(),
-        };
-      });
-      setAlerts(newAlerts);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching alerts:", error);
-      setLoading(false);
-    });
+        }));
+        setAlerts(newAlerts);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching alerts:", error);
+        setLoading(false);
+      },
+    );
 
     return () => unsubscribe();
   }, [currentUser]);
@@ -78,9 +50,9 @@ export function NotificationsManager(): React.ReactElement {
     if (!alertId) return;
 
     setDeleting(alertId);
-    
+
     try {
-      await deleteDoc(doc(db, "alerts", alertId));
+      await deleteAlert(alertId);
       // No need to fetchAlerts(), onSnapshot handles it
     } catch (error: unknown) {
       console.error("Error deleting alert:", error);

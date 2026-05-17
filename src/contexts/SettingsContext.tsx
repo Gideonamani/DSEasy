@@ -8,8 +8,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { fetchUserSettings, saveUserSettings } from "../services/settings.service";
 import { useAuth } from "./AuthContext";
 
 export type LandingPage = "/" | "/glance" | "/analytics" | "/trends" | "/compare" | "/notifications";
@@ -97,17 +96,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
-        const ref = doc(db, "users", currentUser.uid, "profile", "settings");
-        const snap = await getDoc(ref);
+        const remote = await fetchUserSettings(currentUser.uid);
         if (cancelled) return;
 
-        if (snap.exists()) {
-          const remote = snap.data() as Partial<Settings>;
+        if (remote) {
           setSettings((prev) => ({ ...DEFAULT_SETTINGS, ...prev, ...remote }));
         } else {
           // First-time login: seed Firestore with whatever the user has locally
-          const local = readLocalSettings();
-          await setDoc(ref, { ...local, updatedAt: serverTimestamp() });
+          await saveUserSettings(currentUser.uid, readLocalSettings());
         }
         loadedUidRef.current = currentUser.uid;
       } catch (err) {
@@ -127,8 +123,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (!currentUser) return;
     if (loadedUidRef.current !== currentUser.uid) return;
 
-    const ref = doc(db, "users", currentUser.uid, "profile", "settings");
-    setDoc(ref, { ...settings, updatedAt: serverTimestamp() }, { merge: true })
+    saveUserSettings(currentUser.uid, settings)
       .catch((err) => console.error("Failed to persist settings:", err));
   }, [settings, currentUser]);
 

@@ -77,3 +77,54 @@ export interface MarketIndex {
   PreviousClose?: number;
   PercentChange?: number;
 }
+
+// Flattened shape stored in marketWatch/{date}/snapshots/{timestamp}.stocks
+export interface MarketWatchStock {
+  marketPrice: number;
+  openingPrice: number;
+  change: number;
+  bestBidPrice: number;
+  bestBidQuantity: number;
+  bestOfferPrice: number;
+  bestOfferQuantity: number;
+  high: number;
+  low: number;
+  volume: number;
+  marketCap: number;
+  minLimit: number;
+  maxLimit: number;
+  totalSharesIssued: number;
+  companyDescription: string;
+  marketSegment: string;
+}
+
+export interface MarketWatchSnapshot {
+  capturedAt: string;
+  stockCount: number;
+  stocks: { [symbol: string]: MarketWatchStock };
+  // Firestore Timestamp; typed loosely here so the shared type does not
+  // require consumers to import firebase.
+  timestamp: { toDate(): Date; seconds: number; nanoseconds: number };
+}
+
+export interface MarketIntel {
+  capturedAt: string;
+  type: "intraday" | "closing" | "pre-open";
+  snapshotSummary: string;
+  trendSummary: string;
+}
+
+export interface AlertDoc {
+  symbol: string;
+  condition: "ABOVE" | "BELOW";
+  targetPrice: number;
+  status: string;
+  userId: string;
+  // Firestore Timestamp shape, typed loosely to avoid leaking firebase types.
+  createdAt?: { toDate(): Date };
+}
+
+export interface Alert extends AlertDoc {
+  id: string;
+  created: string;
+}

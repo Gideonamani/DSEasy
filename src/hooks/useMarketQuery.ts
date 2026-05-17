@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
+import {
+  fetchAppConfig,
+  fetchDailyClosingStocks,
+  fetchMarketIndices,
+  fetchTickerHistory,
+  fetchTickerSymbols,
+  type AppConfig,
+  type RawStockEntry,
+} from "../services/market.service";
 import type {
   MarketDate,
   MarketIndex,
@@ -43,18 +50,6 @@ const parseSheetDate = (sheetName: string): Date | null => {
     jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
   };
   return new Date(year, months[monthStr], day);
-};
-
-// Shape of the config/app Firestore document
-interface AppConfig {
-  availableDates?: string[];
-  marketWatchDates?: string[];
-}
-
-const fetchAppConfig = async (): Promise<AppConfig | null> => {
-  const snapshot = await getDoc(doc(db, "config", "app"));
-  if (!snapshot.exists()) return null;
-  return snapshot.data() as AppConfig;
 };
 
 const toSortedMarketDates = (raw: string[] | undefined): MarketDate[] => {
@@ -131,11 +126,8 @@ export const useMarketData = (date: string) => {
     queryKey: ["marketData", date],
     queryFn: async () => {
       if (!date) return [];
-
-      const colRef = collection(db, "dailyClosing", date, "stocks");
-      const snapshot = await getDocs(colRef);
-
-      return snapshot.docs.map((d) => toStockData(d.data() as RawStockDoc, d.id));
+      const entries: RawStockEntry[] = await fetchDailyClosingStocks(date);
+      return entries.map((entry) => toStockData(entry.data, entry.id));
     },
     enabled: !!date,
     select: (data) => data.filter((item) => item.close > 0 && item.symbol !== "Total"),
@@ -146,11 +138,7 @@ export const useMarketData = (date: string) => {
 export const useTickerSymbols = () => {
   return useQuery<string[]>({
     queryKey: ["tickerSymbols"],
-    queryFn: async () => {
-      const colRef = collection(db, "trends");
-      const snapshot = await getDocs(colRef);
-      return snapshot.docs.map((d) => d.id);
-    },
+    queryFn: fetchTickerSymbols,
   });
 };
 
@@ -162,13 +150,12 @@ export const useTickerHistory = (symbol: string) => {
     queryKey: ["tickerHistory", symbol],
     queryFn: async () => {
       if (!symbol) return [];
-
-      const colRef = collection(db, "trends", symbol, "dailyClosingHistory");
-      const snapshot = await getDocs(colRef);
-
-      return snapshot.docs.map((d) => {
-        const raw = d.data() as RawStockDoc;
-        const result = toStockData({ ...raw, date: raw.date ?? d.id }, symbol);
+      const entries: RawStockEntry[] = await fetchTickerHistory(symbol);
+      return entries.map((entry) => {
+        const result = toStockData(
+          { ...entry.data, date: entry.data.date ?? entry.id },
+          symbol,
+        );
         return result as TrendDataPoint;
       });
     },
@@ -188,14 +175,7 @@ export const useTickerHistory = (symbol: string) => {
 export const useMarketIndices = () => {
   return useQuery<MarketIndex[] | null>({
     queryKey: ["marketIndices"],
-    queryFn: async () => {
-      const docRef = doc(db, "marketIndices", "current");
-      const snapshot = await getDoc(docRef);
-
-      if (!snapshot.exists()) return null;
-      const data = snapshot.data() as { data?: MarketIndex[] };
-      return data.data ?? [];
-    },
+    queryFn: fetchMarketIndices,
     refetchInterval: 1000 * 60 * 15,
   });
 };
