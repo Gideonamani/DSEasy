@@ -2,6 +2,7 @@ import { User } from "firebase/auth";
 import { deleteToken, getToken } from "firebase/messaging";
 import { deleteDoc, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db, messaging } from "../firebase";
+import { FirestorePaths } from "./firestorePaths";
 
 /**
  * Register the current device's FCM token under the user's profile.
@@ -17,9 +18,8 @@ export async function registerFcmToken(user: User): Promise<string | null> {
     const token = await getToken(messaging);
     if (!token) return null;
 
-    const tokenRef = doc(db, "users", user.uid, "fcmTokens", token);
     await setDoc(
-      tokenRef,
+      doc(db, ...FirestorePaths.userFcmToken(user.uid, token)),
       { token, lastRefreshed: serverTimestamp() },
       { merge: true },
     );
@@ -38,7 +38,9 @@ export async function unregisterFcmToken(user: User): Promise<void> {
   try {
     const token = await getToken(messaging).catch(() => null);
     if (token) {
-      await deleteDoc(doc(db, "users", user.uid, "fcmTokens", token)).catch(() => undefined);
+      await deleteDoc(doc(db, ...FirestorePaths.userFcmToken(user.uid, token))).catch(
+        () => undefined,
+      );
       await deleteToken(messaging).catch(() => undefined);
     }
   } catch (err) {

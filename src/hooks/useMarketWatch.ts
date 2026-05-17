@@ -1,47 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  type Timestamp,
-} from "firebase/firestore";
-import { db } from "../firebase";
+  fetchAllSnapshots,
+  fetchLatestSnapshot,
+} from "../services/marketWatch.service";
+import { fetchMarketIntel } from "../services/intel.service";
+import type {
+  MarketIntel,
+  MarketWatchSnapshot,
+  MarketWatchStock,
+} from "../types/market";
 
-// Interface matching the flattened Firestore schema in marketWatch/{date}/snapshots/{timestamp}
-export interface MarketWatchStock {
-  marketPrice: number;
-  openingPrice: number;
-  change: number;
-  bestBidPrice: number;
-  bestBidQuantity: number;
-  bestOfferPrice: number;
-  bestOfferQuantity: number;
-  high: number;
-  low: number;
-  volume: number;
-  marketCap: number;
-  minLimit: number;
-  maxLimit: number;
-  totalSharesIssued: number;
-  companyDescription: string;
-  marketSegment: string;
-}
-
-export interface MarketWatchSnapshot {
-  capturedAt: string;
-  stockCount: number;
-  stocks: { [symbol: string]: MarketWatchStock };
-  timestamp: Timestamp;
-}
-
-export interface MarketIntel {
-  capturedAt: string;
-  type: "intraday" | "closing" | "pre-open";
-  snapshotSummary: string;
-  trendSummary: string;
-}
+export type { MarketIntel, MarketWatchSnapshot, MarketWatchStock };
 
 /**
  * Get today's date string in YYYY-MM-DD format (EAT timezone)
@@ -64,22 +33,7 @@ export function useLatestSnapshot(date?: string) {
 
   return useQuery<MarketWatchSnapshot | null>({
     queryKey: ["marketWatch", "latest", dateStr],
-    queryFn: async () => {
-      // Get the most recent snapshot by ordering capturedAt descending
-      const snapshotsRef = collection(
-        db,
-        "marketWatch",
-        dateStr,
-        "snapshots"
-      );
-      const q = query(snapshotsRef, orderBy("capturedAt", "desc"), limit(1));
-      const snap = await getDocs(q);
-
-      if (snap.empty) return null;
-
-      const doc = snap.docs[0];
-      return doc.data() as MarketWatchSnapshot;
-    },
+    queryFn: () => fetchLatestSnapshot(dateStr),
     refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,
   });
@@ -93,18 +47,7 @@ export function useAllSnapshots(date?: string) {
 
   return useQuery<MarketWatchSnapshot[]>({
     queryKey: ["marketWatch", "all", dateStr],
-    queryFn: async () => {
-      const snapshotsRef = collection(
-        db,
-        "marketWatch",
-        dateStr,
-        "snapshots"
-      );
-      const q = query(snapshotsRef, orderBy("capturedAt", "asc"));
-      const snap = await getDocs(q);
-
-      return snap.docs.map((doc) => doc.data() as MarketWatchSnapshot);
-    },
+    queryFn: () => fetchAllSnapshots(dateStr),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -117,18 +60,7 @@ export function useMarketIntel(date?: string) {
 
   return useQuery<MarketIntel[]>({
     queryKey: ["marketWatch", "intel", dateStr],
-    queryFn: async () => {
-      const intelRef = collection(
-        db,
-        "marketWatch",
-        dateStr,
-        "intel"
-      );
-      const q = query(intelRef, orderBy("capturedAt", "asc"));
-      const snap = await getDocs(q);
-
-      return snap.docs.map((doc) => doc.data() as MarketIntel);
-    },
+    queryFn: () => fetchMarketIntel(dateStr),
     refetchInterval: 5 * 60 * 1000,
     staleTime: 5 * 60 * 1000,
   });

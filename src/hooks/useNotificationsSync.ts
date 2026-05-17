@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useSettings } from "../contexts/SettingsContext";
-import { registerFcmToken, unregisterFcmToken } from "../lib/fcm";
+import { registerFcmToken, unregisterFcmToken } from "../services/fcm.service";
 
 /**
  * Keeps the device's FCM registration in sync with the user's

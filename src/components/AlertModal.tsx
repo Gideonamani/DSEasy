@@ -1,8 +1,7 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { X, Bell, Loader2, CheckCircle } from "lucide-react";
-import { functions } from "../firebase";
-import { httpsCallable } from "firebase/functions";
+import { createAlert } from "../services/alerts.service";
 
 export interface AlertModalProps {
   isOpen: boolean;
@@ -41,18 +40,14 @@ export const AlertModal: React.FC<AlertModalProps> = ({
     setStatus("idle");
 
     try {
-      const createAlert = httpsCallable<
-        { symbol: string; targetPrice: number; condition: "ABOVE" | "BELOW" },
-        { success: boolean; error?: string }
-      >(functions, "createAlert");
       const result = await createAlert({
         symbol,
         targetPrice: parseFloat(targetPrice as string),
         condition,
       });
 
-      if (!result.data.success)
-        throw new Error(result.data.error || "Unknown error");
+      if (!result.success)
+        throw new Error(result.error || "Unknown error");
 
       setStatus("success");
       setTimeout(() => {
