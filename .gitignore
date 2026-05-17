@@ -15,6 +15,9 @@ dist-node
 vite.config.d.ts
 *.local
 
+# Test coverage output
+coverage
+
 # Firebase Functions
 functions/lib
 functions/node_modules

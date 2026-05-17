@@ -14,20 +14,10 @@ import type {
   RawStockDoc,
   StockData,
 } from "../types/market";
+import { normalizeMcap } from "../utils/normalizeMcap";
 
 export type { MarketDate, MarketIndex, StockData } from "../types/market";
-
-// Helper: Parse market cap value (backend ensures uniform full-number scaling)
-export const normalizeMcap = (mcap: unknown): number => {
-  if (mcap === undefined || mcap === null) return 0;
-
-  const parsed =
-    typeof mcap === "string"
-      ? parseFloat(mcap.replace(/,/g, ""))
-      : Number(mcap);
-
-  return isNaN(parsed) ? 0 : parsed;
-};
+export { normalizeMcap } from "../utils/normalizeMcap";
 
 // Helper: Parse "26Jan2026" or "2024-01-26" -> Date Object
 const parseSheetDate = (sheetName: string): Date | null => {
