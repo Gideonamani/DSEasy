@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { auth } from "../firebase";
 import {
   onAuthStateChanged,
@@ -81,7 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading && (
+        <div className="loading-container" style={{ position: "fixed", inset: 0, zIndex: 9999 }}>
+          <Loader2 size={48} className="animate-spin" color="#6366f1" />
+        </div>
+      )}
+      {children}
     </AuthContext.Provider>
   );
 }

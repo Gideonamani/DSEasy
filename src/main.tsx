@@ -18,7 +18,7 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter unstable_useTransitions={false}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <SettingsProvider>
