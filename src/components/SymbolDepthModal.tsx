@@ -84,12 +84,23 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
     typeof window !== "undefined" &&
     window.matchMedia("(max-width: 479px)").matches,
   );
+  const [isNarrowViewport, setIsNarrowViewport] = useState(() =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 599px)").matches,
+  );
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 479px)");
-    const handler = (e: MediaQueryListEvent) => setIsSmallPhone(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    const phoneMq = window.matchMedia("(max-width: 479px)");
+    const narrowMq = window.matchMedia("(max-width: 599px)");
+    const phoneHandler = (e: MediaQueryListEvent) => setIsSmallPhone(e.matches);
+    const narrowHandler = (e: MediaQueryListEvent) =>
+      setIsNarrowViewport(e.matches);
+    phoneMq.addEventListener("change", phoneHandler);
+    narrowMq.addEventListener("change", narrowHandler);
+    return () => {
+      phoneMq.removeEventListener("change", phoneHandler);
+      narrowMq.removeEventListener("change", narrowHandler);
+    };
   }, []);
 
   // Lock body scroll while modal is open
@@ -258,11 +269,13 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         {
           label: "Market Price",
           data: symbolSeries.map((s) => s.stock.marketPrice || null),
-          borderColor: "#6366f1",
-          backgroundColor: "rgba(99, 102, 241, 0.1)",
-          borderDash: [4, 4],
+          borderColor: "#a78bfa",
+          backgroundColor: "rgba(167, 139, 250, 0.1)",
+          borderDash: [8, 6],
+          borderWidth: 2.5,
           tension: 0.25,
-          pointRadius: 0,
+          pointRadius: 2,
+          pointBackgroundColor: "#a78bfa",
           spanGaps: true,
         },
       ],
@@ -521,16 +534,54 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                   marginBottom: 20,
                 }}
               >
-                <StatPill label="Best Bid" value={formatNumber(latest.bestBidPrice)} sub={`${formatLargeNumber(latest.bestBidQuantity)} qty`} accent="var(--accent-success)" />
-                <StatPill label="Best Offer" value={formatNumber(latest.bestOfferPrice)} sub={`${formatLargeNumber(latest.bestOfferQuantity)} qty`} accent="var(--accent-danger)" />
+                <StatPill
+                  label="Best Bid"
+                  value={
+                    latest.bestBidPrice && latest.bestBidQuantity
+                      ? formatNumber(latest.bestBidPrice)
+                      : "—"
+                  }
+                  sub={
+                    latest.bestBidPrice && latest.bestBidQuantity
+                      ? `${formatLargeNumber(latest.bestBidQuantity)} qty`
+                      : "No resting bids"
+                  }
+                  accent={
+                    latest.bestBidPrice && latest.bestBidQuantity
+                      ? "var(--accent-success)"
+                      : undefined
+                  }
+                />
+                <StatPill
+                  label="Best Offer"
+                  value={
+                    latest.bestOfferPrice && latest.bestOfferQuantity
+                      ? formatNumber(latest.bestOfferPrice)
+                      : "—"
+                  }
+                  sub={
+                    latest.bestOfferPrice && latest.bestOfferQuantity
+                      ? `${formatLargeNumber(latest.bestOfferQuantity)} qty`
+                      : "No resting offers"
+                  }
+                  accent={
+                    latest.bestOfferPrice && latest.bestOfferQuantity
+                      ? "var(--accent-danger)"
+                      : undefined
+                  }
+                />
                 <StatPill
                   label="Spread"
                   value={
                     latest.bestBidPrice && latest.bestOfferPrice
                       ? formatNumber(latest.bestOfferPrice - latest.bestBidPrice)
-                      : "-"
+                      : "—"
                   }
-                  sub="Bid → Offer"
+                  sub={
+                    latest.bestBidPrice && latest.bestOfferPrice
+                      ? "Bid → Offer"
+                      : "One side empty"
+                  }
                 />
                 <StatPill
                   label="Day Range"
@@ -560,10 +611,10 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
             <SectionHeader title="Bid / Offer Ladder" />
             <div
               style={{
-                overflowX: "auto",
                 marginBottom: 28,
                 border: "1px solid var(--glass-border)",
                 borderRadius: "var(--radius-md)",
+                overflow: "hidden",
               }}
             >
               <table
@@ -571,7 +622,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                   width: "100%",
                   borderCollapse: "collapse",
                   fontSize: "var(--text-sm)",
-                  minWidth: 480,
+                  tableLayout: "fixed",
                 }}
               >
                 <thead>
@@ -584,11 +635,15 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                       letterSpacing: "0.04em",
                     }}
                   >
-                    <th style={ladderTh}>Bid Qty (last)</th>
-                    <th style={ladderTh}>Bid Samples</th>
+                    <th style={ladderTh}>Bid Qty</th>
+                    {!isNarrowViewport && (
+                      <th style={ladderThSamples}>Bid n</th>
+                    )}
                     <th style={{ ...ladderTh, textAlign: "center" }}>Price</th>
-                    <th style={ladderTh}>Offer Samples</th>
-                    <th style={ladderTh}>Offer Qty (last)</th>
+                    {!isNarrowViewport && (
+                      <th style={ladderThSamples}>Offer n</th>
+                    )}
+                    <th style={ladderTh}>Offer Qty</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -597,6 +652,8 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                       latest && row.bid && latest.bestBidPrice === row.price;
                     const isLatestOffer =
                       latest && row.offer && latest.bestOfferPrice === row.price;
+                    const bidSamples = row.bid ? row.bid.samples : null;
+                    const offerSamples = row.offer ? row.offer.samples : null;
                     return (
                       <tr
                         key={row.price}
@@ -605,6 +662,11 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                         }}
                       >
                         <td
+                          title={
+                            bidSamples
+                              ? `Seen in ${bidSamples} snapshot${bidSamples === 1 ? "" : "s"}`
+                              : undefined
+                          }
                           style={{
                             ...ladderTd,
                             color: row.bid
@@ -615,17 +677,22 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                               : "var(--font-medium)",
                           }}
                         >
-                          {row.bid ? formatNumber(row.bid.lastQty) : "—"}
+                          {row.bid ? (
+                            <>
+                              {formatNumber(row.bid.lastQty)}
+                              {isNarrowViewport && bidSamples && bidSamples > 1 && (
+                                <SamplesBadge n={bidSamples} />
+                              )}
+                            </>
+                          ) : (
+                            "—"
+                          )}
                         </td>
-                        <td
-                          style={{
-                            ...ladderTd,
-                            color: "var(--text-tertiary)",
-                            fontSize: "var(--text-xs)",
-                          }}
-                        >
-                          {row.bid ? row.bid.samples : "—"}
-                        </td>
+                        {!isNarrowViewport && (
+                          <td style={ladderTdSamples}>
+                            {bidSamples ?? "—"}
+                          </td>
+                        )}
                         <td
                           style={{
                             ...ladderTd,
@@ -638,16 +705,17 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                         >
                           {formatNumber(row.price)}
                         </td>
+                        {!isNarrowViewport && (
+                          <td style={ladderTdSamples}>
+                            {offerSamples ?? "—"}
+                          </td>
+                        )}
                         <td
-                          style={{
-                            ...ladderTd,
-                            color: "var(--text-tertiary)",
-                            fontSize: "var(--text-xs)",
-                          }}
-                        >
-                          {row.offer ? row.offer.samples : "—"}
-                        </td>
-                        <td
+                          title={
+                            offerSamples
+                              ? `Seen in ${offerSamples} snapshot${offerSamples === 1 ? "" : "s"}`
+                              : undefined
+                          }
                           style={{
                             ...ladderTd,
                             color: row.offer
@@ -658,7 +726,16 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                               : "var(--font-medium)",
                           }}
                         >
-                          {row.offer ? formatNumber(row.offer.lastQty) : "—"}
+                          {row.offer ? (
+                            <>
+                              {formatNumber(row.offer.lastQty)}
+                              {isNarrowViewport && offerSamples && offerSamples > 1 && (
+                                <SamplesBadge n={offerSamples} />
+                              )}
+                            </>
+                          ) : (
+                            "—"
+                          )}
                         </td>
                       </tr>
                     );
@@ -771,13 +848,41 @@ const EmptyHint: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
+const SamplesBadge: React.FC<{ n: number }> = ({ n }) => (
+  <sup
+    style={{
+      marginLeft: 4,
+      fontSize: 9,
+      color: "var(--text-tertiary)",
+      fontWeight: "var(--font-medium)",
+    }}
+    title={`Seen in ${n} snapshots`}
+  >
+    ×{n}
+  </sup>
+);
+
 const ladderTh: React.CSSProperties = {
   padding: "10px 12px",
   textAlign: "right",
   fontWeight: "var(--font-semibold)",
 };
 
+const ladderThSamples: React.CSSProperties = {
+  padding: "10px 8px",
+  textAlign: "right",
+  fontWeight: "var(--font-semibold)",
+  width: 60,
+};
+
 const ladderTd: React.CSSProperties = {
   padding: "10px 12px",
   textAlign: "right",
+};
+
+const ladderTdSamples: React.CSSProperties = {
+  padding: "10px 8px",
+  textAlign: "right",
+  color: "var(--text-tertiary)",
+  fontSize: "var(--text-xs)",
 };
