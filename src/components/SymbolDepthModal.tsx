@@ -42,6 +42,16 @@ const EAT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
   timeZone: "Africa/Dar_es_Salaam",
 };
 
+type DepthScale = "linear" | "log";
+
+const DEPTH_SCALE_KEY = "dseasy_depth_scale";
+
+const symlog = (x: number): number =>
+  Math.sign(x) * Math.log1p(Math.abs(x));
+
+const symlogInverse = (y: number): number =>
+  Math.sign(y) * (Math.exp(Math.abs(y)) - 1);
+
 function buildLadder(
   series: SymbolSeries[],
   side: "bid" | "offer",
@@ -88,6 +98,17 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
     typeof window !== "undefined" &&
     window.matchMedia("(max-width: 599px)").matches,
   );
+  const [depthScale, setDepthScale] = useState<DepthScale>(() => {
+    if (typeof window === "undefined") return "linear";
+    return window.localStorage.getItem(DEPTH_SCALE_KEY) === "log"
+      ? "log"
+      : "linear";
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DEPTH_SCALE_KEY, depthScale);
+  }, [depthScale]);
 
   useEffect(() => {
     const phoneMq = window.matchMedia("(max-width: 479px)");
@@ -164,17 +185,19 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
   const { textColorHex, fontFamily } = getChartTheme(settings.theme);
 
   // Depth chart: horizontal bars, one row per unique price level
-  // Bid quantity shown as negative (left of zero), offer as positive (right)
+  // Bid quantity shown as negative (left of zero), offer as positive (right).
+  // In log mode each value is symlog-transformed so small queues stay legible
+  // next to a dominant level. Tick + tooltip callbacks invert the transform.
   const depthChartData: ChartData<"bar"> = useMemo(() => {
+    const xform = (qty: number) =>
+      depthScale === "log" ? symlog(qty) : qty;
     const labels = ladderRows.map((r) => formatNumber(r.price));
     return {
       labels,
       datasets: [
         {
           label: "Bid (last qty)",
-          data: ladderRows.map((r) =>
-            r.bid ? -r.bid.lastQty : 0,
-          ),
+          data: ladderRows.map((r) => (r.bid ? xform(-r.bid.lastQty) : 0)),
           backgroundColor: "rgba(16, 185, 129, 0.65)",
           borderColor: "#10b981",
           borderWidth: 1,
@@ -182,9 +205,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         },
         {
           label: "Offer (last qty)",
-          data: ladderRows.map((r) =>
-            r.offer ? r.offer.lastQty : 0,
-          ),
+          data: ladderRows.map((r) => (r.offer ? xform(r.offer.lastQty) : 0)),
           backgroundColor: "rgba(239, 68, 68, 0.65)",
           borderColor: "#ef4444",
           borderWidth: 1,
@@ -192,7 +213,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         },
       ],
     };
-  }, [ladderRows]);
+  }, [ladderRows, depthScale]);
 
   const depthChartOptions: ChartOptions<"bar"> = useMemo(() => ({
     ...baseBarOptions,
@@ -207,8 +228,10 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         ...baseBarOptions.plugins?.tooltip,
         callbacks: {
           label: (ctx) => {
-            const raw = ctx.raw as number;
-            const qty = Math.abs(raw);
+            const transformed = ctx.raw as number;
+            const real =
+              depthScale === "log" ? symlogInverse(transformed) : transformed;
+            const qty = Math.abs(Math.round(real));
             return `${ctx.dataset.label}: ${formatNumber(qty)} shares`;
           },
         },
@@ -219,11 +242,20 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         ...baseBarOptions.scales?.x,
         ticks: {
           ...baseBarOptions.scales?.x?.ticks,
-          callback: (value) => formatLargeNumber(Math.abs(Number(value))),
+          callback: (value) => {
+            const real =
+              depthScale === "log"
+                ? symlogInverse(Number(value))
+                : Number(value);
+            return formatLargeNumber(Math.round(Math.abs(real)));
+          },
         },
         title: {
           display: true,
-          text: "Queue size (bid ◄ │ ► offer)",
+          text:
+            depthScale === "log"
+              ? "Queue size — log scale (bid ◄ │ ► offer)"
+              : "Queue size (bid ◄ │ ► offer)",
           color: textColorHex,
           font: { family: fontFamily, size: 11 },
         },
@@ -238,7 +270,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         },
       },
     },
-  }), [baseBarOptions, textColorHex, fontFamily]);
+  }), [baseBarOptions, textColorHex, fontFamily, depthScale]);
 
   // Spread timeline
   const spreadChartData: ChartData<"line"> = useMemo(() => {
@@ -251,8 +283,9 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         {
           label: "Best Bid",
           data: symbolSeries.map((s) => s.stock.bestBidPrice || null),
-          borderColor: "#10b981",
-          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          borderColor: "rgba(16, 185, 129, 0.5)",
+          backgroundColor: "rgba(16, 185, 129, 0.08)",
+          pointBackgroundColor: "rgba(16, 185, 129, 0.85)",
           tension: 0.25,
           pointRadius: 2,
           spanGaps: true,
@@ -260,8 +293,9 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         {
           label: "Best Offer",
           data: symbolSeries.map((s) => s.stock.bestOfferPrice || null),
-          borderColor: "#ef4444",
-          backgroundColor: "rgba(239, 68, 68, 0.1)",
+          borderColor: "rgba(239, 68, 68, 0.5)",
+          backgroundColor: "rgba(239, 68, 68, 0.08)",
+          pointBackgroundColor: "rgba(239, 68, 68, 0.85)",
           tension: 0.25,
           pointRadius: 2,
           spanGaps: true,
@@ -597,7 +631,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
               style={{
                 position: "relative",
                 height: Math.max(220, Math.min(420, ladderRows.length * 28 + 80)),
-                marginBottom: 28,
+                marginBottom: 8,
               }}
             >
               {ladderRows.length > 0 ? (
@@ -606,6 +640,39 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                 <EmptyHint text="No bid/offer activity recorded yet." />
               )}
             </div>
+            {ladderRows.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginBottom: 28,
+                }}
+              >
+                <div
+                  role="group"
+                  aria-label="Depth chart scale"
+                  style={{
+                    display: "inline-flex",
+                    padding: 3,
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: "var(--radius-full)",
+                    gap: 2,
+                  }}
+                >
+                  <ScalePill
+                    label="Linear"
+                    active={depthScale === "linear"}
+                    onClick={() => setDepthScale("linear")}
+                  />
+                  <ScalePill
+                    label="Log"
+                    active={depthScale === "log"}
+                    onClick={() => setDepthScale("log")}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Ladder Table */}
             <SectionHeader title="Bid / Offer Ladder" />
@@ -846,6 +913,31 @@ const EmptyHint: React.FC<{ text: string }> = ({ text }) => (
   >
     {text}
   </div>
+);
+
+const ScalePill: React.FC<{
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}> = ({ label, active, onClick }) => (
+  <button
+    type="button"
+    aria-pressed={active}
+    onClick={onClick}
+    style={{
+      padding: "4px 14px",
+      borderRadius: "var(--radius-full)",
+      border: "none",
+      background: active ? "var(--accent-primary)" : "transparent",
+      color: active ? "white" : "var(--text-secondary)",
+      fontSize: "var(--text-xs)",
+      fontWeight: "var(--font-semibold)",
+      cursor: "pointer",
+      transition: "background 0.15s ease, color 0.15s ease",
+    }}
+  >
+    {label}
+  </button>
 );
 
 const SamplesBadge: React.FC<{ n: number }> = ({ n }) => (
