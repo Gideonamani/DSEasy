@@ -184,6 +184,16 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
   const baseLineOptions = getCommonChartOptions<"line">(settings.theme);
   const { textColorHex, fontFamily } = getChartTheme(settings.theme);
 
+  // Largest queue size across both sides — drives log-mode axis ticks/extent.
+  const maxLadderQty = useMemo(() => {
+    let max = 0;
+    for (const r of ladderRows) {
+      if (r.bid) max = Math.max(max, r.bid.lastQty);
+      if (r.offer) max = Math.max(max, r.offer.lastQty);
+    }
+    return max;
+  }, [ladderRows]);
+
   // Depth chart: horizontal bars, one row per unique price level
   // Bid quantity shown as negative (left of zero), offer as positive (right).
   // In log mode each value is symlog-transformed so small queues stay legible
@@ -240,8 +250,33 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
     scales: {
       x: {
         ...baseBarOptions.scales?.x,
+        ...(depthScale === "log" && maxLadderQty > 0
+          ? (() => {
+              // Pin axis to nice decade ticks (…, 100, 1K, 10K, …) so users
+              // read the log axis as decimal magnitudes instead of the raw
+              // symlog grid (147, 22.02K, etc).
+              const upperDecade = Math.floor(
+                Math.log10(Math.max(maxLadderQty, 10)),
+              );
+              const decades: number[] = [];
+              for (let p = 1; p <= upperDecade; p++) {
+                decades.push(Math.pow(10, p));
+              }
+              const axisExtent = symlog(maxLadderQty) * 1.05;
+              return {
+                min: -axisExtent,
+                max: axisExtent,
+                afterBuildTicks: (axis: { ticks: { value: number }[] }) => {
+                  const pos = decades.map((d) => symlog(d));
+                  const neg = pos.slice().reverse().map((v) => -v);
+                  axis.ticks = [...neg, 0, ...pos].map((value) => ({ value }));
+                },
+              };
+            })()
+          : {}),
         ticks: {
           ...baseBarOptions.scales?.x?.ticks,
+          autoSkip: false,
           callback: (value) => {
             const real =
               depthScale === "log"
@@ -270,7 +305,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         },
       },
     },
-  }), [baseBarOptions, textColorHex, fontFamily, depthScale]);
+  }), [baseBarOptions, textColorHex, fontFamily, depthScale, maxLadderQty]);
 
   // Spread timeline
   const spreadChartData: ChartData<"line"> = useMemo(() => {
