@@ -754,6 +754,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                       latest && row.bid && latest.bestBidPrice === row.price;
                     const isLatestOffer =
                       latest && row.offer && latest.bestOfferPrice === row.price;
+                    const isLiveRow = isLatestBid || isLatestOffer;
                     const bidSamples = row.bid ? row.bid.samples : null;
                     const offerSamples = row.offer ? row.offer.samples : null;
                     return (
@@ -761,13 +762,18 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                         key={row.price}
                         style={{
                           borderTop: "1px solid var(--border-subtle)",
+                          background: isLiveRow
+                            ? "color-mix(in srgb, var(--accent-primary) 7%, transparent)"
+                            : undefined,
                         }}
                       >
                         <td
                           title={
-                            bidSamples
-                              ? `Seen in ${bidSamples} snapshot${bidSamples === 1 ? "" : "s"}`
-                              : undefined
+                            isLatestBid
+                              ? "Current best bid (latest snapshot)"
+                              : bidSamples
+                                ? `Seen in ${bidSamples} snapshot${bidSamples === 1 ? "" : "s"}`
+                                : undefined
                           }
                           style={{
                             ...ladderTd,
@@ -784,6 +790,9 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                               {formatNumber(row.bid.lastQty)}
                               {isNarrowViewport && bidSamples && bidSamples > 1 && (
                                 <SamplesBadge n={bidSamples} />
+                              )}
+                              {isLatestBid && (
+                                <LiveDot color="var(--accent-success)" />
                               )}
                             </>
                           ) : (
@@ -814,9 +823,11 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                         )}
                         <td
                           title={
-                            offerSamples
-                              ? `Seen in ${offerSamples} snapshot${offerSamples === 1 ? "" : "s"}`
-                              : undefined
+                            isLatestOffer
+                              ? "Current best offer (latest snapshot)"
+                              : offerSamples
+                                ? `Seen in ${offerSamples} snapshot${offerSamples === 1 ? "" : "s"}`
+                                : undefined
                           }
                           style={{
                             ...ladderTd,
@@ -830,6 +841,9 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                         >
                           {row.offer ? (
                             <>
+                              {isLatestOffer && (
+                                <LiveDot color="var(--accent-danger)" leading />
+                              )}
                               {formatNumber(row.offer.lastQty)}
                               {isNarrowViewport && offerSamples && offerSamples > 1 && (
                                 <SamplesBadge n={offerSamples} />
@@ -973,6 +987,27 @@ const ScalePill: React.FC<{
   >
     {label}
   </button>
+);
+
+const LiveDot: React.FC<{ color: string; leading?: boolean }> = ({
+  color,
+  leading,
+}) => (
+  <span
+    aria-label="Latest snapshot"
+    title="Latest snapshot — current touch"
+    style={{
+      display: "inline-block",
+      width: 7,
+      height: 7,
+      borderRadius: "50%",
+      background: color,
+      boxShadow: `0 0 6px ${color}`,
+      marginLeft: leading ? 0 : 6,
+      marginRight: leading ? 6 : 0,
+      verticalAlign: "middle",
+    }}
+  />
 );
 
 const SamplesBadge: React.FC<{ n: number }> = ({ n }) => (
