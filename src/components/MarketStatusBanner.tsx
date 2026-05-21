@@ -59,21 +59,12 @@ export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ isDashbo
   if (phase === 'LIVE') {
     if (isDashboard) {
       return (
-        <div style={{
-          padding: "12px 16px",
-          background: "color-mix(in srgb, var(--success-color) 10%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--success-color) 20%, transparent)",
-          borderRadius: "var(--radius-lg)",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: "var(--space-6)"
-        }}>
-          <Clock size={18} color="var(--success-color)" />
-          <p style={{ margin: 0, color: "var(--text-primary)", fontSize: "var(--text-sm)", lineHeight: 1.5 }}>
-            <span style={{ color: "var(--success-color)", fontWeight: "var(--font-bold)" }}>Market OPEN. </span>
-            The Dashboard displays end-of-day official closing numbers. <Link to="/glance" style={{ color: "var(--success-color)", textDecoration: "underline", fontWeight: "var(--font-medium)" }}>Check out the Daily Glance page for live intraday updates.</Link>
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--space-6)", fontSize: "var(--text-sm)" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success-color)", flexShrink: 0, boxShadow: "0 0 6px var(--success-color)" }} />
+          <span style={{ color: "var(--success-color)", fontWeight: "var(--font-semibold)" }}>Market Open.</span>
+          <span style={{ color: "var(--text-secondary)" }}>
+            End-of-day closing numbers shown. <Link to="/glance" style={{ color: "var(--success-color)", textDecoration: "underline" }}>See live intraday updates.</Link>
+          </span>
         </div>
       );
     } else {
@@ -103,6 +94,15 @@ export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ isDashbo
   }
 
   if (phase === 'HOLIDAY') {
+    if (isDashboard) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--space-6)", fontSize: "var(--text-sm)" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--danger-color)", flexShrink: 0 }} />
+          <span style={{ color: "var(--danger-color)", fontWeight: "var(--font-semibold)" }}>Market Closed / Holiday.</span>
+          <span style={{ color: "var(--text-secondary)" }}>No live data for today. Displaying the most recent closing data.</span>
+        </div>
+      );
+    }
     return (
       <div style={{
         padding: "12px 16px",
@@ -126,21 +126,10 @@ export const MarketStatusBanner: React.FC<MarketStatusBannerProps> = ({ isDashbo
   if (phase === 'CLOSED') {
     if (isDashboard) {
       return (
-        <div style={{
-          padding: "12px 16px",
-          background: "color-mix(in srgb, var(--secondary-color) 10%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--secondary-color) 20%, transparent)",
-          borderRadius: "var(--radius-lg)",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: "var(--space-6)"
-        }}>
-          <Clock size={18} color="var(--secondary-color)" />
-          <p style={{ margin: 0, color: "var(--text-primary)", fontSize: "var(--text-sm)", lineHeight: 1.5 }}>
-            <span style={{ color: "var(--secondary-color)", fontWeight: "var(--font-bold)" }}>Market Closed. </span>
-            Displaying the latest official end-of-day closing numbers.
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--space-6)", fontSize: "var(--text-sm)" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--secondary-color)", flexShrink: 0 }} />
+          <span style={{ color: "var(--secondary-color)", fontWeight: "var(--font-semibold)" }}>Market Closed.</span>
+          <span style={{ color: "var(--text-secondary)" }}>Displaying the latest official end-of-day closing numbers.</span>
         </div>
       );
     } else {
