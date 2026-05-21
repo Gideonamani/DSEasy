@@ -53,23 +53,19 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
     <>
       <div className="dashboard-header">
         <div>
-          <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
+          <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-3)" }}>
             Market Overview
           </h2>
-          <p style={{ color: "var(--text-secondary)" }}>
-            Data for{" "}
-            <span style={{ color: "var(--text-primary)", fontWeight: "var(--font-semibold)" }}>
-              {formattedDate}
-            </span>
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>Data for</span>
+            <DatePicker
+              selectedDate={selectedDate}
+              availableDates={availableDates}
+              loadingData={loadingData}
+              onChange={onDateChange}
+            />
+          </div>
         </div>
-
-        <DatePicker
-          selectedDate={selectedDate}
-          availableDates={availableDates}
-          loadingData={loadingData}
-          onChange={onDateChange}
-        />
       </div>
 
       <MarketStatusBanner
