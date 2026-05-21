@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   useLatestSnapshot,
@@ -10,6 +10,7 @@ import { useMarketWatchDates } from "../hooks/useMarketQuery";
 type StockWithSymbol = MarketWatchStock & { symbol: string };
 import { DatePicker } from "./DatePicker";
 import { StatCard } from "./StatCard";
+import { SymbolDepthModal } from "./SymbolDepthModal";
 import {
   TrendingUp,
   TrendingDown,
@@ -52,6 +53,7 @@ export const DailyGlance: React.FC = () => {
 
   const { data: snapshot, isLoading: isLoadingSnapshot, error } = useLatestSnapshot(effectiveDate);
   const { data: intelHistory, error: intelError } = useMarketIntel(effectiveDate);
+  const [depthSymbol, setDepthSymbol] = useState<string | null>(null);
 
   const isLoading = isLoadingSnapshot || loadingDates;
 
@@ -427,9 +429,28 @@ export const DailyGlance: React.FC = () => {
               boxSizing: "border-box",
             }}
           >
-            <h3 className="section-title" style={{ marginBottom: 16 }}>
-              Order Book Heatmap
-            </h3>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              <h3 className="section-title" style={{ margin: 0 }}>
+                Order Book Heatmap
+              </h3>
+              <span
+                style={{
+                  fontSize: "var(--text-xs)",
+                  color: "var(--text-tertiary)",
+                }}
+              >
+                Tap any symbol for Level 2 depth
+              </span>
+            </div>
             <div
               style={{
                 display: "grid",
@@ -483,8 +504,11 @@ export const DailyGlance: React.FC = () => {
                   }
 
                   return (
-                    <div
+                    <button
                       key={s.symbol}
+                      type="button"
+                      onClick={() => setDepthSymbol(s.symbol)}
+                      title={`Open Level 2 depth view for ${s.symbol}`}
                       style={{
                         padding: "12px 16px",
                         background: heatColor,
@@ -495,6 +519,18 @@ export const DailyGlance: React.FC = () => {
                         alignItems: "center",
                         justifyContent: "center",
                         boxSizing: "border-box",
+                        cursor: "pointer",
+                        font: "inherit",
+                        transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow =
+                          "0 4px 12px color-mix(in srgb, var(--accent-primary) 25%, transparent)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "";
+                        e.currentTarget.style.boxShadow = "";
                       }}
                     >
                       <span
@@ -515,7 +551,7 @@ export const DailyGlance: React.FC = () => {
                         {formatLargeNumber(s.bestBidQuantity)} B /{" "}
                         {formatLargeNumber(s.bestOfferQuantity)} S
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
             </div>
@@ -1045,6 +1081,12 @@ export const DailyGlance: React.FC = () => {
           </div>
         </>
       )}
+
+      <SymbolDepthModal
+        symbol={depthSymbol}
+        date={effectiveDate}
+        onClose={() => setDepthSymbol(null)}
+      />
     </div>
   );
 };
