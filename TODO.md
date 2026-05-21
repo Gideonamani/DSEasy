@@ -9,6 +9,7 @@
 
 ## User Experience & Features
 
+- [ ] **Company Logos**: Download and display company logos next to ticker symbols across the web app.
 - [ ] **Better Loading Experience**: Improve initial load states and transitions.
 - [ ] **User Authentication**: Implement real user login and remove the placeholder "Keon Top Trader".
 - [ ] **PWA & Notifications**: Investigate and implement Progressive Web App capabilities and push notifications.

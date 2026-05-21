@@ -5,6 +5,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { formatLargeNumber } from "../utils/formatters";
 import { StockData } from '../hooks/useMarketQuery';
 import { SkeletonTableRows } from './Skeleton';
+import { TickerLogoLabel } from './TickerLogo';
 
 export interface MarketTableProps {
   data: StockData[];
@@ -160,24 +161,26 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false 
                                     borderRight: '1px solid var(--glass-border)',
                                     boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)'
                                 }}>
-                                    <span 
-                                        onClick={() => navigate(`/trends/${row.symbol}`)}
-                                        style={{ 
-                                            cursor: 'pointer', 
-                                            color: 'var(--color-primary-500)',
-                                            transition: 'color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.textDecoration = 'underline';
-                                            e.currentTarget.style.color = 'var(--color-primary-600)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.textDecoration = 'none';
-                                            e.currentTarget.style.color = 'var(--color-primary-500)';
-                                        }}
-                                    >
-                                        {row.symbol}
-                                    </span>
+                                    <TickerLogoLabel symbol={row.symbol} size={28}>
+                                        <span
+                                            onClick={() => navigate(`/trends/${row.symbol}`)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                color: 'var(--color-primary-500)',
+                                                transition: 'color 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.textDecoration = 'underline';
+                                                e.currentTarget.style.color = 'var(--color-primary-600)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.textDecoration = 'none';
+                                                e.currentTarget.style.color = 'var(--color-primary-500)';
+                                            }}
+                                        >
+                                            {row.symbol}
+                                        </span>
+                                    </TickerLogoLabel>
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{row.close.toLocaleString()}</td>
                                 <td style={{...tdStyle, textAlign: 'right'}}>{(row.high ?? 0).toLocaleString()}</td>

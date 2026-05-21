@@ -8,6 +8,7 @@ import type { ChartOptions, TooltipItem } from "chart.js";
 import { CustomSelect } from "./CustomSelect";
 import { GitCompare, Plus, X } from "lucide-react";
 import { SkeletonChart } from "./Skeleton";
+import { TickerLogo } from "./TickerLogo";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -778,12 +779,13 @@ export const CompareTickers: React.FC = () => {
                 <div key={ds.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <div
                     style={{
-                      width: "24px",
+                      width: "16px",
                       height: "3px",
                       background: SYMBOL_COLORS[i],
                       borderRadius: "2px",
                     }}
                   />
+                  <TickerLogo symbol={ds.label || ""} size={20} />
                   <span
                     style={{
                       fontSize: "var(--text-sm)",

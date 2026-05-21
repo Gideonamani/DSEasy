@@ -15,6 +15,7 @@ import { AlertModal } from "./AlertModal";
 import { CustomSelect } from "./CustomSelect";
 import { getCommonChartOptions } from "../utils/chartTheme";
 import { calculateRSI, calculateSMA, calculateRollingVWAP } from "../utils/indicators";
+import { TickerLogo } from "./TickerLogo";
 import type {
   ChartOptions,
   ChartData,
@@ -710,15 +711,18 @@ export const TickerTrends: React.FC = () => {
     <div>
       {/* Header */}
       <div className="dashboard-header">
-        <div>
-          <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
-            {currentSymbol ? `${currentSymbol} Trends` : "Ticker Trends"}
-          </h2>
-          <p style={{ color: "var(--text-secondary)" }}>
-            {currentSymbol 
-              ? `Historical performance and trend analysis for ${currentSymbol}`
-              : "Historical performance and trend analysis for individual tickers"}
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          {currentSymbol && <TickerLogo symbol={currentSymbol} size={48} />}
+          <div>
+            <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)" }}>
+              {currentSymbol ? `${currentSymbol} Trends` : "Ticker Trends"}
+            </h2>
+            <p style={{ color: "var(--text-secondary)" }}>
+              {currentSymbol
+                ? `Historical performance and trend analysis for ${currentSymbol}`
+                : "Historical performance and trend analysis for individual tickers"}
+            </p>
+          </div>
         </div>
 
         {/* Symbol Selector & Alert Button */}

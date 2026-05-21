@@ -8,6 +8,7 @@ import { StockData, MarketDate, MarketIndex } from "../hooks/useMarketQuery";
 import { MarketEmptyState } from "./EmptyState";
 import { MarketStatusBanner } from "./MarketStatusBanner";
 import { SkeletonStatCard, SkeletonChart } from "./Skeleton";
+import { TickerLogoLabel } from "./TickerLogo";
 export interface DashboardProps {
   marketData: StockData[];
   marketIndices: MarketIndex[] | null;
@@ -129,7 +130,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
           <div className="stats-grid">
             <StatCard
               title="Top Gainer"
-              value={topGainer.symbol}
+              value={<TickerLogoLabel symbol={topGainer.symbol} size={32} />}
               change={topGainer.change}
               subtext={`Change: ${topGainer.pctChange !== undefined && topGainer.pctChange !== null ? topGainer.pctChange.toFixed(2) + "%" : "N/A"}`}
               type="success"
@@ -138,7 +139,7 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
             />
             <StatCard
               title="Top Loser"
-              value={topLoser.symbol}
+              value={<TickerLogoLabel symbol={topLoser.symbol} size={32} />}
               change={topLoser.change}
               subtext={`Change: ${topLoser.pctChange !== undefined && topLoser.pctChange !== null ? topLoser.pctChange.toFixed(2) + "%" : "N/A"}`}
               type="danger"
