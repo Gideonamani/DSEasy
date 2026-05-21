@@ -523,30 +523,22 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
             intraday snapshot{symbolSeries.length === 1 ? "" : "s"}
             {latest ? ` · last price ${formatNumber(latest.marketPrice)}` : ""}
           </p>
-        </div>
-
-        {/* Disclaimer */}
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "flex-start",
-            padding: "10px 12px",
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--glass-border)",
-            borderRadius: "var(--radius-md)",
-            marginBottom: 20,
-            fontSize: "var(--text-xs)",
-            color: "var(--text-tertiary)",
-          }}
-        >
-          <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-          <span>
-            DSE publishes only the best bid and best offer per snapshot. The
-            ladder below is reconstructed by collecting every distinct price
-            level seen across today's intraday snapshots — it approximates
-            depth rather than reflecting a live multi-level book.
-          </span>
+          <p
+            title="DSE publishes only the best bid and best offer per snapshot. The ladder is reconstructed by collecting every distinct price level seen across today's intraday snapshots — it approximates depth rather than reflecting a live multi-level book."
+            style={{
+              margin: "6px 0 0",
+              fontSize: "var(--text-xs)",
+              color: "var(--text-tertiary)",
+              fontStyle: "italic",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "help",
+            }}
+          >
+            <Info size={12} style={{ flexShrink: 0 }} />
+            Depth is approximated — DSE publishes only top-of-book per snapshot.
+          </p>
         </div>
 
         {isLoading ? (
