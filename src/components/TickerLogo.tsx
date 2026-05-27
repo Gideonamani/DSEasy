@@ -65,11 +65,15 @@ export const TickerLogo: React.FC<TickerLogoProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    backgroundColor: isFallback ? getColorForSymbol(symbol) : 'transparent',
+    backgroundColor: isFallback ? getColorForSymbol(symbol) : '#ffffff',
+    padding: isFallback ? '0' : `${Math.max(1, Math.round(size * 0.1))}px`,
     color: '#ffffff',
     fontWeight: 'bold',
     fontSize: `${Math.max(10, size * 0.45)}px`,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    boxShadow: isFallback 
+      ? '0 1px 3px rgba(0,0,0,0.1)' 
+      : '0 2px 4px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(0,0,0,0.06)',
+    boxSizing: 'border-box',
     ...style
   };
 
