@@ -202,28 +202,29 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
     const xform = (qty: number) =>
       depthScale === "log" ? symlog(qty) : qty;
     const labels = ladderRows.map((r) => formatNumber(r.price));
+    const isLight = settings.theme === "light";
     return {
       labels,
       datasets: [
         {
           label: "Bid (last qty)",
           data: ladderRows.map((r) => (r.bid ? xform(-r.bid.lastQty) : 0)),
-          backgroundColor: "rgba(16, 185, 129, 0.65)",
-          borderColor: "#10b981",
+          backgroundColor: isLight ? "rgba(5, 150, 105, 0.65)" : "rgba(16, 185, 129, 0.65)",
+          borderColor: isLight ? "#059669" : "#10b981",
           borderWidth: 1,
           borderRadius: 4,
         },
         {
           label: "Offer (last qty)",
           data: ladderRows.map((r) => (r.offer ? xform(r.offer.lastQty) : 0)),
-          backgroundColor: "rgba(239, 68, 68, 0.65)",
-          borderColor: "#ef4444",
+          backgroundColor: isLight ? "rgba(220, 38, 38, 0.65)" : "rgba(239, 68, 68, 0.65)",
+          borderColor: isLight ? "#dc2626" : "#ef4444",
           borderWidth: 1,
           borderRadius: 4,
         },
       ],
     };
-  }, [ladderRows, depthScale]);
+  }, [ladderRows, depthScale, settings.theme]);
 
   const depthChartOptions: ChartOptions<"bar"> = useMemo(() => ({
     ...baseBarOptions,
@@ -312,15 +313,16 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
     const labels = symbolSeries.map((s) =>
       new Date(s.capturedAt).toLocaleTimeString("en-GB", EAT_TIME_FORMAT),
     );
+    const isLight = settings.theme === "light";
     return {
       labels,
       datasets: [
         {
           label: "Best Bid",
           data: symbolSeries.map((s) => s.stock.bestBidPrice || null),
-          borderColor: "rgba(16, 185, 129, 0.5)",
-          backgroundColor: "rgba(16, 185, 129, 0.08)",
-          pointBackgroundColor: "rgba(16, 185, 129, 0.85)",
+          borderColor: isLight ? "rgba(5, 150, 105, 0.55)" : "rgba(16, 185, 129, 0.5)",
+          backgroundColor: isLight ? "rgba(5, 150, 105, 0.08)" : "rgba(16, 185, 129, 0.08)",
+          pointBackgroundColor: isLight ? "rgba(5, 150, 105, 0.85)" : "rgba(16, 185, 129, 0.85)",
           tension: 0.25,
           pointRadius: 2,
           spanGaps: true,
@@ -328,9 +330,9 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         {
           label: "Best Offer",
           data: symbolSeries.map((s) => s.stock.bestOfferPrice || null),
-          borderColor: "rgba(239, 68, 68, 0.5)",
-          backgroundColor: "rgba(239, 68, 68, 0.08)",
-          pointBackgroundColor: "rgba(239, 68, 68, 0.85)",
+          borderColor: isLight ? "rgba(220, 38, 38, 0.55)" : "rgba(239, 68, 68, 0.5)",
+          backgroundColor: isLight ? "rgba(220, 38, 38, 0.08)" : "rgba(239, 68, 68, 0.08)",
+          pointBackgroundColor: isLight ? "rgba(220, 38, 38, 0.85)" : "rgba(239, 68, 68, 0.85)",
           tension: 0.25,
           pointRadius: 2,
           spanGaps: true,
@@ -338,18 +340,18 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
         {
           label: "Market Price",
           data: symbolSeries.map((s) => s.stock.marketPrice || null),
-          borderColor: "#a78bfa",
-          backgroundColor: "rgba(167, 139, 250, 0.1)",
+          borderColor: isLight ? "#7c3aed" : "#a78bfa",
+          backgroundColor: isLight ? "rgba(124, 58, 237, 0.1)" : "rgba(167, 139, 250, 0.1)",
           borderDash: [8, 6],
           borderWidth: 2.5,
           tension: 0.25,
           pointRadius: 2,
-          pointBackgroundColor: "#a78bfa",
+          pointBackgroundColor: isLight ? "#7c3aed" : "#a78bfa",
           spanGaps: true,
         },
       ],
     };
-  }, [symbolSeries]);
+  }, [symbolSeries, settings.theme]);
 
   const spreadChartOptions: ChartOptions<"line"> = useMemo(() => ({
     ...baseLineOptions,
@@ -681,7 +683,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                   style={{
                     display: "inline-flex",
                     padding: 3,
-                    background: "var(--bg-elevated)",
+                    background: settings.theme === "light" ? "var(--bg-input)" : "var(--bg-elevated)",
                     border: "1px solid var(--glass-border)",
                     borderRadius: "var(--radius-full)",
                     gap: 2,
@@ -722,7 +724,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
                 <thead>
                   <tr
                     style={{
-                      background: "var(--bg-elevated)",
+                      background: settings.theme === "light" ? "var(--bg-input)" : "var(--bg-elevated)",
                       color: "var(--text-tertiary)",
                       fontSize: "var(--text-xs)",
                       textTransform: "uppercase",
@@ -895,48 +897,51 @@ const StatPill: React.FC<{
   value: string;
   sub?: string;
   accent?: string;
-}> = ({ label, value, sub, accent }) => (
-  <div
-    style={{
-      padding: "10px 12px",
-      background: "var(--bg-elevated)",
-      border: "1px solid var(--glass-border)",
-      borderRadius: "var(--radius-md)",
-    }}
-  >
+}> = ({ label, value, sub, accent }) => {
+  const { settings } = useSettings();
+  return (
     <div
       style={{
-        fontSize: 10,
-        textTransform: "uppercase",
-        letterSpacing: "0.05em",
-        color: "var(--text-tertiary)",
-        marginBottom: 4,
+        padding: "10px 12px",
+        background: settings.theme === "light" ? "var(--bg-input)" : "var(--bg-elevated)",
+        border: "1px solid var(--glass-border)",
+        borderRadius: "var(--radius-md)",
       }}
     >
-      {label}
-    </div>
-    <div
-      style={{
-        fontSize: "var(--text-base)",
-        fontWeight: "var(--font-bold)",
-        color: accent || "var(--text-primary)",
-      }}
-    >
-      {value}
-    </div>
-    {sub && (
       <div
         style={{
-          fontSize: "var(--text-xs)",
+          fontSize: 10,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
           color: "var(--text-tertiary)",
-          marginTop: 2,
+          marginBottom: 4,
         }}
       >
-        {sub}
+        {label}
       </div>
-    )}
-  </div>
-);
+      <div
+        style={{
+          fontSize: "var(--text-base)",
+          fontWeight: "var(--font-bold)",
+          color: accent || "var(--text-primary)",
+        }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div
+          style={{
+            fontSize: "var(--text-xs)",
+            color: "var(--text-tertiary)",
+            marginTop: 2,
+          }}
+        >
+          {sub}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EmptyHint: React.FC<{ text: string }> = ({ text }) => (
   <div
