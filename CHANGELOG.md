@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-05-27
+
+### Added
+
+- **Issue #55 (Company Logos on Daily Glance)**: Integrated high-fidelity company logo badges across all major interactive panels on the Daily Glance dashboard page:
+  - Inside the **Order Book Heatmap** buttons.
+  - In the **Notable Movers** table.
+  - In the **Circuit Breaker Monitor** listing.
+  - In the **Deal Finder** table.
+  - In the top **Glance Header Stat Cards** ("Strongest Demand" and "Biggest Supply").
+
+### Fixed
+
+- **Issue #56 (Logo Uniformity & Formatting Normalization)**: Normalized rectangular and square company logos for uniform, premium scaling across the app:
+  - Applied solid `#ffffff` (white) background-fill and relative inner padding (10% of container size) inside `TickerLogo.tsx` to prevent clipping of square corners.
+  - Normalized hyphenated symbol name lookups (e.g. `IEACLC-ETF` -> `IEACLC ETF` and `SWIS-` fallback check) in `TickerLogo.tsx` so image assets resolve successfully instead of falling back to default letters.
+
+---
+
 ## [1.5.1] - 2026-05-27
 
 ### Fixed
