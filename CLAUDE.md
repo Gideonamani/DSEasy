@@ -26,6 +26,11 @@ Follow the same prefix convention:
 feat(issue-3): add VWAP overlay to Ticker Trends chart
 fix(issue-12): correct volume calculation for turnover chart
 ```
+## GitHub CLI (`gh`) Guidelines
+
+The agent sandbox environment pre-configures a placeholder `GITHUB_TOKEN`. To successfully run `gh` CLI commands (e.g., checking issues, tracking PRs) using the user's active local keyring, you must clear this placeholder variable before running the command:
+*   **PowerShell (Windows)**: `$env:GITHUB_TOKEN = $null; gh <command>`
+*   **Bash/Zsh (Unix)**: `GITHUB_TOKEN="" gh <command>`
 
 ## Project Overview
 
