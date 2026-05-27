@@ -45,7 +45,7 @@ For active code changes, we follow a strict branching, testing, and pull request
 4.  **Unit Testing**: If you write or modify core utilities (e.g. indicators, formatters, metrics), write matching unit tests under `src/utils/*.test.ts` and verify with:
     *   Test: `npm run test`
 5.  **Atomic, Conventional Commits**: Commit changes in atomic units matching the Conventional Commit format (e.g., `fix(issue-54): resolve contrast in dark mode`).
-6.  **Detailed PR Descriptions**: Always supply a detailed description of the changes made, verification results, and acceptance criteria in the final pull request.
+6.  **Detailed PR Descriptions & Issue Linking**: Always supply a detailed description of the changes made, verification results, and acceptance criteria in the final pull request. You **MUST** include explicit issue-closing keywords (e.g., "Closes #55", "Fixes #56") inside the PR description so that GitHub automatically and hygienically closes the corresponding issues upon merging into `master`. Do not close issues manually.
 
 ## Project Overview
 
