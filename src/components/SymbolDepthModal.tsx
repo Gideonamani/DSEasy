@@ -406,19 +406,20 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
     backdropFilter: settings.theme === "light" ? "none" : "blur(12px)",
     border: settings.theme === "light" ? "1px solid var(--border-subtle)" : "1px solid var(--glass-border)",
     boxShadow: settings.theme === "light" ? "var(--shadow-xl)" : "var(--shadow-lg)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
     ...(isSmallPhone
       ? {
           maxWidth: "100%",
           borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
           paddingBottom: "calc(var(--space-6) + env(safe-area-inset-bottom))",
           maxHeight: "92dvh",
-          overflowY: "auto",
         }
       : {
           maxWidth: 920,
           borderRadius: "var(--radius-xl)",
           maxHeight: "90vh",
-          overflowY: "auto",
         }),
   };
 
@@ -547,7 +548,15 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
           </p>
         </div>
 
-        {isLoading ? (
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            paddingRight: 12,
+            marginRight: -12,
+          }}
+        >
+          {isLoading ? (
           <div
             style={{
               display: "flex",
@@ -875,6 +884,7 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
             </div>
           </>
         )}
+        </div>
       </div>
     </div>,
     document.body,
