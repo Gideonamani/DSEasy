@@ -402,6 +402,10 @@ export const SymbolDepthModal: React.FC<SymbolDepthModalProps> = ({
     width: "100%",
     padding: "var(--space-6)",
     position: "relative",
+    background: settings.theme === "light" ? "#ffffff" : "var(--glass-bg)",
+    backdropFilter: settings.theme === "light" ? "none" : "blur(12px)",
+    border: settings.theme === "light" ? "1px solid var(--border-subtle)" : "1px solid var(--glass-border)",
+    boxShadow: settings.theme === "light" ? "var(--shadow-xl)" : "var(--shadow-lg)",
     ...(isSmallPhone
       ? {
           maxWidth: "100%",
