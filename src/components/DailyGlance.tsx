@@ -11,6 +11,7 @@ type StockWithSymbol = MarketWatchStock & { symbol: string };
 import { DatePicker } from "./DatePicker";
 import { StatCard } from "./StatCard";
 import { SymbolDepthModal } from "./SymbolDepthModal";
+import { TickerLogo, TickerLogoLabel } from "./TickerLogo";
 import {
   TrendingUp,
   TrendingDown,
@@ -400,7 +401,7 @@ export const DailyGlance: React.FC = () => {
             />
             <StatCard
               title="Strongest Demand"
-              value={metrics.strongestDemand.symbol}
+              value={<TickerLogoLabel symbol={metrics.strongestDemand.symbol} size={32} />}
               change={null}
               subtext={`${formatNumber(metrics.strongestDemand.bestBidQuantity)} bid / ${formatNumber(metrics.strongestDemand.bestOfferQuantity)} offer`}
               type="success"
@@ -409,7 +410,7 @@ export const DailyGlance: React.FC = () => {
             />
             <StatCard
               title="Biggest Supply"
-              value={metrics.biggestSupply.symbol}
+              value={<TickerLogoLabel symbol={metrics.biggestSupply.symbol} size={32} />}
               change={null}
               subtext={`${formatNumber(metrics.biggestSupply.bestBidQuantity)} bid / ${formatNumber(metrics.biggestSupply.bestOfferQuantity)} offer`}
               type="danger"
@@ -533,14 +534,17 @@ export const DailyGlance: React.FC = () => {
                         e.currentTarget.style.boxShadow = "";
                       }}
                     >
-                      <span
-                        style={{
-                          fontWeight: "var(--font-bold)",
-                          color: textColor,
-                        }}
-                      >
-                        {s.symbol}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 2 }}>
+                        <TickerLogo symbol={s.symbol} size={20} />
+                        <span
+                          style={{
+                            fontWeight: "var(--font-bold)",
+                            color: textColor,
+                          }}
+                        >
+                          {s.symbol}
+                        </span>
+                      </div>
                       <span
                         style={{
                           fontSize: "var(--text-xs)",
@@ -588,7 +592,9 @@ export const DailyGlance: React.FC = () => {
                   <tbody>
                     {notableMovers.map((mover) => (
                       <tr key={mover.symbol} style={{ borderBottom: "1px solid color-mix(in srgb, var(--border-subtle) 50%, transparent)" }}>
-                        <td style={{ padding: "12px 4px", fontWeight: "var(--font-medium)", color: "var(--text-primary)" }}>{mover.symbol}</td>
+                        <td style={{ padding: "12px 4px" }}>
+                          <TickerLogoLabel symbol={mover.symbol} size={24} style={{ fontWeight: "var(--font-medium)", color: "var(--text-primary)" }} />
+                        </td>
                         <td style={{ padding: "12px 4px", textAlign: "right", color: "var(--text-primary)" }}>{formatNumber(mover.marketPrice)}</td>
                         <td style={{ padding: "12px 4px", textAlign: "right", color: mover.change > 0 ? "var(--accent-success)" : "var(--accent-danger)", fontWeight: "var(--font-medium)" }}>
                           {mover.change > 0 ? "+" : ""}{formatNumber(mover.change)}
@@ -715,6 +721,7 @@ export const DailyGlance: React.FC = () => {
                                   gap: "6px"
                                 }}
                               >
+                                <TickerLogo symbol={s.symbol} size={18} />
                                 {s.symbol}
                                 {/* Traffic Light Dot */}
                                 {glowColor !== "transparent" && (
@@ -875,14 +882,8 @@ export const DailyGlance: React.FC = () => {
                         >
                           #{idx + 1}
                         </td>
-                        <td
-                          style={{
-                            padding: "12px 4px",
-                            fontWeight: "var(--font-medium)",
-                            color: "var(--text-primary)",
-                          }}
-                        >
-                          {deal.symbol}
+                        <td style={{ padding: "12px 4px" }}>
+                          <TickerLogoLabel symbol={deal.symbol} size={20} style={{ fontWeight: "var(--font-medium)", color: "var(--text-primary)" }} />
                         </td>
                         <td
                           style={{
