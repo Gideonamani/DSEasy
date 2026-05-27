@@ -445,7 +445,7 @@ export const DailyGlance: React.FC = () => {
               <span
                 style={{
                   fontSize: "var(--text-xs)",
-                  color: "var(--text-tertiary)",
+                  color: "var(--text-secondary)",
                 }}
               >
                 Tap any symbol for Level 2 depth
@@ -544,7 +544,7 @@ export const DailyGlance: React.FC = () => {
                       <span
                         style={{
                           fontSize: "var(--text-xs)",
-                          color: "var(--text-tertiary)",
+                          color: "var(--text-secondary)",
                           marginTop: 4,
                         }}
                       >
