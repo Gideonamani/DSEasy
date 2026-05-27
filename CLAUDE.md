@@ -32,6 +32,21 @@ The agent sandbox environment pre-configures a placeholder `GITHUB_TOKEN`. To su
 *   **PowerShell (Windows)**: `$env:GITHUB_TOKEN = $null; gh <command>`
 *   **Bash/Zsh (Unix)**: `GITHUB_TOKEN="" gh <command>`
 
+## Development Hygiene & PR Workflow
+
+For active code changes, we follow a strict branching, testing, and pull request workflow:
+1.  **Dedicated Branches**: Always branch off the latest `master` using the convention:
+    *   Features: `feat/issue-<N>-<short-description>`
+    *   Bug Fixes: `fix/issue-<N>-<short-description>`
+2.  **No Direct Commits to `master`**: All feature and bug work must be developed on branches and merged back into `master` via pull requests.
+3.  **Strict Type & Lint Guards**: Before submitting any PR or staging code, run type and lint checks to prevent strict build errors:
+    *   Type Check: `npx tsc --noEmit`
+    *   Lint: `npm run lint`
+4.  **Unit Testing**: If you write or modify core utilities (e.g. indicators, formatters, metrics), write matching unit tests under `src/utils/*.test.ts` and verify with:
+    *   Test: `npm run test`
+5.  **Atomic, Conventional Commits**: Commit changes in atomic units matching the Conventional Commit format (e.g., `fix(issue-54): resolve contrast in dark mode`).
+6.  **Detailed PR Descriptions**: Always supply a detailed description of the changes made, verification results, and acceptance criteria in the final pull request.
+
 ## Project Overview
 
 - **Stack**: React + TypeScript (strict, no `allowJs`), Chart.js (`react-chartjs-2`), Firebase Firestore

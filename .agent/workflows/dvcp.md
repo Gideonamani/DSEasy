@@ -1,37 +1,60 @@
 ---
-description: Document, Version, Commit, Push — the standard release workflow
+description: Document, Version, Commit, Push — the standard post-merge release workflow
 ---
 
-# DVCP Protocol
+# DVCP Protocol (Post-Merge Release Workflow)
 
-> **Branch check**: This workflow should ONLY run on `master` (or `main`). If on a feature branch, remind the Developer to merge first.
+The **DVCP Protocol** is a release-cadence workflow executed **strictly on the `master` (or `main`) branch** after one or more feature branches/pull requests have been successfully merged. 
 
-> **IMPORTANT: Commit code changes FIRST!** Before running DVCP, ensure all code changes (features, fixes, chores) have already been committed as their own atomic commits using Conventional Commits format (e.g. `fix(functions): ...`, `feat(ui): ...`). DVCP only handles the changelog update and version bump — it should NEVER bundle code changes into its commit.
+This workflow handles the changelog compilation and semantic version bump. It should **never** bundle functional code changes (fixes/features) into the version bump commit.
 
-// turbo-all
+---
 
-1. **Check branch**: Run `git branch --show-current` and verify it is `master`. If not, stop and notify the user.
+### 🛡️ Workflow Architecture Guidelines
 
-2. **Check for uncommitted code changes**: Run `git status`. If there are unstaged code changes (not changelog/package.json), stop and commit them first as separate atomic commits before proceeding.
+1.  **Branch Isolation**: Version bumps and changelog updates must **never** be performed directly on a feature/bug branch to prevent merge conflicts when combining parallel branches.
+2.  **Post-Merge Execution**: Always merge your feature PR into `master` first. Then, check out `master`, run `git pull`, and execute the DVCP workflow.
+3.  **Code Commit First**: Ensure all code changes are already committed as separate atomic commits matching Conventional Commits (e.g. `fix(functions): ...`, `feat(ui): ...`) before running DVCP.
 
-3. **Review commits since last version**: Run `git log --oneline` and identify all commits since the last `docs: update changelog and bump version` commit.
+---
 
-4. **Document (CHANGELOG.md)**: Update `CHANGELOG.md` with a new version section summarizing all changes since the last version. Group by type (Features, Fixes, Chores, etc.).
+### 🚀 Execution Steps
 
-5. **Version (package.json)**: Bump the version in `package.json`:
-   - **patch** (0.0.x): bug fixes, UI tweaks, or incremental enhancements (favor this for daily progress)
-   - **minor** (0.x.0): significant new features or substantial functional updates
-   - **major** (x.0.0): breaking changes
+1.  **Switch & Pull `master`**:
+    Verify you are on the `master` branch and have pulled all recently merged pull requests:
+    ```bash
+    git checkout master && git pull
+    ```
 
-> **Tip**: Don't pump up minor versions too rapidly for daily additions. Use patches for most dashboard refinements.
+2.  **Check for Uncommitted Code**:
+    Run `git status`. If there are any uncommitted code files (outside of `package.json` or `CHANGELOG.md`), stop immediately. Commit those changes separately before proceeding.
 
-6. **Commit**: Stage ONLY changelog and version files, then commit:
+3.  **Collate New Commits**:
+    Identify all new commits merged since the last release version bump:
+    ```bash
+    git log --oneline
+    ```
 
-   ```bash
-   git add CHANGELOG.md package.json && git commit -m "docs: update changelog and bump version to X.X.X"
-   ```
+4.  **Document (CHANGELOG.md)**:
+    Open `CHANGELOG.md` and add a new version block. Categorize all recently merged commits since the last release:
+    *   **Features** (new modules/options)
+    *   **Fixes** (bug resolutions)
+    *   **Chores/Docs** (internal maintenance or docs updates)
 
-7. **Push**: Push to remote
-   ```bash
-   git push origin master
-   ```
+5.  **Version Bump (package.json)**:
+    Update the `version` field in `package.json` following semantic versioning rules:
+    *   **patch** (0.0.x) — standard daily fixes, UI alignment, or incremental updates.
+    *   **minor** (0.x.0) — new components, workflows, or substantial functional updates.
+    *   **major** (x.0.0) — breaking API/rule architectural changes.
+
+6.  **Commit the Release**:
+    Stage *only* the changelog and version files and commit the bump:
+    ```bash
+    git add CHANGELOG.md package.json && git commit -m "docs: update changelog and bump version to X.X.X"
+    ```
+
+7.  **Push to Master**:
+    Push the atomic release commit to origin:
+    ```bash
+    git push origin master
+    ```
