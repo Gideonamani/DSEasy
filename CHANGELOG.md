@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-05-27
+
+### Fixed
+
+- **Issue #52 (Light Mode Modal Styling)**: Resolved awkward light-mode visual hierarchy, smoky background overlay clash, and scrollbar clipping in the Level-2 Depth Modal. Constrained the scrollbar inside nested content to prevent rounded corner clipping and locked the header in place.
+- **Issue #54 (Dark Mode Heatmap Contrast)**: Resolved invisible Buy/Sell indicators in dark mode by defining `--text-tertiary` globally, and subsequently upgraded the heatmap quantitative subtitle values (e.g. `54 B / 0 S`) and helper labels from `--text-tertiary` to `--text-secondary` to ensure excellent contrast and accessibility compliance.
+
+### Refactored
+
+- Removed unused `formattedDate` variable inside `Dashboard.tsx` and `App.tsx` to ensure zero compilation warnings.
+
+---
+
 ## [1.4.0] - 2026-05-15
 
 ### Added
