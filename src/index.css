@@ -36,6 +36,7 @@
   --text-primary: var(--color-slate-50);
   --text-secondary: var(--color-slate-400);
   --text-muted: var(--color-slate-500);
+  --text-tertiary: var(--color-slate-500);
 
   --border-subtle: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.2);
@@ -133,6 +134,7 @@
   --text-primary: var(--color-slate-900);
   --text-secondary: var(--color-slate-500);
   --text-muted: var(--color-slate-400);
+  --text-tertiary: var(--color-slate-400);
 
   --border-subtle: var(--color-slate-200);
   --border-strong: var(--color-slate-300);
