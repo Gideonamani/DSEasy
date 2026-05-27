@@ -353,7 +353,6 @@ function App(): React.ReactElement {
                     totalMcap={totalMcap}
                     activeSymbolsCount={activeSymbolsCount}
                     tradedSymbolsCount={tradedSymbolsCount}
-                    formattedDate={formattedDate}
                     selectedDate={effectiveDate}
                     availableDates={availableDates}
                     loadingData={loadingData}

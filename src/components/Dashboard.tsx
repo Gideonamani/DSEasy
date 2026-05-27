@@ -20,7 +20,6 @@ export interface DashboardProps {
   totalMcap: number;
   activeSymbolsCount: number;
   tradedSymbolsCount: number;
-  formattedDate: string;
   selectedDate: string | null;
   availableDates: MarketDate[];
   loadingData: boolean;
@@ -40,7 +39,6 @@ export const Dashboard: React.FC<DashboardProps> = memo(({
   totalMcap,
   activeSymbolsCount,
   tradedSymbolsCount,
-  formattedDate,
   selectedDate,
   availableDates,
   loadingData,
