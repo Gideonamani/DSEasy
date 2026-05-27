@@ -32,7 +32,9 @@ const getColorForSymbol = (symbol: string): string => {
 type LogoStage = 'high-res' | 'low-res' | 'fallback';
 
 const urlForStage = (symbol: string, stage: LogoStage): string => {
-  const encoded = encodeURIComponent(symbol);
+  // Normalize symbol (e.g., replace hyphens with spaces for file lookups)
+  const normalized = symbol.replace(/-/g, ' ');
+  const encoded = encodeURIComponent(normalized);
   if (stage === 'high-res') return `/logos/high-res/${encoded}.png`;
   return `/logos/${encoded}.png`;
 };
@@ -51,7 +53,7 @@ export const TickerLogo: React.FC<TickerLogoProps> = ({
     setStage('high-res');
   }, [symbol]);
 
-  const cleanSymbol = symbol.replace(' ETF', '').trim();
+  const cleanSymbol = symbol.replace(/-/g, ' ').replace(' ETF', '').trim();
   const initial = cleanSymbol ? cleanSymbol.charAt(0).toUpperCase() : '?';
 
   const isFallback = stage === 'fallback';

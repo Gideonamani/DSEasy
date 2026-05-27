@@ -401,7 +401,7 @@ export const DailyGlance: React.FC = () => {
             />
             <StatCard
               title="Strongest Demand"
-              value={metrics.strongestDemand.symbol}
+              value={<TickerLogoLabel symbol={metrics.strongestDemand.symbol} size={32} />}
               change={null}
               subtext={`${formatNumber(metrics.strongestDemand.bestBidQuantity)} bid / ${formatNumber(metrics.strongestDemand.bestOfferQuantity)} offer`}
               type="success"
@@ -410,7 +410,7 @@ export const DailyGlance: React.FC = () => {
             />
             <StatCard
               title="Biggest Supply"
-              value={metrics.biggestSupply.symbol}
+              value={<TickerLogoLabel symbol={metrics.biggestSupply.symbol} size={32} />}
               change={null}
               subtext={`${formatNumber(metrics.biggestSupply.bestBidQuantity)} bid / ${formatNumber(metrics.biggestSupply.bestOfferQuantity)} offer`}
               type="danger"
