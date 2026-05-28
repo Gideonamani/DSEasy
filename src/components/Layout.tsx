@@ -473,23 +473,7 @@ export const Layout: React.FC<LayoutProps> = ({
                 fontSize: "var(--text-sm)",
               }}
             >
-              <span
-                style={{
-                  marginRight: "8px",
-                  display: isMobile ? "none" : "block",
-                }}
-              >
-                Overview
-              </span>
-              <span style={{ display: isMobile ? "none" : "block" }}>/</span>
-              <span
-                style={{
-                  marginLeft: isMobile ? "0" : "8px",
-                  color: "var(--text-primary)",
-                }}
-              >
-                {activeTab}
-              </span>
+              <span style={{ color: "var(--text-primary)" }}>{activeTab}</span>
             </div>
           </div>
 
