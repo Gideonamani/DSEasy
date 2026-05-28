@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-05-28
+
+### Changed
+
+- **Issue #70 (dvcp release command)**: Added the `/dvcp` Claude Code slash command (`.claude/commands/dvcp.md`) that automates the Document → Version → Commit → Push release-notes workflow, encoding the existing conventions (Keep a Changelog format, `package.json`-only version bump, the `docs: ... bump version to X` commit message). Developer tooling only — no application behavior changes.
+
+---
+
 ## [1.7.0] - 2026-05-28
 
 ### Added
