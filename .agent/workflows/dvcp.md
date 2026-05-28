@@ -20,32 +20,44 @@ This workflow handles the changelog compilation and semantic version bump. It sh
 
 ### 🚀 Execution Steps
 
+Optional argument: the bump level (`patch` / `minor` / `major`) or an explicit version (e.g. `1.8.0`). If omitted, infer the level from the commits in range (step 4) and **confirm before committing**.
+
 1.  **Switch & Pull `master`**:
     Verify you are on the `master` branch and have pulled all recently merged pull requests:
     ```bash
     git checkout master && git pull
     ```
 
-2.  **Check for Uncommitted Code**:
-    Run `git status`. If there are any uncommitted code files (outside of `package.json` or `CHANGELOG.md`), stop immediately. Commit those changes separately before proceeding.
+2.  **Pre-flight (abort if any fails — do not force-fix)**:
+    *   On `master`: `git rev-parse --abbrev-ref HEAD` must be `master`.
+    *   In sync: after `git fetch origin`, `master` must not be ahead of / behind `origin/master`.
+    *   Clean tree: `git status --short` must be empty. If there are uncommitted code files (outside `package.json` / `CHANGELOG.md`), stop and commit them separately first.
+    *   Not already released: if `HEAD` is itself a `bump version to` commit, there is nothing new to release — stop.
 
 3.  **Collate New Commits**:
-    Identify all new commits merged since the last release version bump:
+    Releases are tracked by version-bump commits, **not git tags**, so find the previous release point and diff from it:
     ```bash
-    git log --oneline
+    # hash of the most recent version-bump commit (the last release)
+    git log -n 1 --format=%H --grep="bump version to"
+    # then review everything since
+    git log <hash>..HEAD --oneline
     ```
 
 4.  **Document (CHANGELOG.md)**:
-    Open `CHANGELOG.md` and add a new version block. Categorize all recently merged commits since the last release:
-    *   **Features** (new modules/options)
-    *   **Fixes** (bug resolutions)
-    *   **Chores/Docs** (internal maintenance or docs updates)
+    Open `CHANGELOG.md` and add a new `## [X.X.X] - YYYY-MM-DD` block at the top (today's date), above the previous entry. Categorize all commits in the range, leading each bullet with the issue it resolves where applicable (e.g. **Issue #66 (...)**):
+    *   **Added** (new modules/options)
+    *   **Fixed** (bug resolutions)
+    *   **Changed / Refactored** (internal maintenance or docs updates)
+
+    End the section with the `---` separator used between releases.
 
 5.  **Version Bump (package.json)**:
-    Update the `version` field in `package.json` following semantic versioning rules:
+    Update *only* the top-level `version` field in `package.json` following semantic versioning rules:
     *   **patch** (0.0.x) — standard daily fixes, UI alignment, or incremental updates.
     *   **minor** (0.x.0) — new components, workflows, or substantial functional updates.
     *   **major** (x.0.0) — breaking API/rule architectural changes.
+
+    Do **not** touch `package-lock.json` — the established pattern leaves its root version alone (resync only if explicitly asked). If the inferred level is ambiguous, confirm before committing.
 
 6.  **Commit the Release**:
     Stage *only* the changelog and version files and commit the bump:
@@ -54,7 +66,8 @@ This workflow handles the changelog compilation and semantic version bump. It sh
     ```
 
 7.  **Push to Master**:
-    Push the atomic release commit to origin:
+    Push the atomic release commit to origin, then report the new version, the commit range it covers, and the pushed hash:
     ```bash
     git push origin master
     ```
+    > When using `gh` to verify checks afterward, clear the placeholder token first: PowerShell `$env:GITHUB_TOKEN = $null; gh <command>` · Bash `GITHUB_TOKEN="" gh <command>`.
