@@ -83,7 +83,14 @@ const filterByPeriod = (
     });
   }
 
-  const cutoff = new Date();
+  // Anchor the window to the latest available trading day, not wall-clock now:
+  // a stale feed would otherwise silently shrink the window, and this keeps the
+  // chart in step with the matrix's latest-anchored growth figures.
+  const latestDate = data.reduce((max, d) => {
+    const t = parseSheetDate(d.date);
+    return t.getTime() > max.getTime() ? t : max;
+  }, new Date(0));
+  const cutoff = new Date(latestDate);
   switch (period) {
     case "1W": cutoff.setDate(cutoff.getDate() - 7); break;
     case "1M": cutoff.setMonth(cutoff.getMonth() - 1); break;
@@ -355,19 +362,27 @@ export const CompareTickers: React.FC = () => {
           .map((d) => [d.date, d.turnover || 0]),
       );
 
-      let firstTurnover: number | null = null;
-      for (const date of allDates) {
-        const t = turnoverMap.get(date);
-        if (t != null && t > 0) { firstTurnover = t; break; }
-      }
+      // Baseline = each ticker's median turnover over the period. Anchoring to a
+      // single start day biased the whole series (a quiet opening day inflated
+      // everything); the median "typical trading day" resists one-off spikes and
+      // block trades, so the result is comparable across tickers.
+      const positives = Array.from(turnoverMap.values())
+        .filter((t) => t > 0)
+        .sort((a, b) => a - b);
+      const mid = Math.floor(positives.length / 2);
+      const median = positives.length
+        ? positives.length % 2
+          ? positives[mid]
+          : (positives[mid - 1] + positives[mid]) / 2
+        : null;
 
       const color = SYMBOL_COLORS[i];
       return {
         label: slot.symbol,
         data: allDates.map((date) => {
           const t = turnoverMap.get(date);
-          if (t == null || t <= 0 || firstTurnover == null) return null;
-          return ((t / firstTurnover) - 1) * 100;
+          if (t == null || t <= 0 || median == null || median <= 0) return null;
+          return t / median;
         }),
         borderColor: color,
         backgroundColor: color + "20",
@@ -430,7 +445,7 @@ export const CompareTickers: React.FC = () => {
             label: (ctx: TooltipItem<"line">) => {
               const v = ctx.parsed.y;
               if (v == null) return `${ctx.dataset.label}: N/A`;
-              return `${ctx.dataset.label}: ${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+              return `${ctx.dataset.label}: ${v.toFixed(2)}× median day`;
             },
           },
         },
@@ -441,10 +456,7 @@ export const CompareTickers: React.FC = () => {
           ...base.scales?.y,
           ticks: {
             ...base.scales?.y?.ticks,
-            callback: (v: number | string) => {
-              const n = Number(v);
-              return `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
-            },
+            callback: (v: number | string) => `${Number(v).toFixed(1)}×`,
           },
         },
       },
@@ -477,7 +489,14 @@ export const CompareTickers: React.FC = () => {
         if (isNaN(latestDate.getTime())) return null;
 
         const targetTime = latestDate.getTime() - days * 24 * 60 * 60 * 1000;
-        
+
+        // Not enough history to cover this horizon: don't snap to the oldest
+        // point and mislabel a shorter return (e.g. 6M of data as "1Y growth").
+        const oldest = fullSorted.find((d) => d.date && d.close > 0);
+        if (!oldest) return null;
+        const oldestTime = parseSheetDate(oldest.date).getTime();
+        if (isNaN(oldestTime) || oldestTime > targetTime) return null;
+
         let closest = fullSorted[0];
         let minDiff = Infinity;
         
@@ -1415,10 +1434,10 @@ export const CompareTickers: React.FC = () => {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-                Turnover Change
+                Relative Turnover
               </div>
               <div style={{ fontSize: "11px", color: "var(--text-secondary)", opacity: 0.7, marginTop: "2px" }}>
-                Normalized to 0% at start of period
+                Multiple of each ticker's median trading day (1× = typical)
               </div>
             </div>
           </div>
