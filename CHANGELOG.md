@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-05-28
+
+### Fixed
+
+- **Header breadcrumb**: Removed the hardcoded "Overview /" prefix from the Layout header. The breadcrumb now shows only the active tab name (e.g. "Dashboard"), eliminating the mobile-specific display conditionals that hid the label below 768px.
+
+### Changed
+
+- **Issue #72 (dvcp single source of truth)**: Consolidated the DVCP release workflow into `.agent/workflows/dvcp.md` as the canonical spec, with the `/dvcp` slash command delegating to it rather than duplicating steps.
+- Resynced `package-lock.json` root version with `package.json`.
+
+---
+
 ## [1.7.1] - 2026-05-28
 
 ### Changed
