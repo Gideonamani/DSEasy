@@ -2,9 +2,15 @@ import { onRequest } from "firebase-functions/v2/https";
 import { db } from "../config/firebase";
 
 /**
- * HTTP Function to fetch the latest price for a given ticker.
+ * HTTP Function to fetch the latest closing price for a given ticker.
  * Intended for use in Google Sheets custom functions.
- * 
+ *
+ * Reads from the authoritative daily-closing pipeline
+ * (`dailyClosing/{date}/stocks/{ticker}` with dates from
+ * `config/app.availableDates`) so the value matches what the DSEasy app and
+ * dse.co.tz report. The intraday `marketWatch` snapshots are a separate,
+ * lower-coverage source and must not be used here.
+ *
  * Query Params:
  *  - ticker: The stock symbol (e.g., "NMB")
  *  - key: The API key for authentication
@@ -34,56 +40,45 @@ export const getTickerPrice = onRequest(
     }
 
     try {
-      // 3. Find the latest available date
+      // 3. Find the latest available daily-closing date.
+      // availableDates are "YYYY-MM-DD" strings, so a lexical sort is chronological.
       const configSnap = await db.collection("config").doc("app").get();
       const configData = configSnap.data();
-      const availableDates: string[] = configData?.marketWatchDates || [];
+      const availableDates: string[] = configData?.availableDates || [];
 
       if (availableDates.length === 0) {
         res.status(404).json({ error: "No market data dates found in config." });
         return;
       }
 
-      // Sort dates just in case they aren't chronological
       const sortedDates = [...availableDates].sort().reverse();
       const latestDate = sortedDates[0];
 
-      // 4. Fetch the most recent snapshot for that date
-      const snapshotQuery = await db
-        .collection("marketWatch")
+      // 4. Fetch the closing record for this ticker on the latest date.
+      const stockSnap = await db
+        .collection("dailyClosing")
         .doc(latestDate)
-        .collection("snapshots")
-        .orderBy("capturedAt", "desc")
-        .limit(1)
+        .collection("stocks")
+        .doc(ticker)
         .get();
 
-      if (snapshotQuery.empty) {
-        res.status(404).json({ error: `No snapshots found for latest date: ${latestDate}` });
+      if (!stockSnap.exists) {
+        res.status(404).json({ error: `Ticker '${ticker}' not found in latest close (${latestDate}).` });
         return;
       }
 
-      const latestSnapshot = snapshotQuery.docs[0].data();
-      const stocks = latestSnapshot.stocks || {};
-      const stockData = stocks[ticker];
+      const stockData = stockSnap.data() || {};
 
-      if (!stockData) {
-        res.status(404).json({ error: `Ticker '${ticker}' not found in latest snapshot (${latestDate}).` });
-        return;
-      }
-
-      // 5. Return the price
-      // marketPrice is the standard live price in the MarketWatchEntry type
-      const price = stockData.marketPrice || 0;
-      const change = stockData.change || 0;
-      const capturedAt = latestSnapshot.capturedAt;
+      // 5. Return the closing price — the same `close` value the app/site shows.
+      const price = stockData.close ?? 0;
+      const change = stockData.changeValue ?? 0;
 
       res.json({
         symbol: ticker,
         price,
         change,
         date: latestDate,
-        capturedAt,
-        source: "marketWatch"
+        source: "dailyClosing"
       });
     } catch (error) {
       console.error("Error fetching ticker price:", error);
