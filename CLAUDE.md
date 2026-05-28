@@ -47,6 +47,13 @@ For active code changes, we follow a strict branching, testing, and pull request
 5.  **Atomic, Conventional Commits**: Commit changes in atomic units matching the Conventional Commit format (e.g., `fix(issue-54): resolve contrast in dark mode`).
 6.  **Detailed PR Descriptions & Issue Linking**: Always supply a detailed description of the changes made, verification results, and acceptance criteria in the final pull request. You **MUST** include explicit issue-closing keywords (e.g., "Closes #55", "Fixes #56") inside the PR description so that GitHub automatically and hygienically closes the corresponding issues upon merging into `master`. Do not close issues manually.
 
+## Issue Documentation
+
+GitHub Issues is the single source of record for feature/bug specs — **do not commit per-issue spec files** (e.g. `docs/issues/issue-<N>.md`). Mirroring issues into the repo causes drift and stale duplicates.
+
+*   If you draft a spec locally while creating a GitHub issue, treat it as **temporary**: once the issue exists on GitHub, delete the draft rather than committing it. It has served its purpose.
+*   Durable design rationale ("why we chose X over Y") that outlives an issue belongs in an ADR-style note under `docs/decisions/`, keyed by topic (e.g. `turnover-normalization.md`), **not** by issue number.
+
 ## Project Overview
 
 - **Stack**: React + TypeScript (strict, no `allowJs`), Chart.js (`react-chartjs-2`), Firebase Firestore

@@ -83,7 +83,14 @@ const filterByPeriod = (
     });
   }
 
-  const cutoff = new Date();
+  // Anchor the window to the latest available trading day, not wall-clock now:
+  // a stale feed would otherwise silently shrink the window, and this keeps the
+  // chart in step with the matrix's latest-anchored growth figures.
+  const latestDate = data.reduce((max, d) => {
+    const t = parseSheetDate(d.date);
+    return t.getTime() > max.getTime() ? t : max;
+  }, new Date(0));
+  const cutoff = new Date(latestDate);
   switch (period) {
     case "1W": cutoff.setDate(cutoff.getDate() - 7); break;
     case "1M": cutoff.setMonth(cutoff.getMonth() - 1); break;
@@ -355,19 +362,27 @@ export const CompareTickers: React.FC = () => {
           .map((d) => [d.date, d.turnover || 0]),
       );
 
-      let firstTurnover: number | null = null;
-      for (const date of allDates) {
-        const t = turnoverMap.get(date);
-        if (t != null && t > 0) { firstTurnover = t; break; }
-      }
+      // Baseline = each ticker's median turnover over the period. Anchoring to a
+      // single start day biased the whole series (a quiet opening day inflated
+      // everything); the median "typical trading day" resists one-off spikes and
+      // block trades, so the result is comparable across tickers.
+      const positives = Array.from(turnoverMap.values())
+        .filter((t) => t > 0)
+        .sort((a, b) => a - b);
+      const mid = Math.floor(positives.length / 2);
+      const median = positives.length
+        ? positives.length % 2
+          ? positives[mid]
+          : (positives[mid - 1] + positives[mid]) / 2
+        : null;
 
       const color = SYMBOL_COLORS[i];
       return {
         label: slot.symbol,
         data: allDates.map((date) => {
           const t = turnoverMap.get(date);
-          if (t == null || t <= 0 || firstTurnover == null) return null;
-          return ((t / firstTurnover) - 1) * 100;
+          if (t == null || t <= 0 || median == null || median <= 0) return null;
+          return t / median;
         }),
         borderColor: color,
         backgroundColor: color + "20",
@@ -430,7 +445,7 @@ export const CompareTickers: React.FC = () => {
             label: (ctx: TooltipItem<"line">) => {
               const v = ctx.parsed.y;
               if (v == null) return `${ctx.dataset.label}: N/A`;
-              return `${ctx.dataset.label}: ${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+              return `${ctx.dataset.label}: ${v.toFixed(2)}× median day`;
             },
           },
         },
@@ -441,15 +456,161 @@ export const CompareTickers: React.FC = () => {
           ...base.scales?.y,
           ticks: {
             ...base.scales?.y?.ticks,
-            callback: (v: number | string) => {
-              const n = Number(v);
-              return `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
-            },
+            callback: (v: number | string) => `${Number(v).toFixed(1)}×`,
           },
         },
       },
     };
   }, [settings.theme]);
+
+  const comparisonMatrix = useMemo(() => {
+    const slots = selectedSymbols
+      .map((symbol, i) => ({ symbol, full: rawSlots[i].data, filtered: allFiltered[i], color: SYMBOL_COLORS[i] }))
+      .filter((s) => s.symbol && s.full.length > 0);
+
+    if (slots.length < 2) return null;
+
+    return slots.map((slot) => {
+      const fullSorted = [...slot.full].sort(
+        (a, b) => parseSheetDate(a.date).getTime() - parseSheetDate(b.date).getTime()
+      );
+      
+      const filteredSorted = [...slot.filtered].sort(
+        (a, b) => parseSheetDate(a.date).getTime() - parseSheetDate(b.date).getTime()
+      );
+
+      const latest = fullSorted[fullSorted.length - 1];
+      const latestClose = latest ? latest.close : 0;
+
+      // growth calculation helper
+      const calculateGrowth = (days: number) => {
+        if (fullSorted.length < 2 || !latest) return null;
+        const latestDate = parseSheetDate(latest.date);
+        if (isNaN(latestDate.getTime())) return null;
+
+        const targetTime = latestDate.getTime() - days * 24 * 60 * 60 * 1000;
+
+        // Not enough history to cover this horizon: don't snap to the oldest
+        // point and mislabel a shorter return (e.g. 6M of data as "1Y growth").
+        const oldest = fullSorted.find((d) => d.date && d.close > 0);
+        if (!oldest) return null;
+        const oldestTime = parseSheetDate(oldest.date).getTime();
+        if (isNaN(oldestTime) || oldestTime > targetTime) return null;
+
+        let closest = fullSorted[0];
+        let minDiff = Infinity;
+        
+        for (const d of fullSorted) {
+          if (!d.date || d.close <= 0) continue;
+          const dDate = parseSheetDate(d.date);
+          if (isNaN(dDate.getTime())) continue;
+          
+          const diff = Math.abs(dDate.getTime() - targetTime);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = d;
+          }
+        }
+        
+        if (closest && closest.close > 0 && closest !== latest) {
+          return ((latestClose - closest.close) / closest.close) * 100;
+        }
+        return null;
+      };
+
+      // Filtered period growth, peak, trough, avg volatility, avg daily volume
+      let selectedGrowth: number | null = null;
+      let peakGrowth = -Infinity;
+      let troughGrowth = Infinity;
+      let avgVolatility: number | null = null;
+      let avgTurnover: number | null = null;
+
+      if (filteredSorted.length > 0) {
+        const firstFiltered = filteredSorted[0];
+        const firstFilteredClose = firstFiltered ? firstFiltered.close : 0;
+        
+        if (firstFilteredClose > 0) {
+          selectedGrowth = ((latestClose - firstFilteredClose) / firstFilteredClose) * 100;
+          
+          filteredSorted.forEach((d) => {
+            if (d.close > 0) {
+              const relGrowth = ((d.close - firstFilteredClose) / firstFilteredClose) * 100;
+              if (relGrowth > peakGrowth) peakGrowth = relGrowth;
+              if (relGrowth < troughGrowth) troughGrowth = relGrowth;
+            }
+          });
+        }
+
+        // Calculate average volatility over the filtered period
+        const volSeries = calculateRollingVolatility(fullSorted.map((d) => d.close));
+        const volByDate = new Map<string, number | null>(
+          fullSorted
+            .map((d, idx) => [d.date, volSeries[idx]] as const)
+            .filter((entry): entry is readonly [string, number | null] => Boolean(entry[0]))
+        );
+
+        let volSum = 0;
+        let volCount = 0;
+        let turnoverSum = 0;
+        let turnoverCount = 0;
+
+        filteredSorted.forEach((d) => {
+          if (d.date) {
+            const v = volByDate.get(d.date);
+            if (v != null) {
+              volSum += v;
+              volCount++;
+            }
+            if (d.turnover != null && d.turnover > 0) {
+              turnoverSum += d.turnover;
+              turnoverCount++;
+            }
+          }
+        });
+
+        avgVolatility = volCount > 0 ? volSum / volCount : null;
+        avgTurnover = turnoverCount > 0 ? turnoverSum / turnoverCount : null;
+      }
+
+      return {
+        symbol: slot.symbol,
+        color: slot.color,
+        latestClose,
+        growth1W: calculateGrowth(7),
+        growth1M: calculateGrowth(30),
+        growth3M: calculateGrowth(90),
+        growth6M: calculateGrowth(180),
+        growth1Y: calculateGrowth(365),
+        selectedGrowth,
+        peakGrowth: peakGrowth !== -Infinity ? peakGrowth : null,
+        troughGrowth: troughGrowth !== Infinity ? troughGrowth : null,
+        avgVolatility,
+        avgTurnover,
+      };
+    });
+  }, [selectedSymbols, allFiltered, raw0, raw1, raw2]);
+
+  const renderPercentCell = (val: number | null, isWinner: boolean) => {
+    if (val == null) return <span style={{ color: "var(--text-muted)" }}>N/A</span>;
+    const isPos = val >= 0;
+    const color = isPos ? "var(--accent-success)" : "var(--accent-danger)";
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "4px",
+          color: color,
+          fontWeight: isWinner ? "var(--font-bold)" : "var(--font-medium)",
+          fontSize: "var(--text-sm)",
+        }}
+      >
+        <span>{isPos ? "+" : ""}{val.toFixed(2)}%</span>
+        {isWinner && <span style={{ fontSize: "11px" }}>🏆</span>}
+      </div>
+    );
+  };
 
   // For each picker, exclude symbols chosen in other slots
   const optionsFor = (currentIndex: number) =>
@@ -809,6 +970,375 @@ export const CompareTickers: React.FC = () => {
         </div>
       )}
 
+      {/* Visual comparison breakdown matrix */}
+      {!isLoading && activeSymbolCount >= 2 && comparisonMatrix && (
+        <div
+          className="glass-panel page-transition"
+          style={{
+            padding: "24px",
+            borderRadius: "var(--radius-xl)",
+            marginTop: "24px",
+            boxShadow: "var(--shadow-lg)",
+          }}
+        >
+          <div style={{ marginBottom: "20px" }}>
+            <h3
+              style={{
+                fontSize: "var(--text-base)",
+                fontWeight: "var(--font-bold)",
+                margin: "0 0 6px 0",
+                color: "var(--text-primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <GitCompare size={18} color="var(--accent-primary)" />
+              Performance & Metrics Breakdown
+            </h3>
+            <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "var(--text-xs)" }}>
+              Side-by-side growth percentages and key volatility metrics for the selected tickers
+            </p>
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                textAlign: "left",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--glass-border)" }}>
+                  <th
+                    style={{
+                      padding: "12px 16px",
+                      fontSize: "var(--text-xs)",
+                      fontWeight: "var(--font-bold)",
+                      color: "var(--text-secondary)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    Horizon / Statistic
+                  </th>
+                  {comparisonMatrix.map((item) => (
+                    <th
+                      key={item.symbol}
+                      style={{
+                        padding: "12px 16px",
+                        fontSize: "var(--text-sm)",
+                        fontWeight: "var(--font-bold)",
+                        color: "var(--text-primary)",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "8px",
+                            height: "8px",
+                            borderRadius: "50%",
+                            background: item.color,
+                          }}
+                        />
+                        <TickerLogo symbol={item.symbol} size={18} />
+                        <span>{item.symbol}</span>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* Latest Close Row */}
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--glass-border)",
+                    transition: "background 0.2s",
+                  }}
+                  className="hover-bg"
+                >
+                  <td
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: "var(--text-sm)",
+                      fontWeight: "var(--font-medium)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    Latest Close Price
+                  </td>
+                  {comparisonMatrix.map((item) => (
+                    <td
+                      key={item.symbol}
+                      style={{
+                        padding: "14px 16px",
+                        fontSize: "var(--text-sm)",
+                        fontWeight: "var(--font-semibold)",
+                        color: "var(--text-primary)",
+                        textAlign: "center",
+                      }}
+                    >
+                      TZS {item.latestClose.toLocaleString(undefined, { minimumFractionDigits: 1 })}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Sub-periods Growth rows */}
+                {[
+                  { label: "1-Week Growth", key: "growth1W" },
+                  { label: "1-Month Growth", key: "growth1M" },
+                  { label: "3-Month Growth", key: "growth3M" },
+                  { label: "6-Month Growth", key: "growth6M" },
+                  { label: "1-Year Growth", key: "growth1Y" },
+                  { label: `Selected Period Growth (${selectedPeriod})`, key: "selectedGrowth" },
+                ].map((row) => {
+                  // Find the maximum value in the row to award the crown
+                  let maxVal = -Infinity;
+                  comparisonMatrix.forEach((item) => {
+                    const val = item[row.key as keyof typeof item] as number | null;
+                    if (val != null && val > maxVal) {
+                      maxVal = val;
+                    }
+                  });
+
+                  return (
+                    <tr
+                      key={row.key}
+                      style={{
+                        borderBottom: "1px solid var(--glass-border)",
+                        transition: "background 0.2s",
+                      }}
+                      className="hover-bg"
+                    >
+                      <td
+                        style={{
+                          padding: "14px 16px",
+                          fontSize: "var(--text-sm)",
+                          fontWeight: "var(--font-medium)",
+                          color: "var(--text-primary)",
+                        }}
+                      >
+                        {row.label}
+                      </td>
+                      {comparisonMatrix.map((item) => {
+                        const val = item[row.key as keyof typeof item] as number | null;
+                        const isWinner = val != null && val === maxVal && comparisonMatrix.length > 1;
+                        return (
+                          <td key={item.symbol} style={{ padding: "14px 16px", textAlign: "center" }}>
+                            {renderPercentCell(val, isWinner)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+
+                {/* Period statistics */}
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--glass-border)",
+                    transition: "background 0.2s",
+                  }}
+                  className="hover-bg"
+                >
+                  <td
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: "var(--text-sm)",
+                      fontWeight: "var(--font-medium)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    Peak Growth in Period
+                  </td>
+                  {comparisonMatrix.map((item) => {
+                    let isWinner = false;
+                    if (item.peakGrowth != null && comparisonMatrix.length > 1) {
+                      const allPeaks = comparisonMatrix
+                        .map((x) => x.peakGrowth)
+                        .filter((v): v is number => v != null);
+                      isWinner = item.peakGrowth === Math.max(...allPeaks);
+                    }
+                    return (
+                      <td key={item.symbol} style={{ padding: "14px 16px", textAlign: "center" }}>
+                        {renderPercentCell(item.peakGrowth, isWinner)}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--glass-border)",
+                    transition: "background 0.2s",
+                  }}
+                  className="hover-bg"
+                >
+                  <td
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: "var(--text-sm)",
+                      fontWeight: "var(--font-medium)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    Trough Growth in Period
+                  </td>
+                  {comparisonMatrix.map((item) => {
+                    let isWinner = false;
+                    if (item.troughGrowth != null && comparisonMatrix.length > 1) {
+                      const allTroughs = comparisonMatrix
+                        .map((x) => x.troughGrowth)
+                        .filter((v): v is number => v != null);
+                      isWinner = item.troughGrowth === Math.max(...allTroughs); // highlight highest trough (best downside protection!)
+                    }
+                    return (
+                      <td key={item.symbol} style={{ padding: "14px 16px", textAlign: "center" }}>
+                        {renderPercentCell(item.troughGrowth, isWinner)}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* Average Volatility */}
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--glass-border)",
+                    transition: "background 0.2s",
+                  }}
+                  className="hover-bg"
+                >
+                  <td
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: "var(--text-sm)",
+                      fontWeight: "var(--font-medium)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    Avg Daily Volatility (20D rolling)
+                  </td>
+                  {comparisonMatrix.map((item) => {
+                    let isLowest = false;
+                    if (item.avgVolatility != null && comparisonMatrix.length > 1) {
+                      const allVols = comparisonMatrix
+                        .map((x) => x.avgVolatility)
+                        .filter((v): v is number => v != null);
+                      isLowest = item.avgVolatility === Math.min(...allVols); // lowest volatility is winner (lowest risk)
+                    }
+                    return (
+                      <td
+                        key={item.symbol}
+                        style={{
+                          padding: "14px 16px",
+                          fontSize: "var(--text-sm)",
+                          fontWeight: isLowest ? "var(--font-bold)" : "var(--font-medium)",
+                          color: "var(--text-primary)",
+                          textAlign: "center",
+                        }}
+                      >
+                        {item.avgVolatility != null ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <span>{item.avgVolatility.toFixed(2)}%</span>
+                            {isLowest && (
+                              <span
+                                style={{ fontSize: "10px", color: "var(--accent-success)" }}
+                                title="Lowest Risk (Beta/Volatility)"
+                              >
+                                🛡️
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>N/A</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* Avg Daily Turnover */}
+                <tr style={{ transition: "background 0.2s" }} className="hover-bg">
+                  <td
+                    style={{
+                      padding: "14px 16px",
+                      fontSize: "var(--text-sm)",
+                      fontWeight: "var(--font-medium)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    Avg Daily Turnover in Period
+                  </td>
+                  {comparisonMatrix.map((item) => {
+                    let isWinner = false;
+                    if (item.avgTurnover != null && comparisonMatrix.length > 1) {
+                      const allTurnovers = comparisonMatrix
+                        .map((x) => x.avgTurnover)
+                        .filter((v): v is number => v != null);
+                      isWinner = item.avgTurnover === Math.max(...allTurnovers); // highest liquidity is winner
+                    }
+                    return (
+                      <td
+                        key={item.symbol}
+                        style={{
+                          padding: "14px 16px",
+                          fontSize: "var(--text-sm)",
+                          fontWeight: isWinner ? "var(--font-bold)" : "var(--font-medium)",
+                          color: "var(--text-primary)",
+                          textAlign: "center",
+                        }}
+                      >
+                        {item.avgTurnover != null ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <span>
+                              TZS {item.avgTurnover.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </span>
+                            {isWinner && (
+                              <span
+                                style={{ fontSize: "10px", color: "var(--accent-primary)" }}
+                                title="Highest Liquidity"
+                              >
+                                💧
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>N/A</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Rolling Volatility chart */}
       {!isLoading && activeSymbolCount >= 2 && volChartData && (
         <div
@@ -904,10 +1434,10 @@ export const CompareTickers: React.FC = () => {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-                Turnover Change
+                Relative Turnover
               </div>
               <div style={{ fontSize: "11px", color: "var(--text-secondary)", opacity: 0.7, marginTop: "2px" }}>
-                Normalized to 0% at start of period
+                Multiple of each ticker's median trading day (1× = typical)
               </div>
             </div>
           </div>
