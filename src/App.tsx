@@ -8,17 +8,25 @@ import {
   useNavigationType,
 } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { Dashboard } from "./components/Dashboard";
-import { DailyGlance } from "./components/DailyGlance";
-import { DerivedAnalytics } from "./components/DerivedAnalytics";
-import { TickerTrends } from "./components/TickerTrends";
-import { CompareTickers } from "./components/CompareTickers";
-import { NotificationsManager } from "./components/NotificationsManager";
 import { Loader2, Lock } from "lucide-react";
 import { AuthModal } from "./components/AuthModal";
 import { AuthModalProvider, useAuthModal } from "./contexts/AuthModalContext";
 import { useSettings } from "./contexts/SettingsContext";
-import { Settings } from "./components/Settings";
+
+// Lazy load route components to optimize page load times using React lazy + Suspense
+const Dashboard = React.lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
+const DailyGlance = React.lazy(() => import("./components/DailyGlance").then(m => ({ default: m.DailyGlance })));
+const DerivedAnalytics = React.lazy(() => import("./components/DerivedAnalytics").then(m => ({ default: m.DerivedAnalytics })));
+const TickerTrends = React.lazy(() => import("./components/TickerTrends").then(m => ({ default: m.TickerTrends })));
+const CompareTickers = React.lazy(() => import("./components/CompareTickers").then(m => ({ default: m.CompareTickers })));
+const NotificationsManager = React.lazy(() => import("./components/NotificationsManager").then(m => ({ default: m.NotificationsManager })));
+const Settings = React.lazy(() => import("./components/Settings").then(m => ({ default: m.Settings })));
+
+const LoadingFallback = (): React.ReactElement => (
+  <div className="loading-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "50vh" }}>
+    <Loader2 size={48} className="animate-spin" color="#6366f1" />
+  </div>
+);
 import {
   useMarketDates,
   useMarketData,
@@ -337,56 +345,58 @@ function App(): React.ReactElement {
       <Layout activeTab={activeTab} onTabChange={handleTabChange}>
         <ErrorBoundary>
           <div key={location.pathname} className="page-transition">
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <Dashboard
-                    marketData={marketData}
-                    marketIndices={marketIndices}
-                    loadingIndices={loadingIndices}
-                    topGainer={topGainer}
-                    topLoser={topLoser}
-                    totalVolume={totalVolume}
-                    totalTurnover={totalTurnover}
-                    totalDeals={totalDeals}
-                    totalMcap={totalMcap}
-                    activeSymbolsCount={activeSymbolsCount}
-                    tradedSymbolsCount={tradedSymbolsCount}
-                    selectedDate={effectiveDate}
-                    availableDates={availableDates}
-                    loadingData={loadingData}
-                    onDateChange={handleDateChange}
-                    formatLargeNumber={formatLargeNumberDisplay}
-                  />
-                }
-              />
-              <Route
-                path="/glance"
-                element={
-                  <ProtectedRoute>
-                    <DailyGlance />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/analytics"
-                element={
-                  <DerivedAnalytics
-                    data={marketData}
-                    selectedDate={effectiveDate}
-                    formattedDate={formattedDate}
-                    availableDates={availableDates}
-                    loadingData={loadingData}
-                    onDateChange={handleDateChange}
-                  />
-                }
-              />
-              <Route path="/trends/:symbol?" element={<TickerTrends />} />
-              <Route path="/compare" element={<CompareTickers />} />
-              <Route path="/notifications" element={<NotificationsManager />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
+            <React.Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <Dashboard
+                      marketData={marketData}
+                      marketIndices={marketIndices}
+                      loadingIndices={loadingIndices}
+                      topGainer={topGainer}
+                      topLoser={topLoser}
+                      totalVolume={totalVolume}
+                      totalTurnover={totalTurnover}
+                      totalDeals={totalDeals}
+                      totalMcap={totalMcap}
+                      activeSymbolsCount={activeSymbolsCount}
+                      tradedSymbolsCount={tradedSymbolsCount}
+                      selectedDate={effectiveDate}
+                      availableDates={availableDates}
+                      loadingData={loadingData}
+                      onDateChange={handleDateChange}
+                      formatLargeNumber={formatLargeNumberDisplay}
+                    />
+                  }
+                />
+                <Route
+                  path="/glance"
+                  element={
+                    <ProtectedRoute>
+                      <DailyGlance />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/analytics"
+                  element={
+                    <DerivedAnalytics
+                      data={marketData}
+                      selectedDate={effectiveDate}
+                      formattedDate={formattedDate}
+                      availableDates={availableDates}
+                      loadingData={loadingData}
+                      onDateChange={handleDateChange}
+                    />
+                  }
+                />
+                <Route path="/trends/:symbol?" element={<TickerTrends />} />
+                <Route path="/compare" element={<CompareTickers />} />
+                <Route path="/notifications" element={<NotificationsManager />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </React.Suspense>
           </div>
         </ErrorBoundary>
       </Layout>
