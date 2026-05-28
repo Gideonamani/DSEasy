@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-05-28
+
+### Added
+
+- **Issue #66 (Compare Tickers Breakdown Matrix)**: Added a side-by-side performance & metrics matrix under the price comparison chart in `CompareTickers`. For each selected ticker it shows latest close, growth across 1W/1M/3M/6M/1Y and the selected period, plus peak/trough growth, average 20-day rolling volatility, and average daily turnover — with the best performer highlighted in each row.
+
+### Fixed
+
+- **Turnover comparison chart bias**: The "Relative Turnover" chart now normalizes each ticker to its own median trading day (1× = a typical day) instead of dividing by an arbitrary opening day. This removes the start-point bias that inflated the whole series (e.g. a spike that previously read as `+130,000%` now reads as `~1300×` a normal day) and makes tickers comparable.
+- **Growth horizon mislabeling**: Sub-period growth figures now return N/A when available history is shorter than the horizon, instead of snapping to the oldest data point and mislabeling a shorter return (e.g. 6 months of data shown as "1-Year Growth").
+- **Period anchoring**: Period windows now count back from the latest available trading day rather than wall-clock "now", so the chart reconciles with the matrix and a stale data feed no longer silently shrinks the window.
+
+### Changed
+
+- **Issue Documentation policy**: GitHub Issues is now the single source of record. Stopped committing per-issue spec files under `docs/issues/`; durable design rationale belongs in an ADR-style `docs/decisions/` note keyed by topic.
+
+---
+
 ## [1.6.0] - 2026-05-27
 
 ### Added
