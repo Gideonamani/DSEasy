@@ -19,25 +19,24 @@ interface IntradayChange {
 }
 
 // Latest daily close for a ticker. Daily-closing dates are "YYYY-MM-DD"
-// strings, so a lexical sort is chronological.
+// strings, so a lexical sort is chronological. Only the most recent date is
+// queried — walking older dates on a miss would mean one Firestore read per
+// historical date for any ticker outside the equities scrape (e.g. ETFs),
+// which blows past the Apps Script custom-function timeout.
 async function getLatestDailyClose(
   availableDates: string[],
   ticker: string,
 ): Promise<DailyClose | null> {
-  const sorted = [...availableDates].sort().reverse();
-  for (const date of sorted) {
-    const snap = await db
-      .collection("dailyClosing")
-      .doc(date)
-      .collection("stocks")
-      .doc(ticker)
-      .get();
-    if (snap.exists) {
-      const data = snap.data() || {};
-      return { date, close: data.close ?? 0 };
-    }
-  }
-  return null;
+  const latestDate = [...availableDates].sort().reverse()[0];
+  const snap = await db
+    .collection("dailyClosing")
+    .doc(latestDate)
+    .collection("stocks")
+    .doc(ticker)
+    .get();
+  if (!snap.exists) return null;
+  const data = snap.data() || {};
+  return { date: latestDate, close: data.close ?? 0 };
 }
 
 // Today's intraday change for a ticker from the most recent marketWatch
@@ -123,14 +122,16 @@ export const getTickerPrice = onRequest(
       }
 
       // prevClose: latest published daily close — the live-price base and the
-      // off-hours fallback.
-      const dailyClose = await getLatestDailyClose(availableDates, ticker);
+      // off-hours fallback. Fetched in parallel with the intraday snapshot.
+      const [dailyClose, intraday] = await Promise.all([
+        getLatestDailyClose(availableDates, ticker),
+        getLatestIntradayChange(marketWatchDates, ticker),
+      ]);
+
       if (!dailyClose) {
         res.status(404).json({ error: `Ticker '${ticker}' not found in daily closing data.` });
         return;
       }
-
-      const intraday = await getLatestIntradayChange(marketWatchDates, ticker);
 
       // Apply the intraday change only when the snapshot is genuinely newer
       // than the published close (freshest-by-date — avoids double-counting the
