@@ -1,5 +1,6 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { db } from "../config/firebase";
+import { normalizeSymbol } from "../utils/helpers";
 
 // Beyond this age an intraday snapshot's `change` is treated as unusable and we
 // fall back to the plain daily close. Covers the overnight post-close gap (the
@@ -92,14 +93,19 @@ export const getTickerPrice = onRequest(
     secrets: ["SHEETS_API_KEY"],
   },
   async (req, res) => {
-    const ticker = (req.query.ticker as string || "").toUpperCase().trim();
+    const rawTicker = (req.query.ticker as string || "").toUpperCase().trim();
     const providedKey = req.query.key as string;
 
     // 1. Basic Validation
-    if (!ticker) {
+    if (!rawTicker) {
       res.status(400).json({ error: "Missing 'ticker' parameter." });
       return;
     }
+
+    // Apply the same symbol mapping the scraper uses, so callers can pass the
+    // dashed form (e.g. "IEACLC-ETF", "VERTEX-ETF") and still hit the canonical
+    // Firestore doc id (e.g. "IEACLC ETF").
+    const ticker = normalizeSymbol(rawTicker);
 
     // 2. API Key Validation
     // Note: In production, set this via: firebase functions:secrets:set SHEETS_API_KEY
