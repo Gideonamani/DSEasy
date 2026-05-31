@@ -36,6 +36,7 @@ import { formatLargeNumber } from "./utils/formatters";
 import { useAuth } from "./contexts/AuthContext";
 import { useNotificationsSync } from "./hooks/useNotificationsSync";
 import { ForegroundNotifications } from "./components/ForegroundNotifications";
+import PWAPrompt from "./components/PWAPrompt";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { StockData } from "./types/market";
 
@@ -402,6 +403,7 @@ function App(): React.ReactElement {
       </Layout>
       <AuthModal />
       <ForegroundNotifications />
+      <PWAPrompt />
     </AuthModalProvider>
   );
 }
