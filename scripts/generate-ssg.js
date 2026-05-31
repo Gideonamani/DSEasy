@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.join(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
 const publicLogosDir = path.join(rootDir, 'public', 'logos');
-const baseDomain = 'https://dse-easy.web.app';
+const baseDomain = process.env.VITE_APP_BASE_URL || 'https://ds-easy.vercel.app';
 
 // Ensure the dist directory exists
 if (!fs.existsSync(distDir)) {
@@ -73,8 +73,9 @@ const pages = [
 
 // Helper to inject meta tags into the HTML template
 function preRenderHtml(title, description, relativeImagePath, pagePath) {
+  const encodedImagePath = relativeImagePath.split('/').map(encodeURIComponent).join('/');
   const fullUrl = `${baseDomain}/${pagePath}`.replace(/\/+$/, '');
-  const absoluteImageUrl = `${baseDomain}${relativeImagePath}`;
+  const absoluteImageUrl = `${baseDomain}${encodedImagePath}`;
 
   const seoMetaTags = `
     <!-- Primary SEO Meta Tags -->
@@ -160,12 +161,13 @@ for (const ticker of tickers) {
   const ogImage = fs.existsSync(highResLogoLocalPath) ? highResLogoRelativePath : logoRelativePath;
 
   const title = `${ticker} Stock Price, Trends & Historical Chart - DSEasy`;
-  const description = `Analyze historical price action, technical overlays (RSI, MACD, Bollinger Bands), daily spreads, and volume breakouts for ${ticker} on the Dar es Salaam Stock Exchange.`;
+  const description = `Analyze historical price action, technical overlays (RSI, SMA), daily spreads, and volume breakouts for ${ticker} on the Dar es Salaam Stock Exchange.`;
 
-  const fileContent = preRenderHtml(title, description, ogImage, `trends/${ticker}`);
+  const encodedTicker = encodeURIComponent(ticker);
+  const fileContent = preRenderHtml(title, description, ogImage, `trends/${encodedTicker}`);
 
   // Generate both UPPERCASE and lowercase paths for safety/compatibility
-  const pathsToGenerate = [`trends/${ticker}`, `trends/${ticker.toLowerCase()}`];
+  const pathsToGenerate = [`trends/${encodedTicker}`, `trends/${encodedTicker.toLowerCase()}`];
 
   for (const p of pathsToGenerate) {
     const dirPath = path.join(distDir, p);
