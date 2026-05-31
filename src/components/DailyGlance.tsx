@@ -28,6 +28,28 @@ import { formatNumber, formatLargeNumber } from "../utils/formatters";
 import { MarketStatusBanner } from "./MarketStatusBanner";
 import { SkeletonStatCard, SkeletonGlanceHeatmap, SkeletonGlancePanel } from "./Skeleton";
 
+const renderSafeSummary = (text: string, customStyle?: React.CSSProperties): React.ReactNode => {
+  if (!text) return null;
+  // Splits the text by markdown bold markers and captures the text inside.
+  // E.g. "Stock is **bullish** today" -> ["Stock is ", "bullish", " today"]
+  const parts = text.split(/\*\*(.*?)\*\*/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        // Odd indices are the captured bold groups
+        if (index % 2 === 1) {
+          return (
+            <strong key={index} style={customStyle}>
+              {part}
+            </strong>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+};
+
 export const DailyGlance: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const dateFromUrl = searchParams.get("date");
@@ -1017,12 +1039,14 @@ export const DailyGlance: React.FC = () => {
                           </div>
 
                           {!isClosing ? (
-                            <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
-                               dangerouslySetInnerHTML={{ __html: intel.snapshotSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                            <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}>
+                              {renderSafeSummary(intel.snapshotSummary)}
+                            </p>
                           ) : (
                             intel.trendSummary && (
-                              <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
-                                 dangerouslySetInnerHTML={{ __html: intel.trendSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                              <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}>
+                                {renderSafeSummary(intel.trendSummary)}
+                              </p>
                             )
                           )}
                         </div>
@@ -1070,8 +1094,12 @@ export const DailyGlance: React.FC = () => {
                             borderRadius: "var(--radius-md)",
                             borderLeft: "2px solid var(--accent-primary)",
                           }}>
-                            <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}
-                               dangerouslySetInnerHTML={{ __html: intelHistory[intelHistory.length - 1].trendSummary.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--accent-primary)">$1</strong>') }} />
+                            <p style={{ color: "var(--text-primary)", lineHeight: 1.5, margin: 0, fontSize: "var(--text-sm)" }}>
+                              {renderSafeSummary(
+                                intelHistory[intelHistory.length - 1].trendSummary,
+                                { color: "var(--accent-primary)" }
+                              )}
+                            </p>
                           </div>
                         </div>
                       </div>
