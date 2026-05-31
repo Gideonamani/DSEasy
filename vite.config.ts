@@ -13,7 +13,7 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/icon-192x192.png', 'icons/icon-512x512.png'],
       manifest: {
-        name: 'DSEEasy - Financial Dashboard',
+        name: 'DSEasy - Financial Dashboard',
         short_name: 'DSEasy',
         description: 'Track DSE market data, trends, and analytics in real-time.',
         theme_color: '#6366f1',
@@ -43,6 +43,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        importScripts: ['/firebase-messaging-sw.js'],
         navigateFallbackDenylist: [/^\/__/],
       }
     })
