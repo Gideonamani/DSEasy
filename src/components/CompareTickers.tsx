@@ -512,8 +512,15 @@ export const CompareTickers: React.FC = () => {
           }
         }
         
-        if (closest && closest.close > 0 && closest !== latest) {
-          return ((latestClose - closest.close) / closest.close) * 100;
+        if (
+          closest &&
+          typeof closest.close === "number" &&
+          closest.close > 0 &&
+          Number.isFinite(closest.close) &&
+          closest !== latest
+        ) {
+          const growthVal = ((latestClose - closest.close) / closest.close) * 100;
+          return Number.isFinite(growthVal) ? growthVal : null;
         }
         return null;
       };
@@ -529,14 +536,21 @@ export const CompareTickers: React.FC = () => {
         const firstFiltered = filteredSorted[0];
         const firstFilteredClose = firstFiltered ? firstFiltered.close : 0;
         
-        if (firstFilteredClose > 0) {
-          selectedGrowth = ((latestClose - firstFilteredClose) / firstFilteredClose) * 100;
+        if (
+          typeof firstFilteredClose === "number" &&
+          firstFilteredClose > 0 &&
+          Number.isFinite(firstFilteredClose)
+        ) {
+          const growthVal = ((latestClose - firstFilteredClose) / firstFilteredClose) * 100;
+          selectedGrowth = Number.isFinite(growthVal) ? growthVal : null;
           
           filteredSorted.forEach((d) => {
-            if (d.close > 0) {
+            if (typeof d.close === "number" && d.close > 0 && Number.isFinite(d.close)) {
               const relGrowth = ((d.close - firstFilteredClose) / firstFilteredClose) * 100;
-              if (relGrowth > peakGrowth) peakGrowth = relGrowth;
-              if (relGrowth < troughGrowth) troughGrowth = relGrowth;
+              if (Number.isFinite(relGrowth)) {
+                if (relGrowth > peakGrowth) peakGrowth = relGrowth;
+                if (relGrowth < troughGrowth) troughGrowth = relGrowth;
+              }
             }
           });
         }
