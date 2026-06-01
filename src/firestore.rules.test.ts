@@ -24,11 +24,11 @@ describe("Firestore Security Rules - Notifications", () => {
   });
 
   beforeEach(async () => {
-    await testEnv.clearFirestore();
+    if (testEnv) await testEnv.clearFirestore();
   });
 
   afterAll(async () => {
-    await testEnv.cleanup();
+    if (testEnv) await testEnv.cleanup();
   });
 
   it("allows a user to read their own notification history", async () => {
