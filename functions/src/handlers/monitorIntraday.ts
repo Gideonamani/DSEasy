@@ -265,9 +265,12 @@ async function runIntradayMonitor(): Promise<void> {
           alertId: doc.id,
         });
 
-        const notifRef = db.collection("notifications").doc();
+        const notifRef = db
+          .collection("notifications")
+          .doc(alert.userId)
+          .collection("history")
+          .doc();
         batch.set(notifRef, {
-          userId: alert.userId,
           type: "PRICE_ALERT",
           title: `Price Alert: ${alert.symbol}`,
           body: `${alert.symbol} reached ${currentPrice} TZS`,
