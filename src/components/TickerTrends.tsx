@@ -877,23 +877,23 @@ export const TickerTrends: React.FC = () => {
         </div>
       ) : stats ? (
         <div className="stats-grid" style={{ marginBottom: "24px" }}>
-          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Latest Close</p>
-            <p style={{ fontSize: "24px", fontWeight: "bold" }}>{formatNumber(stats.latest)}</p>
+          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px", height: "90px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "8px" }}>
+            <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1 }}>Latest Close</p>
+            <p style={{ margin: 0, fontSize: "24px", fontWeight: "bold", lineHeight: 1 }}>{formatNumber(stats.latest)}</p>
           </div>
-          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Period Change</p>
-            <p style={{ fontSize: "24px", fontWeight: "bold", color: stats.periodChange >= 0 ? "var(--accent-success)" : "var(--accent-danger)" }}>
+          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px", height: "90px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "8px" }}>
+            <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1 }}>Period Change</p>
+            <p style={{ margin: 0, fontSize: "24px", fontWeight: "bold", lineHeight: 1, color: stats.periodChange >= 0 ? "var(--accent-success)" : "var(--accent-danger)" }}>
               {stats.periodChange >= 0 ? "+" : ""}{stats.periodChange.toFixed(2)}%
             </p>
           </div>
-          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Period High</p>
-            <p style={{ fontSize: "24px", fontWeight: "bold", color: "var(--accent-success)" }}>{formatNumber(stats.high)}</p>
+          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px", height: "90px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "8px" }}>
+            <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1 }}>Period High</p>
+            <p style={{ margin: 0, fontSize: "24px", fontWeight: "bold", lineHeight: 1, color: "var(--accent-success)" }}>{formatNumber(stats.high)}</p>
           </div>
-          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px" }}>
-            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>Period Low</p>
-            <p style={{ fontSize: "24px", fontWeight: "bold", color: "var(--accent-danger)" }}>{formatNumber(stats.low)}</p>
+          <div className="glass-panel" style={{ padding: "20px", borderRadius: "12px", height: "90px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "8px" }}>
+            <p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1 }}>Period Low</p>
+            <p style={{ margin: 0, fontSize: "24px", fontWeight: "bold", lineHeight: 1, color: "var(--accent-danger)" }}>{formatNumber(stats.low)}</p>
           </div>
         </div>
       ) : null}
@@ -980,7 +980,7 @@ export const TickerTrends: React.FC = () => {
                   )}
                </div>
                {metric.key === "close" && (
-                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap", alignItems: "center", minHeight: "26px" }}>
                    <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 500, marginRight: "4px" }}>Overlays:</span>
                    {[...SMA_OVERLAYS, ...VWAP_OVERLAYS].map(overlay => {
                      const active = activeOverlays.has(overlay.key);
@@ -1047,7 +1047,7 @@ export const TickerTrends: React.FC = () => {
       )}
 
       {/* High-Low-Close Analysis Chart */}
-      {filteredData.length > 0 && (
+      {(loadingData || filteredData.length > 0) && (
         <div style={{ marginTop: "24px" }}>
           <TrendCard 
             title="Price Action Analysis (High/Low/Close)" 
@@ -1055,61 +1055,65 @@ export const TickerTrends: React.FC = () => {
             explanation="Visualizes the daily volatility range. The gray bars show the High-Low range, while the purple line shows the Close price. Long bars indicate high volatility."
           >
             <div style={{ height: "400px" }}>
-              <Bar 
-                data={{
-                  labels: filteredData.map(d => d.date),
-                  datasets: [
-                    {
-                      type: 'line',
-                      label: 'Close Price',
-                      data: filteredData.map(d => d.close !== undefined && d.close !== null ? d.close : null),
-                      borderColor: '#4f46e5', // Indigo-600
-                      borderWidth: 2,
-                      pointRadius: 0,
-                      tension: 0.4,
-                      yAxisID: 'y',
-                      order: 1,
-                      spanGaps: true
-                    },
-                    {
-                      type: 'bar',
-                      label: 'High Deviation (Green)',
-                      data: filteredData.map(d => (d.close == null || d.high == null) ? null : [d.close, d.high]),
-                      backgroundColor: 'rgba(16, 185, 129, 0.6)', // Green
-                      borderColor: 'rgba(16, 185, 129, 1)',
-                      borderWidth: { top: 1, right: 1, bottom: 0, left: 1 },
-                      borderSkipped: false,
-                      barPercentage: 0.3,
-                      yAxisID: 'y',
-                      grouped: false, // Prevent lateral offset
-                      order: 2
-                    },
-                    {
-                      type: 'bar',
-                      label: 'Low Deviation (Red)',
-                      data: filteredData.map(d => (d.close == null || d.low == null) ? null : [d.low, d.close]),
-                      backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
-                      borderColor: 'rgba(239, 68, 68, 1)',
-                      borderWidth: { top: 0, right: 1, bottom: 1, left: 1 },
-                      borderSkipped: false,
-                      barPercentage: 0.3,
-                      yAxisID: 'y',
-                      grouped: false, // Prevent lateral offset
-                      order: 3
+              {loadingData ? (
+                <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: "var(--radius-md)" }} />
+              ) : (
+                <Bar 
+                  data={{
+                    labels: filteredData.map(d => d.date),
+                    datasets: [
+                      {
+                        type: 'line',
+                        label: 'Close Price',
+                        data: filteredData.map(d => d.close !== undefined && d.close !== null ? d.close : null),
+                        borderColor: '#4f46e5', // Indigo-600
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        order: 1,
+                        spanGaps: true
+                      },
+                      {
+                        type: 'bar',
+                        label: 'High Deviation (Green)',
+                        data: filteredData.map(d => (d.close == null || d.high == null) ? null : [d.close, d.high]),
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)', // Green
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: { top: 1, right: 1, bottom: 0, left: 1 },
+                        borderSkipped: false,
+                        barPercentage: 0.3,
+                        yAxisID: 'y',
+                        grouped: false, // Prevent lateral offset
+                        order: 2
+                      },
+                      {
+                        type: 'bar',
+                        label: 'Low Deviation (Red)',
+                        data: filteredData.map(d => (d.close == null || d.low == null) ? null : [d.low, d.close]),
+                        backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: { top: 0, right: 1, bottom: 1, left: 1 },
+                        borderSkipped: false,
+                        barPercentage: 0.3,
+                        yAxisID: 'y',
+                        grouped: false, // Prevent lateral offset
+                        order: 3
+                      }
+                    ] as ChartData<"bar">["datasets"],
+                  }}
+                  options={{
+                    ...chartOptions,
+                    plugins: {
+                      ...chartOptions.plugins,
+                      tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                      }
                     }
-                  ] as ChartData<"bar">["datasets"],
-                }}
-                options={{
-                  ...chartOptions,
-                  plugins: {
-                    ...chartOptions.plugins,
-                    tooltip: {
-                      mode: 'index',
-                      intersect: false,
-                    }
-                  }
-                } as ChartOptions<"bar">}
-              />
+                  } as ChartOptions<"bar">}
+                />
+              )}
             </div>
           </TrendCard>
         </div>

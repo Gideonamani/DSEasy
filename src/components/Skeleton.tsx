@@ -82,13 +82,14 @@ export const SkeletonTrendCard: React.FC = () => (
       <Bone style={{ width: '130px', height: '18px' }} />
     </div>
     <Bone style={{ width: '100%', height: '320px', borderRadius: 'var(--radius-md)' }} />
+    <div style={{ height: '26px', marginTop: '12px' }} />
   </div>
 );
 
 // For TickerTrends hero stats strip (Latest Close / Period Change / High / Low)
 export const SkeletonMiniStat: React.FC = () => (
-  <div className="glass-panel" style={{ padding: '20px', borderRadius: '12px' }}>
-    <Bone style={{ width: '80px', height: '12px', marginBottom: '8px' }} />
+  <div className="glass-panel" style={{ padding: '20px', borderRadius: '12px', height: '90px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px' }}>
+    <Bone style={{ width: '80px', height: '12px' }} />
     <Bone style={{ width: '64px', height: '24px' }} />
   </div>
 );
