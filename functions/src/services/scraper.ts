@@ -139,6 +139,22 @@ export async function scrapeDSEAndWriteToFirestore(
       const volume = parseNum(row[11]);
       let mcap = parseNum(row[12]);
 
+      // Price Validity Gate (ID 42): Block zero or invalid close prices from entering Firestore
+      if (close <= 0 || !Number.isFinite(close)) {
+        console.warn(
+          JSON.stringify({
+            event: "SCRAPER_ROW_VALIDITY_FAIL",
+            symbol,
+            open,
+            prevClose,
+            close,
+            rawRow: row,
+            message: `Skipping stock row for ${symbol} due to invalid or zero closing price.`,
+          })
+        );
+        continue;
+      }
+
       // DSE website reports MCAP in Billions (e.g. 1.23 = 1.23B TZS).
       // Expand to full number for uniform storage across all sources.
       if (mcap > 0 && Math.abs(mcap) < 1000000) {
