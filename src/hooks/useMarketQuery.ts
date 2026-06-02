@@ -55,12 +55,19 @@ const toSortedMarketDates = (raw: string[] | undefined): MarketDate[] => {
   return dates;
 };
 
+// config/app is written by the daily scraper and intraday handlers — at most
+// a few times per trading day. Cache for 5 minutes and refetch on focus so an
+// open tab picks up a new date without a hard reload.
+const APP_CONFIG_STALE_TIME = 5 * 60 * 1000;
+
 // Fetch available dates from config/app
 export const useMarketDates = () => {
   return useQuery<AppConfig | null, Error, MarketDate[]>({
     queryKey: ["appConfig"],
     queryFn: fetchAppConfig,
     select: (config) => toSortedMarketDates(config?.availableDates),
+    staleTime: APP_CONFIG_STALE_TIME,
+    refetchOnWindowFocus: "always",
   });
 };
 
@@ -71,6 +78,8 @@ export const useMarketWatchDates = () => {
     queryKey: ["appConfig"],
     queryFn: fetchAppConfig,
     select: (config) => toSortedMarketDates(config?.marketWatchDates),
+    staleTime: APP_CONFIG_STALE_TIME,
+    refetchOnWindowFocus: "always",
   });
 };
 
