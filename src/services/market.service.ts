@@ -1,7 +1,7 @@
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { FirestorePaths } from "./firestorePaths";
-import type { MarketIndex, RawStockDoc } from "../types/market";
+import type { MarketIndex, RawStockDoc, DividendEntry, RawDividendDoc } from "../types/market";
 
 export interface AppConfig {
   availableDates?: string[];
@@ -89,5 +89,18 @@ export async function fetchMarketIndices(): Promise<MarketIndex[] | null> {
   } catch (error) {
     console.error("fetchMarketIndices failed:", error);
     throw new Error("Failed to retrieve current market indices. Please try again later.");
+  }
+}
+
+export async function fetchTickerDividends(symbol: string): Promise<DividendEntry[]> {
+  try {
+    const snapshot = await getDocs(collection(db, ...FirestorePaths.dividendHistory(symbol)));
+    return snapshot.docs.map((entry) => ({
+      id: entry.id,
+      data: entry.data() as RawDividendDoc,
+    }));
+  } catch (error) {
+    console.error(`fetchTickerDividends failed for symbol ${symbol}:`, error);
+    throw new Error(`Failed to retrieve dividend history for ${symbol}. Please try again later.`);
   }
 }

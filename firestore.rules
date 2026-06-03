@@ -25,6 +25,11 @@ service cloud.firestore {
         allow read: if true;
         allow write: if false;
       }
+
+      match /dividendHistory/{entry} {
+        allow read: if true;
+        allow write: if false;
+      }
     }
 
     // Config: Public read

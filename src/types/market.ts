@@ -128,3 +128,18 @@ export interface Alert extends AlertDoc {
   id: string;
   created: string;
 }
+
+export interface RawDividendDoc {
+  exDate: string;
+  paymentDate: string;
+  amount: number;
+  type?: "Interim" | "Final" | "Special";
+}
+
+export interface DividendEntry {
+  id: string;
+  data: RawDividendDoc;
+}
+
+export type TrendDataPoint = StockData & { date: string };
+

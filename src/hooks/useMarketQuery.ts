@@ -5,6 +5,7 @@ import {
   fetchMarketIndices,
   fetchTickerHistory,
   fetchTickerSymbols,
+  fetchTickerDividends,
   type AppConfig,
   type RawStockEntry,
 } from "../services/market.service";
@@ -13,10 +14,12 @@ import type {
   MarketIndex,
   RawStockDoc,
   StockData,
+  DividendEntry,
+  TrendDataPoint,
 } from "../types/market";
 import { normalizeMcap } from "../utils/normalizeMcap";
 
-export type { MarketDate, MarketIndex, StockData } from "../types/market";
+export type { MarketDate, MarketIndex, StockData, TrendDataPoint } from "../types/market";
 export { normalizeMcap } from "../utils/normalizeMcap";
 
 // Helper: Parse "26Jan2026" or "2024-01-26" -> Date Object
@@ -141,8 +144,6 @@ export const useTickerSymbols = () => {
   });
 };
 
-export type TrendDataPoint = StockData & { date: string };
-
 // Fetch history from trends/{symbol}/dailyClosingHistory
 export const useTickerHistory = (symbol: string) => {
   return useQuery<TrendDataPoint[]>({
@@ -176,5 +177,17 @@ export const useMarketIndices = () => {
     queryKey: ["marketIndices"],
     queryFn: fetchMarketIndices,
     refetchInterval: 1000 * 60 * 15,
+  });
+};
+
+export const useTickerDividends = (symbol: string) => {
+  return useQuery<DividendEntry[]>({
+    queryKey: ["dividendHistory", symbol],
+    queryFn: () => {
+      if (!symbol) return [];
+      return fetchTickerDividends(symbol);
+    },
+    enabled: !!symbol,
+    staleTime: 1000 * 60 * 15,
   });
 };
