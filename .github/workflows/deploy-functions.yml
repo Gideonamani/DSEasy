@@ -1,0 +1,31 @@
+name: Deploy Functions
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'functions/**'
+      - 'firebase.json'
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
+
+      - name: Deploy functions
+        run: npx firebase-tools deploy --only functions --project dse-easy --token "$FIREBASE_TOKEN" --non-interactive
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
