@@ -178,4 +178,30 @@ describe("dcaCalculator", () => {
     expect(Number.isNaN(result.divYieldUsed)).toBe(false);
     expect(Number.isFinite(result.divYieldUsed)).toBe(true);
   });
+
+  it("handles zero or non-positive close prices gracefully without division-by-zero or NaN output", () => {
+    const zeroPriceHistory: TrendDataPoint[] = [
+      { symbol: "CRDB", date: "2023-01-01", close: 0, open: 100, change: 0 },
+      { symbol: "CRDB", date: "2023-02-01", close: -5, open: 100, change: 0 },
+      { symbol: "CRDB", date: "2023-03-01", close: 100, open: 100, change: 0 },
+    ];
+
+    const result = runDcaSimulation(
+      zeroPriceHistory,
+      [],
+      1000,
+      "monthly",
+      0.16,
+      false
+    );
+
+    expect(Number.isNaN(result.totalContributed)).toBe(false);
+    expect(Number.isFinite(result.totalContributed)).toBe(true);
+    expect(Number.isNaN(result.totalSharesOwned)).toBe(false);
+    expect(Number.isFinite(result.totalSharesOwned)).toBe(true);
+    // Shares bought on Jan/Feb should be 0 instead of Infinity/NaN
+    // Shares bought on Mar should be 1000 / 100 = 10
+    expect(result.totalSharesOwned).toBe(10);
+    expect(result.finalValue).toBe(1000);
+  });
 });

@@ -178,7 +178,7 @@ export function runDcaSimulation(
 
     if (event.type === "contribution") {
       const { price } = findClosePrice(event.date, parsedHistory);
-      const sharesBought = event.amount / price;
+      const sharesBought = price > 0 ? event.amount / price : 0;
       sharesOwned += sharesBought;
       totalContributed += event.amount;
       timeline.push({
@@ -213,7 +213,7 @@ export function runDcaSimulation(
       }
     } else if (event.type === "dividend_pay") {
       const { price } = findClosePrice(event.date, parsedHistory);
-      const sharesBought = event.amount / price;
+      const sharesBought = price > 0 ? event.amount / price : 0;
       sharesOwned += sharesBought;
       timeline.push({
         date: dateStr,
