@@ -139,16 +139,13 @@ export async function scrapeDSEAndWriteToFirestore(
       const volume = parseNum(row[11]);
       let mcap = parseNum(row[12]);
 
-      // Price Validity Gate (ID 42): Block zero or invalid close prices from entering Firestore
-      if (close <= 0 || !Number.isFinite(close)) {
+      // Block zero, negative, NaN, and Infinity close prices before writing to Firestore
+      if (!(close > 0)) {
         console.warn(
           JSON.stringify({
             event: "SCRAPER_ROW_VALIDITY_FAIL",
             symbol,
-            open,
-            prevClose,
-            close,
-            rawRow: row,
+            rawClose: row[3],
             message: `Skipping stock row for ${symbol} due to invalid or zero closing price.`,
           })
         );
