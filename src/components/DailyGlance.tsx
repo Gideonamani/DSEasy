@@ -58,7 +58,7 @@ export const DailyGlance: React.FC = () => {
 
   const isDateInvalid = useMemo(() => {
     if (!dateFromUrl) return false;
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const dateRegex = /^(?:\d{4}-\d{2}-\d{2}|(?:\d{1,2}[A-Za-z]{3,9}\d{4}))$/;
     return !dateRegex.test(dateFromUrl);
   }, [dateFromUrl]);
 
@@ -85,7 +85,7 @@ export const DailyGlance: React.FC = () => {
   const handleDateChange = (date: string) => {
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      const dateRegex = /^(?:\d{4}-\d{2}-\d{2}|(?:\d{1,2}[A-Za-z]{3,9}\d{4}))$/;
       if (date && dateRegex.test(date)) {
         newParams.set("date", date);
       } else {
