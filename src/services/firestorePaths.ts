@@ -14,4 +14,6 @@ export const FirestorePaths = {
   alert: (alertId: string) => ["alerts", alertId] as const,
   userSettings: (uid: string) => ["users", uid, "profile", "settings"] as const,
   userFcmToken: (uid: string, token: string) => ["users", uid, "fcmTokens", token] as const,
+  userNotifications: (uid: string) => ["notifications", uid, "history"] as const,
+  userNotification: (uid: string, notificationId: string) => ["notifications", uid, "history", notificationId] as const,
 };
