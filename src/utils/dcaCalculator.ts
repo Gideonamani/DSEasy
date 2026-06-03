@@ -254,16 +254,27 @@ export function runDcaSimulation(
   if (numYears > 0.1 && firstPrice > 0 && lastPrice > 0) {
     cagr = Math.pow(lastPrice / firstPrice, 1 / numYears) - 1;
   }
-  cagr = Math.min(Math.max(cagr, -0.2), 0.3); // Clamp between -20% and +30%
+  if (isNaN(cagr) || !isFinite(cagr)) {
+    cagr = 0.08;
+  } else {
+    cagr = Math.min(Math.max(cagr, -0.2), 0.3); // Clamp between -20% and +30%
+  }
 
-  // Compute historical average dividend yield
-  const sumOfDividendAmounts = dividends.reduce((sum, div) => sum + div.data.amount, 0);
+  // Compute historical average dividend yield with strict numeric guards
+  const validDividendAmounts = dividends
+    .map((div) => Number(div?.data?.amount))
+    .filter((amt) => typeof amt === "number" && isFinite(amt) && amt >= 0);
+  const sumOfDividendAmounts = validDividendAmounts.reduce((sum, amt) => sum + amt, 0);
   const averagePrice = parsedHistory.reduce((sum, h) => sum + h.close, 0) / parsedHistory.length;
   let divYield = 0.04; // Default 4% yield
   if (averagePrice > 0 && numYears > 0.1) {
     divYield = (sumOfDividendAmounts / averagePrice) / numYears;
   }
-  divYield = Math.min(Math.max(divYield, 0), 0.15); // Clamp between 0% and 15%
+  if (isNaN(divYield) || !isFinite(divYield)) {
+    divYield = 0.04;
+  } else {
+    divYield = Math.min(Math.max(divYield, 0), 0.15); // Clamp between 0% and 15%
+  }
 
   let currentPrice = lastPrice || 100;
 
@@ -325,18 +336,21 @@ export function runDcaSimulation(
 
   const finalValue = sharesOwned * currentPrice + cashBalance;
   const annualisedNetDividends = sharesOwned * currentPrice * divYield * 0.95;
-  const yieldOnCost = totalContributed > 0 ? (annualisedNetDividends / totalContributed) * 100 : 0;
+  let yieldOnCost = totalContributed > 0 ? (annualisedNetDividends / totalContributed) * 100 : 0;
+  if (isNaN(yieldOnCost) || !isFinite(yieldOnCost)) {
+    yieldOnCost = 0;
+  }
 
   return {
     timeline,
-    totalContributed,
-    finalValue,
-    totalDividends,
-    yieldOnCost,
-    totalSharesOwned: sharesOwned,
+    totalContributed: isNaN(totalContributed) || !isFinite(totalContributed) ? 0 : totalContributed,
+    finalValue: isNaN(finalValue) || !isFinite(finalValue) ? 0 : finalValue,
+    totalDividends: isNaN(totalDividends) || !isFinite(totalDividends) ? 0 : totalDividends,
+    yieldOnCost: isNaN(yieldOnCost) || !isFinite(yieldOnCost) ? 0 : yieldOnCost,
+    totalSharesOwned: isNaN(sharesOwned) || !isFinite(sharesOwned) ? 0 : sharesOwned,
     hasProjections,
-    historicalYears,
-    projectedYears,
+    historicalYears: isNaN(historicalYears) || !isFinite(historicalYears) ? 0 : historicalYears,
+    projectedYears: isNaN(projectedYears) || !isFinite(projectedYears) ? 0 : projectedYears,
     cagrUsed: cagr,
     divYieldUsed: divYield,
   };

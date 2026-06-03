@@ -127,4 +127,55 @@ describe("dcaCalculator", () => {
     expect(lastStep.cashBalance).toBe(285);
     expect(resultNoDrip.finalValue).toBeCloseTo(50 * 100 + 285);
   });
+
+  it("handles corrupted or NaN dividend fields gracefully without silent cascades", () => {
+    const corruptedDividends: DividendEntry[] = [
+      {
+        id: "div-1",
+        data: {
+          exDate: "2023-03-15",
+          paymentDate: "2023-04-15",
+          amount: NaN,
+        },
+      },
+      {
+        id: "div-2",
+        data: {
+          exDate: "2023-04-15",
+          paymentDate: "2023-05-15",
+          amount: undefined as any,
+        },
+      },
+      {
+        id: "div-3",
+        data: {
+          exDate: "2023-05-15",
+          paymentDate: "2023-06-15",
+          amount: "invalid-number" as any,
+        },
+      },
+    ];
+
+    const result = runDcaSimulation(
+      mockHistory,
+      corruptedDividends,
+      1000,
+      "monthly",
+      1,
+      true
+    );
+
+    expect(Number.isNaN(result.totalDividends)).toBe(false);
+    expect(Number.isFinite(result.totalDividends)).toBe(true);
+    expect(result.totalDividends).toBe(0);
+
+    expect(Number.isNaN(result.yieldOnCost)).toBe(false);
+    expect(Number.isFinite(result.yieldOnCost)).toBe(true);
+
+    expect(Number.isNaN(result.finalValue)).toBe(false);
+    expect(Number.isFinite(result.finalValue)).toBe(true);
+
+    expect(Number.isNaN(result.divYieldUsed)).toBe(false);
+    expect(Number.isFinite(result.divYieldUsed)).toBe(true);
+  });
 });

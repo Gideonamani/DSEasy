@@ -95,10 +95,21 @@ export async function fetchMarketIndices(): Promise<MarketIndex[] | null> {
 export async function fetchTickerDividends(symbol: string): Promise<DividendEntry[]> {
   try {
     const snapshot = await getDocs(collection(db, ...FirestorePaths.dividendHistory(symbol)));
-    return snapshot.docs.map((entry) => ({
-      id: entry.id,
-      data: entry.data() as RawDividendDoc,
-    }));
+    return snapshot.docs.map((entry) => {
+      const raw = entry.data();
+      const amountVal = Number(raw.amount);
+      const data: RawDividendDoc = {
+        ...raw,
+        exDate: typeof raw.exDate === "string" ? raw.exDate : "",
+        paymentDate: typeof raw.paymentDate === "string" ? raw.paymentDate : "",
+        amount: typeof raw.amount === "number" && isFinite(raw.amount) && raw.amount >= 0 ? raw.amount : (isNaN(amountVal) || amountVal < 0 ? 0 : amountVal),
+        type: raw.type,
+      };
+      return {
+        id: entry.id,
+        data,
+      };
+    });
   } catch (error) {
     console.error(`fetchTickerDividends failed for symbol ${symbol}:`, error);
     throw new Error(`Failed to retrieve dividend history for ${symbol}. Please try again later.`);
