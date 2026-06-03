@@ -27,7 +27,7 @@ export default function PWAPrompt() {
 
   return (
     <div className="pwa-toast-container animate-toast">
-      <div className="glass-panel pwa-toast-content">
+      <div className="pwa-toast-content">
         <div className="pwa-toast-header">
           <div className="pwa-toast-info">
             {needRefresh ? (
