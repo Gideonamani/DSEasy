@@ -13,6 +13,36 @@ import {
   generateGapDetection,
 } from "../services/marketIntel";
 
+// Number of consecutive identical intraday snapshots required before we
+// classify the day as a non-trading day. ~45 min at the 15-min cadence —
+// long enough to rule out a quiet patch on a real session, short enough to
+// stop most of the day's phantom writes.
+const HOLIDAY_STALE_THRESHOLD = 3;
+
+// Returns true iff every stock in both snapshots has identical values on the
+// fields that always move during real trading: marketPrice, volume, and
+// best bid/offer quantities. A real session shows drift in at least one of
+// these for at least one stock across any 15-min window; a frozen response
+// from the marketWatch API on a closed day shows literally none.
+function snapshotsAreFrozen(
+  prior: { [symbol: string]: Record<string, unknown> },
+  current: { [symbol: string]: Record<string, unknown> },
+): boolean {
+  const priorKeys = Object.keys(prior);
+  const currentKeys = Object.keys(current);
+  if (priorKeys.length !== currentKeys.length) return false;
+  for (const sym of currentKeys) {
+    const p = prior[sym];
+    const c = current[sym];
+    if (!p) return false;
+    if (p.marketPrice !== c.marketPrice) return false;
+    if (p.volume !== c.volume) return false;
+    if (p.bestBidQuantity !== c.bestBidQuantity) return false;
+    if (p.bestOfferQuantity !== c.bestOfferQuantity) return false;
+  }
+  return true;
+}
+
 // ------------------------------------------------------------------
 // Core intraday monitoring logic, shared by multiple scheduled triggers.
 // ------------------------------------------------------------------
@@ -108,60 +138,137 @@ async function runIntradayMonitor(): Promise<void> {
         });
 
         const dateStr = eatNow.format("YYYY-MM-DD");
-        const snapshotRef = db
-          .collection("marketWatch")
-          .doc(dateStr)
-          .collection("snapshots")
-          .doc(timestamp);
+        const dateRef = db.collection("marketWatch").doc(dateStr);
 
-        batch.set(snapshotRef, {
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          capturedAt: timestamp,
-          stockCount: Object.keys(snapshot).length,
-          stocks: snapshot,
-        });
+        // Holiday detection: if a previous run already classified today as a
+        // non-trading day, skip all marketWatch writes (snapshot + intel +
+        // marketWatchDates append). Alerts and indices still run below.
+        const dateMeta = (await dateRef.get()).data() ?? {};
+        if (dateMeta.isHoliday) {
+          console.log(
+            JSON.stringify({
+              event: "MARKETWATCH_SKIP_HOLIDAY",
+              date: dateStr,
+              message: `${dateStr} is flagged as non-trading day; skipping marketWatch writes.`,
+            }),
+          );
+        } else {
+          // Compare against the most recent prior snapshot for the same date.
+          // Identity across snapshots for that day → API is replaying yesterday's
+          // close. Increment a counter; once it crosses the threshold, classify
+          // the day as a holiday, remove from marketWatchDates, and stop writing.
+          const priorSnap = await dateRef
+            .collection("snapshots")
+            .orderBy("capturedAt", "desc")
+            .limit(1)
+            .get();
 
-        const configAppRef = db.collection("config").doc("app");
-        batch.set(configAppRef, {
-          marketWatchDates: admin.firestore.FieldValue.arrayUnion(dateStr),
-          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
+          let staleCount = (dateMeta.staleSnapshotCount as number | undefined) ?? 0;
+          let frozen = false;
+          if (!priorSnap.empty) {
+            const priorStocks = (priorSnap.docs[0].data().stocks ?? {}) as {
+              [symbol: string]: Record<string, unknown>;
+            };
+            frozen = snapshotsAreFrozen(priorStocks, snapshot);
+          }
+          staleCount = frozen ? staleCount + 1 : 0;
 
-        console.log(
-          `Queued write to marketWatch/${dateStr}/snapshots/${timestamp} with ${Object.keys(snapshot).length} stocks.`,
-        );
+          if (frozen && staleCount >= HOLIDAY_STALE_THRESHOLD) {
+            // Threshold crossed: mark holiday, remove from marketWatchDates,
+            // and do NOT queue this snapshot or its intel — they're phantoms.
+            await dateRef.set(
+              {
+                isHoliday: true,
+                staleSnapshotCount: staleCount,
+                detectedAt: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+            await db
+              .collection("config")
+              .doc("app")
+              .set(
+                {
+                  marketWatchDates:
+                    admin.firestore.FieldValue.arrayRemove(dateStr),
+                  lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+                },
+                { merge: true },
+              );
+            console.log(
+              JSON.stringify({
+                event: "MARKETWATCH_HOLIDAY_DETECTED",
+                date: dateStr,
+                staleCount,
+                message: `${dateStr} flagged as non-trading day after ${staleCount} identical snapshots.`,
+              }),
+            );
+          } else {
+            // Not a holiday (yet) — write the snapshot and bump the counter.
+            const snapshotRef = dateRef.collection("snapshots").doc(timestamp);
 
-        try {
-          const currentSnapPayload = {
-             capturedAt: timestamp,
-             stockCount: Object.keys(snapshot).length,
-             stocks: snapshot,
-          };
-          let snapshotSummary = generateSnapshotIntel(currentSnapPayload);
-          const trendSummary = await generateTrendIntel(db, dateStr, currentSnapPayload);
-          
-          if (!trendSummary) {
-            const gapText = await generateGapDetection(db, currentSnapPayload);
-            if (gapText) {
-              snapshotSummary += ` ${gapText}`;
+            batch.set(snapshotRef, {
+              timestamp: admin.firestore.FieldValue.serverTimestamp(),
+              capturedAt: timestamp,
+              stockCount: Object.keys(snapshot).length,
+              stocks: snapshot,
+            });
+
+            batch.set(
+              dateRef,
+              {
+                staleSnapshotCount: staleCount,
+                lastChecked: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+
+            const configAppRef = db.collection("config").doc("app");
+            batch.set(configAppRef, {
+              marketWatchDates: admin.firestore.FieldValue.arrayUnion(dateStr),
+              lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+
+            console.log(
+              `Queued write to marketWatch/${dateStr}/snapshots/${timestamp} with ${Object.keys(snapshot).length} stocks.`,
+            );
+
+            try {
+              const currentSnapPayload = {
+                capturedAt: timestamp,
+                stockCount: Object.keys(snapshot).length,
+                stocks: snapshot,
+              };
+              let snapshotSummary = generateSnapshotIntel(currentSnapPayload);
+              const trendSummary = await generateTrendIntel(
+                db,
+                dateStr,
+                currentSnapPayload,
+              );
+
+              if (!trendSummary) {
+                const gapText = await generateGapDetection(
+                  db,
+                  currentSnapPayload,
+                );
+                if (gapText) {
+                  snapshotSummary += ` ${gapText}`;
+                }
+              }
+
+              const intelRef = dateRef.collection("intel").doc(timestamp);
+
+              batch.set(intelRef, {
+                capturedAt: timestamp,
+                type: "intraday",
+                snapshotSummary,
+                trendSummary,
+              });
+              console.log(`Queued market intel for ${dateStr}/${timestamp}`);
+            } catch (intelError) {
+              console.error("Failed to generate market intel:", intelError);
             }
           }
-
-          const intelRef = db
-            .collection("marketWatch")
-            .doc(dateStr)
-            .collection("intel")
-            .doc(timestamp);
-
-          batch.set(intelRef, {
-            capturedAt: timestamp,
-            type: "intraday",
-            snapshotSummary,
-            trendSummary,
-          });
-          console.log(`Queued market intel for ${dateStr}/${timestamp}`);
-        } catch (intelError) {
-          console.error("Failed to generate market intel:", intelError);
         }
       } else {
         console.warn("New market-data API returned no data.");

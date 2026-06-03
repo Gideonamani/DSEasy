@@ -3,6 +3,89 @@ import * as admin from "firebase-admin";
 import * as moment from "moment-timezone";
 import { db } from "../config/firebase";
 
+// Belt-and-braces holiday detection. The intraday monitor flags a day as a
+// non-trading day after ~45 min of frozen snapshots, but if the monitor was
+// down or the threshold wasn't reached (e.g. a half-day with delayed start),
+// this catches it at the start of the next session: if the most recent date
+// in marketWatchDates has no corresponding dailyClosing entry, its first and
+// last snapshots are deep-compared, and if identical we mark it as a holiday
+// and remove it from marketWatchDates.
+async function verifyMostRecentMarketWatchDay(todayStr: string): Promise<void> {
+  const configSnap = await db.collection("config").doc("app").get();
+  const cfg = configSnap.data() ?? {};
+  const watchDates: string[] = cfg.marketWatchDates ?? [];
+  const closingDates: string[] = cfg.availableDates ?? [];
+  const closingSet = new Set(closingDates);
+
+  // Find the most recent watch date that ISN'T today and has no closing entry.
+  const suspect = [...watchDates]
+    .sort()
+    .reverse()
+    .find((d) => d !== todayStr && !closingSet.has(d));
+  if (!suspect) return;
+
+  const dateRef = db.collection("marketWatch").doc(suspect);
+  const meta = (await dateRef.get()).data() ?? {};
+  if (meta.isHoliday) return; // Already handled.
+
+  const snaps = await dateRef
+    .collection("snapshots")
+    .orderBy("capturedAt", "asc")
+    .get();
+  if (snaps.size < 2) return; // Not enough data to compare.
+
+  const first = (snaps.docs[0].data().stocks ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const last = (snaps.docs[snaps.size - 1].data().stocks ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const firstKeys = Object.keys(first);
+  if (firstKeys.length === 0 || firstKeys.length !== Object.keys(last).length) {
+    return;
+  }
+  for (const sym of firstKeys) {
+    const a = first[sym];
+    const b = last[sym];
+    if (!b) return;
+    if (
+      a.marketPrice !== b.marketPrice ||
+      a.volume !== b.volume ||
+      a.bestBidQuantity !== b.bestBidQuantity ||
+      a.bestOfferQuantity !== b.bestOfferQuantity
+    ) {
+      return;
+    }
+  }
+
+  // All snapshots identical across the whole day → non-trading day.
+  await dateRef.set(
+    {
+      isHoliday: true,
+      detectedAt: admin.firestore.FieldValue.serverTimestamp(),
+      detectedBy: "preOpenSummary",
+    },
+    { merge: true },
+  );
+  await db.collection("config").doc("app").set(
+    {
+      marketWatchDates: admin.firestore.FieldValue.arrayRemove(suspect),
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+  console.log(
+    JSON.stringify({
+      event: "MARKETWATCH_HOLIDAY_RETRO",
+      date: suspect,
+      snapshotCount: snaps.size,
+      message: `Retroactively flagged ${suspect} as non-trading day (all ${snaps.size} snapshots identical).`,
+    }),
+  );
+}
+
 export const generatePreOpenSummary = onSchedule(
   {
     schedule: "25 9 * * 1-5",
@@ -12,6 +95,12 @@ export const generatePreOpenSummary = onSchedule(
   async (event) => {
     const now = moment().tz("Africa/Dar_es_Salaam");
     const todayStr = now.format("YYYY-MM-DD");
+
+    try {
+      await verifyMostRecentMarketWatchDay(todayStr);
+    } catch (verifyError) {
+      console.error("Holiday verification failed:", verifyError);
+    }
 
     try {
       const closingQuery = await db.collection("dailyClosing")
