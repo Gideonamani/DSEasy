@@ -38,6 +38,7 @@ import { useNotificationsSync } from "./hooks/useNotificationsSync";
 import { ForegroundNotifications } from "./components/ForegroundNotifications";
 import PWAPrompt from "./components/PWAPrompt";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RouteErrorBoundary } from "./components/RouteErrorBoundary";
 import type { StockData } from "./types/market";
 
 interface ProtectedRouteProps {
@@ -351,51 +352,85 @@ function App(): React.ReactElement {
                 <Route
                   path="/"
                   element={
-                    <Dashboard
-                      marketData={marketData}
-                      marketIndices={marketIndices}
-                      loadingIndices={loadingIndices}
-                      topGainer={topGainer}
-                      topLoser={topLoser}
-                      totalVolume={totalVolume}
-                      totalTurnover={totalTurnover}
-                      totalDeals={totalDeals}
-                      totalMcap={totalMcap}
-                      activeSymbolsCount={activeSymbolsCount}
-                      tradedSymbolsCount={tradedSymbolsCount}
-                      selectedDate={effectiveDate}
-                      availableDates={availableDates}
-                      loadingData={loadingData}
-                      onDateChange={handleDateChange}
-                      formatLargeNumber={formatLargeNumberDisplay}
-                    />
+                    <RouteErrorBoundary featureName="Dashboard">
+                      <Dashboard
+                        marketData={marketData}
+                        marketIndices={marketIndices}
+                        loadingIndices={loadingIndices}
+                        topGainer={topGainer}
+                        topLoser={topLoser}
+                        totalVolume={totalVolume}
+                        totalTurnover={totalTurnover}
+                        totalDeals={totalDeals}
+                        totalMcap={totalMcap}
+                        activeSymbolsCount={activeSymbolsCount}
+                        tradedSymbolsCount={tradedSymbolsCount}
+                        selectedDate={effectiveDate}
+                        availableDates={availableDates}
+                        loadingData={loadingData}
+                        onDateChange={handleDateChange}
+                        formatLargeNumber={formatLargeNumberDisplay}
+                      />
+                    </RouteErrorBoundary>
                   }
                 />
                 <Route
                   path="/glance"
                   element={
                     <ProtectedRoute>
-                      <DailyGlance />
+                      <RouteErrorBoundary featureName="Daily Glance">
+                        <DailyGlance />
+                      </RouteErrorBoundary>
                     </ProtectedRoute>
                   }
                 />
                 <Route
                   path="/analytics"
                   element={
-                    <DerivedAnalytics
-                      data={marketData}
-                      selectedDate={effectiveDate}
-                      formattedDate={formattedDate}
-                      availableDates={availableDates}
-                      loadingData={loadingData}
-                      onDateChange={handleDateChange}
-                    />
+                    <RouteErrorBoundary featureName="Derived Analytics">
+                      <DerivedAnalytics
+                        data={marketData}
+                        selectedDate={effectiveDate}
+                        formattedDate={formattedDate}
+                        availableDates={availableDates}
+                        loadingData={loadingData}
+                        onDateChange={handleDateChange}
+                      />
+                    </RouteErrorBoundary>
                   }
                 />
-                <Route path="/trends/:symbol?" element={<TickerTrends />} />
-                <Route path="/compare" element={<CompareTickers />} />
-                <Route path="/notifications" element={<NotificationsManager />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route
+                  path="/trends/:symbol?"
+                  element={
+                    <RouteErrorBoundary featureName="Ticker Trends">
+                      <TickerTrends />
+                    </RouteErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/compare"
+                  element={
+                    <RouteErrorBoundary featureName="Compare Tickers">
+                      <CompareTickers />
+                    </RouteErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/notifications"
+                  element={
+                    <RouteErrorBoundary featureName="Notifications Manager">
+                      <NotificationsManager />
+                    </RouteErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <RouteErrorBoundary featureName="Settings">
+                      <Settings />
+                    </RouteErrorBoundary>
+                  }
+                />
               </Routes>
             </React.Suspense>
           </div>
