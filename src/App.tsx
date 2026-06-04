@@ -21,6 +21,7 @@ const TickerTrends = React.lazy(() => import("./components/TickerTrends").then(m
 const CompareTickers = React.lazy(() => import("./components/CompareTickers").then(m => ({ default: m.CompareTickers })));
 const NotificationsManager = React.lazy(() => import("./components/NotificationsManager").then(m => ({ default: m.NotificationsManager })));
 const Settings = React.lazy(() => import("./components/Settings").then(m => ({ default: m.Settings })));
+const DCASimulator = React.lazy(() => import("./components/DCASimulator").then(m => ({ default: m.DCASimulator })));
 
 const LoadingFallback = (): React.ReactElement => (
   <div className="loading-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "50vh" }}>
@@ -125,7 +126,8 @@ type RoutePath =
   | "/trends"
   | "/compare"
   | "/notifications"
-  | "/settings";
+  | "/settings"
+  | "/dca";
 
 type TabName =
   | "Dashboard"
@@ -134,7 +136,8 @@ type TabName =
   | "Ticker Trends"
   | "Compare Tickers"
   | "Notifications"
-  | "Settings";
+  | "Settings"
+  | "DCA Simulator";
 
 const ROUTES: Record<RoutePath, TabName> = {
   "/": "Dashboard",
@@ -144,6 +147,7 @@ const ROUTES: Record<RoutePath, TabName> = {
   "/compare": "Compare Tickers",
   "/notifications": "Notifications",
   "/settings": "Settings",
+  "/dca": "DCA Simulator",
 };
 
 const TAB_TO_ROUTE: Record<TabName, RoutePath> = {
@@ -154,6 +158,7 @@ const TAB_TO_ROUTE: Record<TabName, RoutePath> = {
   "Compare Tickers": "/compare",
   Notifications: "/notifications",
   Settings: "/settings",
+  "DCA Simulator": "/dca",
 };
 
 const EMPTY_TICKER: StockData = {
@@ -396,6 +401,7 @@ function App(): React.ReactElement {
                 <Route path="/compare" element={<CompareTickers />} />
                 <Route path="/notifications" element={<NotificationsManager />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/dca" element={<DCASimulator />} />
               </Routes>
             </React.Suspense>
           </div>

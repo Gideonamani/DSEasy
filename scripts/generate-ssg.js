@@ -64,6 +64,12 @@ const pages = [
     image: '/og-image.png'
   },
   {
+    path: 'dca',
+    title: 'DCA Wealth Builder & Retirement Simulator - DSEasy',
+    description: 'Run high-fidelity Dollar-Cost Averaging (DCA) and retirement backtesting simulations on DSE stocks, including tax cuts and dividend reinvestment plans.',
+    image: '/og-image.png'
+  },
+  {
     path: 'settings',
     title: 'Preferences & Settings - DSEasy',
     description: 'Customize your DSEasy experience including dark mode, default landing page, number format formatting (full vs. abbreviated), and chart configurations.',

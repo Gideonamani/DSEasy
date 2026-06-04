@@ -14,6 +14,7 @@ import {
   LogOut,
   User,
   LucideIcon,
+  Calculator,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useAuthModal } from "../contexts/AuthModalContext";
@@ -347,6 +348,7 @@ export const Layout: React.FC<LayoutProps> = ({
             "Derived Analytics",
             "Ticker Trends",
             "Compare Tickers",
+            "DCA Simulator",
             "Notifications",
             "Settings",
           ].map((tab) => (
@@ -363,6 +365,8 @@ export const Layout: React.FC<LayoutProps> = ({
                       ? LineChart
                       : tab === "Compare Tickers"
                         ? GitCompare
+                        : tab === "DCA Simulator"
+                          ? Calculator
                         : tab === "Notifications"
                           ? Bell
                           : Settings

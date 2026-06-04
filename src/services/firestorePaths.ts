@@ -7,6 +7,7 @@ export const FirestorePaths = {
   dailyClosingStocks: (date: string) => ["dailyClosing", date, "stocks"] as const,
   trends: () => ["trends"] as const,
   tickerHistory: (symbol: string) => ["trends", symbol, "dailyClosingHistory"] as const,
+  dividendHistory: (symbol: string) => ["trends", symbol, "dividendHistory"] as const,
   marketIndicesCurrent: () => ["marketIndices", "current"] as const,
   marketWatchSnapshots: (date: string) => ["marketWatch", date, "snapshots"] as const,
   marketWatchIntel: (date: string) => ["marketWatch", date, "intel"] as const,
