@@ -9,7 +9,14 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Use 'prompt' (not 'autoUpdate'): the app ships a manual update UI
+      // (PWAPrompt) and a separate Firebase messaging service worker
+      // (firebase-messaging-sw.js, registered by getToken at the same '/'
+      // scope). With 'autoUpdate' the generated worker uses skipWaiting +
+      // clientsClaim and reloads on every controllerchange, so the two
+      // workers contending for control trigger an endless page-reload loop.
+      // 'prompt' only reloads when the user clicks "Reload & Update".
+      registerType: 'prompt',
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/icon-192x192.png', 'icons/icon-512x512.png'],
       manifest: {
