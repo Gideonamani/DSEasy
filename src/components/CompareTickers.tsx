@@ -111,8 +111,13 @@ export const CompareTickers: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { settings } = useSettings();
 
-  // Parse initial symbols from URL, pad to MIN_SYMBOLS
-  const urlSymbols = (searchParams.get("s") || "").split(",").filter(Boolean);
+  // Parse and sanitize initial symbols from URL, pad to MIN_SYMBOLS
+  const urlSymbols = (searchParams.get("s") || "")
+    .split(",")
+    .filter(Boolean)
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => /^[A-Z0-9-]{1,8}$/.test(s));
+
   const initSymbols = [
     urlSymbols[0] || "",
     urlSymbols[1] || "",
@@ -120,10 +125,20 @@ export const CompareTickers: React.FC = () => {
   ];
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(initSymbols);
 
-  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "6M");
+  const parsedPeriod = searchParams.get("period") || "6M";
+  const validPeriod = ["1W", "1M", "3M", "6M", "1Y", "5Y", "Custom"].includes(parsedPeriod) ? parsedPeriod : "6M";
+  const [selectedPeriod, setSelectedPeriod] = useState(validPeriod);
+
+  const startParam = searchParams.get("start");
+  const endParam = searchParams.get("end");
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  
+  const initialStart = startParam && dateRegex.test(startParam) && !isNaN(new Date(startParam).getTime()) ? new Date(startParam) : null;
+  const initialEnd = endParam && dateRegex.test(endParam) && !isNaN(new Date(endParam).getTime()) ? new Date(endParam) : null;
+
   const [customRange, setCustomRange] = useState<{ start: Date | null; end: Date | null }>({
-    start: searchParams.get("start") ? new Date(searchParams.get("start")!) : null,
-    end: searchParams.get("end") ? new Date(searchParams.get("end")!) : null,
+    start: initialStart,
+    end: initialEnd,
   });
 
   // Symbol slot management

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   useLatestSnapshot,
@@ -55,17 +55,38 @@ export const DailyGlance: React.FC = () => {
   const dateFromUrl = searchParams.get("date");
   
   const { data: availableDates = [], isLoading: loadingDates } = useMarketWatchDates();
+
+  const isDateInvalid = useMemo(() => {
+    if (!dateFromUrl) return false;
+    const dateRegex = /^(?:\d{4}-\d{2}-\d{2}|(?:\d{1,2}[A-Za-z]{3,9}\d{4}))$/;
+    return !dateRegex.test(dateFromUrl);
+  }, [dateFromUrl]);
+
+  // If date parameter in URL is invalid, remove it to redirect/fallback safely
+  useEffect(() => {
+    if (isDateInvalid) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("date");
+          return next;
+        },
+        { replace: true }
+      );
+    }
+  }, [isDateInvalid, setSearchParams]);
   
   const effectiveDate = useMemo(() => {
-    if (dateFromUrl) return dateFromUrl;
+    if (dateFromUrl && !isDateInvalid) return dateFromUrl;
     if (availableDates.length > 0) return availableDates[0].sheetName;
     return undefined;
-  }, [dateFromUrl, availableDates]);
+  }, [dateFromUrl, isDateInvalid, availableDates]);
 
   const handleDateChange = (date: string) => {
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
-      if (date) {
+      const dateRegex = /^(?:\d{4}-\d{2}-\d{2}|(?:\d{1,2}[A-Za-z]{3,9}\d{4}))$/;
+      if (date && dateRegex.test(date)) {
         newParams.set("date", date);
       } else {
         newParams.delete("date");
