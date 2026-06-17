@@ -19,15 +19,32 @@ export function useNotificationsSync(): void {
 
   useEffect(() => {
     if (!currentUser) return;
+    const user = currentUser;
 
-    const key = `${currentUser.uid}:${settings.notificationsEnabled}`;
+    const key = `${user.uid}:${settings.notificationsEnabled}`;
     if (lastAppliedRef.current === key) return;
     lastAppliedRef.current = key;
 
-    if (settings.notificationsEnabled) {
-      registerFcmToken(currentUser);
-    } else {
-      unregisterFcmToken(currentUser);
+    let active = true;
+
+    async function syncNotificationToken() {
+      try {
+        if (settings.notificationsEnabled) {
+          await registerFcmToken(user);
+        } else {
+          await unregisterFcmToken(user);
+        }
+      } catch (err) {
+        if (active) {
+          console.error("Error syncing FCM token:", err);
+        }
+      }
     }
+
+    syncNotificationToken();
+
+    return () => {
+      active = false;
+    };
   }, [currentUser, settings.notificationsEnabled]);
 }
