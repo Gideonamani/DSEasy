@@ -15,45 +15,10 @@ import type {
   StockData,
 } from "../types/market";
 import { normalizeMcap } from "../utils/normalizeMcap";
+import { parseMarketDate, toSortedMarketDates } from "../utils/marketDates";
 
 export type { MarketDate, MarketIndex, StockData } from "../types/market";
 export { normalizeMcap } from "../utils/normalizeMcap";
-
-// Helper: Parse "26Jan2026" or "2024-01-26" -> Date Object
-const parseSheetDate = (sheetName: string): Date | null => {
-  if (!sheetName) return null;
-
-  // Check for standard ISO YYYY-MM-DD date first
-  if (/^\d{4}-\d{2}-\d{2}$/.test(sheetName)) {
-    return new Date(sheetName);
-  }
-
-  const match = sheetName.match(/^(\d{1,2})([A-Za-z]{3})(\d{4})$/);
-  if (!match) return null;
-
-  const day = parseInt(match[1]);
-  const monthStr = match[2].toLowerCase();
-  const year = parseInt(match[3]);
-
-  const months: Record<string, number> = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
-  };
-  return new Date(year, months[monthStr], day);
-};
-
-const toSortedMarketDates = (raw: string[] | undefined): MarketDate[] => {
-  const dates: MarketDate[] = (raw ?? []).map((d) => ({
-    sheetName: d,
-    date: parseSheetDate(d),
-  }));
-  dates.sort((a, b) => {
-    const dateA = a.date ? a.date.getTime() : 0;
-    const dateB = b.date ? b.date.getTime() : 0;
-    return dateB - dateA;
-  });
-  return dates;
-};
 
 // config/app is written by the daily scraper and intraday handlers — at most
 // a few times per trading day. Cache for 5 minutes and refetch on focus so an
@@ -162,8 +127,8 @@ export const useTickerHistory = (symbol: string) => {
     staleTime: 1000 * 60 * 15,
     select: (data) => {
       return [...data].sort((a, b) => {
-        const dateA = parseSheetDate(a.date)?.getTime() || 0;
-        const dateB = parseSheetDate(b.date)?.getTime() || 0;
+        const dateA = parseMarketDate(a.date)?.getTime() || 0;
+        const dateB = parseMarketDate(b.date)?.getTime() || 0;
         return dateA - dateB;
       });
     },

@@ -15,6 +15,7 @@ import { AlertModal } from "./AlertModal";
 import { CustomSelect } from "./CustomSelect";
 import { getCommonChartOptions } from "../utils/chartTheme";
 import { calculateRSI, calculateSMA, calculateRollingVWAP } from "../utils/indicators";
+import { filterByTrendPeriod, type TrendPeriod } from "../utils/marketDates";
 import { TickerLogo } from "./TickerLogo";
 import type {
   ChartOptions,
@@ -180,7 +181,7 @@ const TrendCard: React.FC<TrendCardProps> = ({ title, icon, children, explanatio
   );
 };
 
-const PERIODS = [
+const PERIODS: { label: string; value: TrendPeriod }[] = [
   { label: '1W', value: '1W' },
   { label: '1M', value: '1M' },
   { label: '3M', value: '3M' },
@@ -199,7 +200,6 @@ export const TickerTrends: React.FC = () => {
   const themeScales = chartTheme.scales ?? {};
   const themePluginOptions = chartTheme.plugins ?? {};
 
-  
   // Track hidden metrics and persist to localStorage
   const [hiddenMetrics, setHiddenMetrics] = useState<Set<string>>(() => {
     try {
@@ -303,7 +303,12 @@ export const TickerTrends: React.FC = () => {
   // --- Filtering Logic ---
   
   // State for period and custom dates - initialize from URL
-  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period") || "6M");
+  const [selectedPeriod, setSelectedPeriod] = useState<TrendPeriod>(() => {
+    const periodParam = searchParams.get("period");
+    return PERIODS.some((period) => period.value === periodParam)
+      ? (periodParam as TrendPeriod)
+      : "6M";
+  });
   const [customRange, setCustomRange] = useState<{ start: Date | null; end: Date | null }>({
     start: searchParams.get("start") ? new Date(searchParams.get("start")!) : null,
     end: searchParams.get("end") ? new Date(searchParams.get("end")!) : null,
@@ -333,74 +338,8 @@ export const TickerTrends: React.FC = () => {
     setSearchParams(params, { replace: true });
   }, [selectedPeriod, customRange, searchParams, setSearchParams]);
 
-  // Filter Data
   const filteredData = useMemo(() => {
-    if (!timeseriesData.length) return [];
-    if (selectedPeriod === "ALL") return timeseriesData;
-
-    let cutoffDate = new Date();
-    // Normalize today to start of day for comparison if needed, or just standard date calc
-    
-    // For Custom
-    if (selectedPeriod === "Custom") {
-        return timeseriesData.filter(d => {
-            const normalizeDate = (date: string | Date): Date => {
-                 const d = new Date(date);
-                 d.setHours(0,0,0,0);
-                 return d;
-            };
-
-            const parseDate = (str: string): Date => {
-                // ISO YYYY-MM-DD (standard) or DDMonYYYY (legacy fallback)
-                if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
-                const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
-                if (!match) return new Date(str);
-                const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-                return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
-            };
-            const itemDate = normalizeDate(parseDate(d.date));
-
-            let matchesStart = true;
-            let matchesEnd = true;
-            
-            if (customRange.start) matchesStart = itemDate >= normalizeDate(customRange.start);
-            if (customRange.end) matchesEnd = itemDate <= normalizeDate(customRange.end);
-            
-            return matchesStart && matchesEnd;
-        });
-    }
-
-    // For Relative Periods
-    // We need to base "1 Week" relative to the LATEST DATE in the data data? or Today?
-    // Financial apps usually do relative to Today.
-    
-    switch (selectedPeriod) {
-        case '1W': cutoffDate.setDate(cutoffDate.getDate() - 7); break;
-        case '1M': cutoffDate.setMonth(cutoffDate.getMonth() - 1); break;
-        case '3M': cutoffDate.setMonth(cutoffDate.getMonth() - 3); break;
-        case '6M': cutoffDate.setMonth(cutoffDate.getMonth() - 6); break;
-        case '1Y': cutoffDate.setFullYear(cutoffDate.getFullYear() - 1); break;
-        default: return timeseriesData;
-    }
-    
-    // Normalize cutoff to start of day
-    cutoffDate.setHours(0,0,0,0);
-
-    return timeseriesData.filter(d => {
-         const parseDate = (str: string): Date => {
-            // ISO YYYY-MM-DD (standard) or DDMonYYYY (legacy fallback)
-            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
-            const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
-            if (!match) return new Date(str);
-            const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-            const date = new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
-            return date;
-         };
-         const itemDate = parseDate(d.date);
-         itemDate.setHours(0,0,0,0);
-         return itemDate >= cutoffDate;
-    });
-
+    return filterByTrendPeriod(timeseriesData, selectedPeriod, customRange);
   }, [timeseriesData, selectedPeriod, customRange]);
 
   // SMA values are computed over the FULL history so the visible window
