@@ -199,12 +199,7 @@ export const TickerTrends: React.FC = () => {
   const chartTheme = getCommonChartOptions<"line">(settings.theme);
   const themeScales = chartTheme.scales ?? {};
   const themePluginOptions = chartTheme.plugins ?? {};
-  const periodParam = searchParams.get("period");
-  const initialPeriod: TrendPeriod = PERIODS.some((period) => period.value === periodParam)
-    ? (periodParam as TrendPeriod)
-    : "6M";
 
-  
   // Track hidden metrics and persist to localStorage
   const [hiddenMetrics, setHiddenMetrics] = useState<Set<string>>(() => {
     try {
@@ -308,7 +303,12 @@ export const TickerTrends: React.FC = () => {
   // --- Filtering Logic ---
   
   // State for period and custom dates - initialize from URL
-  const [selectedPeriod, setSelectedPeriod] = useState<TrendPeriod>(initialPeriod);
+  const [selectedPeriod, setSelectedPeriod] = useState<TrendPeriod>(() => {
+    const periodParam = searchParams.get("period");
+    return PERIODS.some((period) => period.value === periodParam)
+      ? (periodParam as TrendPeriod)
+      : "6M";
+  });
   const [customRange, setCustomRange] = useState<{ start: Date | null; end: Date | null }>({
     start: searchParams.get("start") ? new Date(searchParams.get("start")!) : null,
     end: searchParams.get("end") ? new Date(searchParams.get("end")!) : null,

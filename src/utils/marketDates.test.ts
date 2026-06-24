@@ -86,6 +86,35 @@ describe("filterByTrendPeriod", () => {
       rows,
     );
   });
+
+  it("keeps unparseable rows in Custom mode when no bounds are set", () => {
+    const result = filterByTrendPeriod(rows, "Custom", {
+      start: null,
+      end: null,
+    });
+
+    expect(result.map((row) => row.close)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("drops unparseable rows in Custom mode once a bound is set", () => {
+    const result = filterByTrendPeriod(rows, "Custom", {
+      start: new Date("2026-01-01"),
+      end: null,
+    });
+
+    expect(result.map((row) => row.close)).toEqual([2, 3]);
+  });
+
+  it("supports a 5Y relative window", () => {
+    const result = filterByTrendPeriod(
+      rows,
+      "5Y",
+      { start: null, end: null },
+      new Date("2026-01-31"),
+    );
+
+    expect(result.map((row) => row.close)).toEqual([1, 2, 3]);
+  });
 });
 
 describe("toStartOfDay", () => {

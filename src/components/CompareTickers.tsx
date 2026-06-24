@@ -2,6 +2,11 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useSettings } from "../contexts/SettingsContext";
 import { useTickerSymbols, useTickerHistory, StockData } from "../hooks/useMarketQuery";
+import {
+  filterByTrendPeriod,
+  parseMarketDate,
+  type TrendPeriod,
+} from "../utils/marketDates";
 import { Line } from "react-chartjs-2";
 import { getCommonChartOptions } from "../utils/chartTheme";
 import type { ChartOptions, TooltipItem } from "chart.js";
@@ -16,7 +21,7 @@ const SYMBOL_COLORS = ["#6366f1", "#10b981", "#f59e0b"];
 const MIN_SYMBOLS = 2;
 const MAX_SYMBOLS = 3;
 
-const PERIOD_OPTIONS = [
+const PERIOD_OPTIONS: { label: string; value: TrendPeriod }[] = [
   { label: "1W", value: "1W" },
   { label: "1M", value: "1M" },
   { label: "3M", value: "3M" },
@@ -26,17 +31,11 @@ const PERIOD_OPTIONS = [
   { label: "Custom", value: "Custom" },
 ];
 
-const parseSheetDate = (str: string | undefined): Date => {
-  if (!str) return new Date(NaN);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return new Date(str);
-  const match = String(str).match(/(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})/);
-  if (!match) return new Date(str);
-  const months: Record<string, number> = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
-  };
-  return new Date(parseInt(match[3]), months[match[2].toLowerCase()], parseInt(match[1]));
-};
+// Adapt parseMarketDate to the legacy "always returns a Date" shape that the
+// sort/format call sites below rely on (Invalid Date sorts as NaN, which is
+// the prior behavior).
+const parseSheetDate = (str: string | undefined): Date =>
+  parseMarketDate(str) ?? new Date(NaN);
 
 // Rolling 20-day volatility (std dev of daily % returns), computed over full history
 const calculateRollingVolatility = (closes: number[], period = 20): (number | null)[] => {
@@ -59,52 +58,21 @@ const calculateRollingVolatility = (closes: number[], period = 20): (number | nu
 
 const filterByPeriod = (
   data: StockData[],
-  period: string,
+  period: TrendPeriod,
   customRange: { start: Date | null; end: Date | null }
 ): StockData[] => {
   if (!data.length) return [];
-  if (period === "ALL") return data;
-
-  if (period === "Custom") {
-    return data.filter((d) => {
-      const itemDate = parseSheetDate(d.date);
-      itemDate.setHours(0, 0, 0, 0);
-      if (customRange.start) {
-        const s = new Date(customRange.start);
-        s.setHours(0, 0, 0, 0);
-        if (itemDate < s) return false;
-      }
-      if (customRange.end) {
-        const e = new Date(customRange.end);
-        e.setHours(0, 0, 0, 0);
-        if (itemDate > e) return false;
-      }
-      return true;
-    });
-  }
-
   // Anchor the window to the latest available trading day, not wall-clock now:
   // a stale feed would otherwise silently shrink the window, and this keeps the
   // chart in step with the matrix's latest-anchored growth figures.
-  const latestDate = data.reduce((max, d) => {
-    const t = parseSheetDate(d.date);
-    return t.getTime() > max.getTime() ? t : max;
-  }, new Date(0));
-  const cutoff = new Date(latestDate);
-  switch (period) {
-    case "1W": cutoff.setDate(cutoff.getDate() - 7); break;
-    case "1M": cutoff.setMonth(cutoff.getMonth() - 1); break;
-    case "3M": cutoff.setMonth(cutoff.getMonth() - 3); break;
-    case "6M": cutoff.setMonth(cutoff.getMonth() - 6); break;
-    case "1Y": cutoff.setFullYear(cutoff.getFullYear() - 1); break;
-  }
-  cutoff.setHours(0, 0, 0, 0);
-
-  return data.filter((d) => {
-    const itemDate = parseSheetDate(d.date);
-    itemDate.setHours(0, 0, 0, 0);
-    return itemDate >= cutoff;
-  });
+  const anchor =
+    period === "ALL" || period === "Custom"
+      ? undefined
+      : data.reduce((max, d) => {
+          const t = parseMarketDate(d.date);
+          return t && t.getTime() > max.getTime() ? t : max;
+        }, new Date(0));
+  return filterByTrendPeriod(data, period, customRange, anchor);
 };
 
 export const CompareTickers: React.FC = () => {
@@ -125,9 +93,13 @@ export const CompareTickers: React.FC = () => {
   ];
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(initSymbols);
 
-  const parsedPeriod = searchParams.get("period") || "6M";
-  const validPeriod = ["1W", "1M", "3M", "6M", "1Y", "5Y", "Custom"].includes(parsedPeriod) ? parsedPeriod : "6M";
-  const [selectedPeriod, setSelectedPeriod] = useState(validPeriod);
+  const [selectedPeriod, setSelectedPeriod] = useState<TrendPeriod>(() => {
+    const parsedPeriod = searchParams.get("period");
+    const valid: TrendPeriod[] = ["1W", "1M", "3M", "6M", "1Y", "5Y", "Custom"];
+    return valid.includes(parsedPeriod as TrendPeriod)
+      ? (parsedPeriod as TrendPeriod)
+      : "6M";
+  });
 
   const startParam = searchParams.get("start");
   const endParam = searchParams.get("end");
