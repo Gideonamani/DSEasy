@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { formatNumber } from "../utils/formatters";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { useSettings } from "../contexts/SettingsContext"; // Import useSettings
+import { useSettings, Settings } from "../contexts/SettingsContext";
 import { useTickerSymbols, useTickerHistory } from "../hooks/useMarketQuery";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -195,7 +195,7 @@ export const TickerTrends: React.FC = () => {
   const { symbol: urlSymbol } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { settings } = useSettings(); // Use settings hook
+  const { settings, updateSetting } = useSettings();
   const chartTheme = getCommonChartOptions<"line">(settings.theme);
   const themeScales = chartTheme.scales ?? {};
   const themePluginOptions = chartTheme.plugins ?? {};
@@ -302,23 +302,34 @@ export const TickerTrends: React.FC = () => {
 
   // --- Filtering Logic ---
   
-  // State for period and custom dates - initialize from URL
+  // State for period and custom dates - initialize from URL, falling back to
+  // the user's saved default chart range so the Settings page and this view stay
+  // in sync. We tolerate stale values (e.g. a deprecated "YTD" left in storage)
+  // by only accepting values that the period buttons actually render.
   const [selectedPeriod, setSelectedPeriod] = useState<TrendPeriod>(() => {
     const periodParam = searchParams.get("period");
-    return PERIODS.some((period) => period.value === periodParam)
-      ? (periodParam as TrendPeriod)
-      : "6M";
+    if (PERIODS.some((period) => period.value === periodParam)) {
+      return periodParam as TrendPeriod;
+    }
+    const fromSettings = settings.defaultChartRange;
+    if (PERIODS.some((period) => period.value === fromSettings)) {
+      return fromSettings as TrendPeriod;
+    }
+    return "6M";
   });
   const [customRange, setCustomRange] = useState<{ start: Date | null; end: Date | null }>({
     start: searchParams.get("start") ? new Date(searchParams.get("start")!) : null,
     end: searchParams.get("end") ? new Date(searchParams.get("end")!) : null,
   });
 
-  // Sync URL when period/dates change
+  // Sync URL when period/dates change. The period is omitted when it matches
+  // the user's saved default — clicking a button updates that default too, so
+  // the in-app flow normally leaves the URL clean and the param only appears
+  // when someone navigates to a non-default period explicitly.
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
-    
-    if (selectedPeriod === "6M") {
+
+    if (selectedPeriod === settings.defaultChartRange) {
        params.delete("period");
        params.delete("start");
        params.delete("end");
@@ -334,9 +345,9 @@ export const TickerTrends: React.FC = () => {
       params.delete("start");
       params.delete("end");
     }
-    
+
     setSearchParams(params, { replace: true });
-  }, [selectedPeriod, customRange, searchParams, setSearchParams]);
+  }, [selectedPeriod, customRange, searchParams, setSearchParams, settings.defaultChartRange]);
 
   const filteredData = useMemo(() => {
     return filterByTrendPeriod(timeseriesData, selectedPeriod, customRange);
@@ -709,7 +720,15 @@ export const TickerTrends: React.FC = () => {
             {PERIODS.map((period) => (
                 <button
                     key={period.value}
-                    onClick={() => setSelectedPeriod(period.value)}
+                    onClick={() => {
+                        setSelectedPeriod(period.value);
+                        // "Custom" is a per-session view that doesn't make sense
+                        // as a global default; everything else syncs back to
+                        // the Settings page.
+                        if (period.value !== "Custom") {
+                            updateSetting("defaultChartRange", period.value as Settings["defaultChartRange"]);
+                        }
+                    }}
                     style={{
                         padding: "6px 12px",
                         borderRadius: "8px",

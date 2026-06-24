@@ -153,7 +153,6 @@ export function Settings(): React.ReactElement {
                     { value: "3M", label: "3 Months" },
                     { value: "6M", label: "6 Months" },
                     { value: "1Y", label: "1 Year" },
-                    { value: "YTD", label: "Year to Date" },
                     { value: "ALL", label: "All Time" },
                 ]
             }

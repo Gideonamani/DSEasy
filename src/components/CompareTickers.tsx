@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useSettings } from "../contexts/SettingsContext";
+import { useSettings, Settings } from "../contexts/SettingsContext";
 import { useTickerSymbols, useTickerHistory, StockData } from "../hooks/useMarketQuery";
 import {
   filterByTrendPeriod,
@@ -77,7 +77,7 @@ const filterByPeriod = (
 
 export const CompareTickers: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { settings } = useSettings();
+  const { settings, updateSetting } = useSettings();
 
   // Parse and sanitize initial symbols from URL, pad to MIN_SYMBOLS
   const urlSymbols = (searchParams.get("s") || "")
@@ -93,12 +93,19 @@ export const CompareTickers: React.FC = () => {
   ];
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(initSymbols);
 
+  // Initialize from URL → settings.defaultChartRange → "6M", filtering both
+  // sources through the period buttons this view actually renders. This keeps
+  // the Settings page in sync and ignores stale stored values like "YTD".
   const [selectedPeriod, setSelectedPeriod] = useState<TrendPeriod>(() => {
     const parsedPeriod = searchParams.get("period");
-    const valid: TrendPeriod[] = ["1W", "1M", "3M", "6M", "1Y", "5Y", "Custom"];
-    return valid.includes(parsedPeriod as TrendPeriod)
-      ? (parsedPeriod as TrendPeriod)
-      : "6M";
+    if (PERIOD_OPTIONS.some((opt) => opt.value === parsedPeriod)) {
+      return parsedPeriod as TrendPeriod;
+    }
+    const fromSettings = settings.defaultChartRange;
+    if (PERIOD_OPTIONS.some((opt) => opt.value === fromSettings)) {
+      return fromSettings as TrendPeriod;
+    }
+    return "6M";
   });
 
   const startParam = searchParams.get("start");
@@ -135,7 +142,10 @@ export const CompareTickers: React.FC = () => {
     if (activeSymbols.length) params.set("s", activeSymbols.join(","));
     else params.delete("s");
 
-    if (selectedPeriod === "6M") params.delete("period");
+    // Omit period from URL when it already matches the user's saved default —
+    // every click writes the default back, so the in-app flow normally keeps
+    // the URL clean.
+    if (selectedPeriod === settings.defaultChartRange) params.delete("period");
     else params.set("period", selectedPeriod);
 
     if (selectedPeriod === "Custom") {
@@ -147,7 +157,7 @@ export const CompareTickers: React.FC = () => {
     }
 
     setSearchParams(params, { replace: true });
-  }, [selectedSymbols, selectedPeriod, customRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedSymbols, selectedPeriod, customRange, settings.defaultChartRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: symbols = [], isLoading: loadingSymbols } = useTickerSymbols();
   const symbolOptions = symbols.map((s) => ({ label: s, value: s }));
@@ -767,7 +777,14 @@ export const CompareTickers: React.FC = () => {
             {PERIOD_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setSelectedPeriod(opt.value)}
+                onClick={() => {
+                  setSelectedPeriod(opt.value);
+                  // "Custom" is a per-session view — don't promote it to the
+                  // global default; every other choice syncs back to Settings.
+                  if (opt.value !== "Custom") {
+                    updateSetting("defaultChartRange", opt.value as Settings["defaultChartRange"]);
+                  }
+                }}
                 style={{
                   padding: "7px 12px",
                   borderRadius: "var(--radius-md)",

@@ -18,7 +18,7 @@ export interface Settings {
   density: "comfortable" | "compact";
   numberFormat: "abbreviated" | "full";
   showCurrency: boolean;
-  defaultChartRange: "1W" | "1M" | "3M" | "6M" | "1Y" | "YTD" | "ALL";
+  defaultChartRange: "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL";
   landingPage: LandingPage;
   notificationsEnabled: boolean;
 }
