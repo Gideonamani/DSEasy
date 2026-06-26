@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-26
+
+### Added
+
+- **Issue #65 (Static Site Generation / SSG)**: Added build-time static pre-rendering (SSG) for SEO and OpenGraph tags to support static crawlers.
+- **Issue #91 (Offline Support & PWA)**: Added offline support, background sync, and service worker update notifications using `vite-plugin-pwa`.
+- **Issue #101 (Price Validity Gate)**: Added price validity gate to block non-positive closing prices and sanitization for Firestore paths and URL parameters.
+- **Issue #106 (Scoped Error Boundaries)**: Added `RouteErrorBoundary` components to isolate routing and layout crashes.
+- **Issue #98 (Security & Write Alignment)**: Aligned notification write paths with Firestore rules and added unit tests.
+
+### Fixed
+
+- **Issue #199 (Date Picker Contrast)**: Resolved date picker text contrast in Light Mode by introducing theme-aware inputs and consolidating CSS overrides.
+- **Issue #116 (Non-Trading Days)**: Detected non-trading days in the intraday monitor to prevent false alerts.
+- **Issue #117 (AppConfig Cache Refresh)**: Refreshed `appConfig` query cache to show new dates dynamically without hard-reloading.
+- **Issue #91 (PWA Loops and Re-registration)**: Resolved application-wide reload loops and FCM service worker conflicts.
+- **Issue #80 (XSS Security)**: Resolved XSS vulnerability in DailyGlance timeline rendering.
+- **Live pricing fallback**: Avoided timeouts and resolved normalization for ETFs in `getTickerPrice`.
+
+### Changed / Refactored
+
+- **Issue #187 (Centralized Date Handling)**: Refactored and consolidated date parsing and comparison logic into centralized date utility helpers.
+- **Google Sheets Apps Script**: Checked in Google Sheets Apps Script integration source code.
+
+---
+
 ## [1.7.2] - 2026-05-28
 
 ### Fixed
