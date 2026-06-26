@@ -766,45 +766,6 @@ export const TickerTrends: React.FC = () => {
                     <Calendar size={14} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }} />
                  </div>
                  
-                 <style>{`
-                    .custom-date-input {
-                        background: rgba(255, 255, 255, 0.05);
-                        border: 1px solid var(--glass-border);
-                        border-radius: 6px;
-                        padding: 6px 28px 6px 10px;
-                        color: white;
-                        font-family: inherit;
-                        font-size: 13px;
-                        width: 110px;
-                        cursor: pointer;
-                    }
-                    .react-datepicker {
-                        background-color: var(--bg-card) !important;
-                        border: 1px solid var(--glass-border) !important;
-                        font-family: inherit !important;
-                        z-index: 9999 !important;
-                    }
-                    .react-datepicker__header {
-                        background-color: var(--bg-surface) !important;
-                        border-bottom: 1px solid var(--glass-border) !important;
-                    }
-                    .react-datepicker__current-month, .react-datepicker__day-name {
-                        color: var(--text-primary) !important;
-                    }
-                    .react-datepicker__day {
-                        color: var(--text-secondary) !important;
-                    }
-                    .react-datepicker__day:hover {
-                         background-color: var(--accent-primary) !important;
-                         color: white !important;
-                    }
-                    .react-datepicker__day--selected, .react-datepicker__day--range-start, .react-datepicker__day--range-end {
-                        background-color: var(--accent-primary) !important;
-                    }
-                    .react-datepicker__day--in-range {
-                         background-color: rgba(99, 102, 241, 0.3) !important;
-                    }
-                 `}</style>
              </div>
           )}
       </div>
