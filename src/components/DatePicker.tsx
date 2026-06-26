@@ -119,55 +119,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       {loadingData && <Loader2 size={16} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
 
       <style>{`
-        .date-picker-input {
-          background: var(--bg-input);
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-md);
-          padding: 6px 12px 6px 32px;
-          color: var(--text-primary);
-          font-family: inherit;
-          font-size: var(--text-sm);
-          width: 140px;
-          cursor: pointer;
-          outline: none;
-        }
-        .date-picker-input:hover {
-          background: var(--bg-hover);
-        }
-        .react-datepicker {
-          background-color: var(--bg-elevated) !important;
-          border: 1px solid var(--glass-border) !important;
-          font-family: inherit !important;
-          color: var(--text-primary) !important;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-          border-radius: var(--radius-lg) !important;
-        }
-        .react-datepicker__header {
-          background-color: var(--bg-surface) !important;
-          border-bottom: 1px solid var(--glass-border) !important;
-        }
-        .react-datepicker__month-container {
-           background-color: transparent !important;
-        }
-        .react-datepicker__current-month, .react-datepicker__day-name {
-          color: var(--text-primary) !important;
-        }
-        .react-datepicker__day {
-          color: var(--text-secondary) !important;
-        }
-        .react-datepicker__day:hover {
-          background-color: var(--accent-primary) !important;
-          color: white !important;
-        }
-        .react-datepicker__day--selected {
-          background-color: var(--accent-primary) !important;
-          color: white !important;
-          font-weight: bold;
-        }
-        .react-datepicker__day--disabled {
-          color: var(--text-secondary) !important;
-          opacity: 0.3;
-        }
         .icon-btn {
           background: transparent;
           border: none;
@@ -182,30 +133,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         }
         .icon-btn:hover:not(:disabled) {
           background: var(--bg-hover);
-        }
-        .react-datepicker-popper {
-          z-index: 99999 !important;
-        }
-        .react-datepicker__header__dropdown {
-          margin: 10px 0;
-          display: flex;
-          justify-content: center;
-          gap: 8px;
-        }
-        .react-datepicker__month-select, .react-datepicker__year-select {
-          background-color: var(--bg-hover) !important;
-          color: var(--text-primary) !important;
-          border: 1px solid var(--glass-border) !important;
-          border-radius: var(--radius-sm) !important;
-          padding: 2px 4px !important;
-          font-family: inherit !important;
-          outline: none !important;
-          cursor: pointer !important;
-        }
-        /* Style options for better visibility across different OS browsers */
-        .react-datepicker__month-select option, .react-datepicker__year-select option {
-          background-color: var(--bg-elevated) !important;
-          color: var(--text-primary) !important;
         }
       `}</style>
     </div>
