@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef } from "react";
 import {
   Routes,
   Route,
+  Navigate,
   useLocation,
   useNavigate,
   useSearchParams,
@@ -35,6 +36,7 @@ import {
 } from "./hooks/useMarketQuery";
 import { formatLargeNumber } from "./utils/formatters";
 import { useAuth } from "./contexts/AuthContext";
+import { useIsOwner } from "./hooks/useUserProfile";
 import { useNotificationsSync } from "./hooks/useNotificationsSync";
 import { ForegroundNotifications } from "./components/ForegroundNotifications";
 import PWAPrompt from "./components/PWAPrompt";
@@ -118,6 +120,17 @@ function ProtectedRoute({ children }: ProtectedRouteProps): React.ReactElement {
       </button>
     </div>
   );
+}
+
+interface OwnerRouteProps {
+  children: React.ReactNode;
+}
+
+/** Restricts a route to the Firestore-flagged owner; everyone else is bounced to the dashboard. */
+function OwnerRoute({ children }: OwnerRouteProps): React.ReactElement {
+  const isOwner = useIsOwner();
+  if (!isOwner) return <Navigate to="/" replace />;
+  return <>{children}</>;
 }
 
 type RoutePath =
@@ -423,9 +436,11 @@ function App(): React.ReactElement {
                 <Route
                   path="/backtesting"
                   element={
-                    <RouteErrorBoundary featureName="Backtesting">
-                      <Backtesting />
-                    </RouteErrorBoundary>
+                    <OwnerRoute>
+                      <RouteErrorBoundary featureName="Backtesting">
+                        <Backtesting />
+                      </RouteErrorBoundary>
+                    </OwnerRoute>
                   }
                 />
                 <Route

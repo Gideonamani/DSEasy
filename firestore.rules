@@ -71,11 +71,14 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
     }
     
-    // User profiles: User can only access their own
+    // User profiles: user can read their own profile doc, but cannot write
+    // it — fields like `isAdmin` are set manually (Firebase Console/Admin
+    // SDK) so a signed-in user can't grant themselves privileges.
     match /users/{userId} {
-      allow read, write: if request.auth != null 
+      allow read: if request.auth != null
         && request.auth.uid == userId;
-      
+      allow write: if false;
+
       // FCM tokens for multi-device notifications
       match /fcmTokens/{tokenId} {
         allow read, write: if request.auth != null 

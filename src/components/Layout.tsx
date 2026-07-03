@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useAuthModal } from "../contexts/AuthModalContext";
+import { useIsOwner } from "../hooks/useUserProfile";
 
 declare global {
   // Already declared in Settings.tsx, but harmless to redeclare
@@ -221,6 +222,7 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
   const { currentUser } = useAuth();
   const { open: openAuthModal } = useAuthModal();
+  const isOwner = useIsOwner();
   const getMobile = () =>
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
   const getWide = () =>
@@ -348,7 +350,7 @@ export const Layout: React.FC<LayoutProps> = ({
             "Derived Analytics",
             "Ticker Trends",
             "Compare Tickers",
-            "Backtesting",
+            ...(isOwner ? ["Backtesting"] : []),
             "Notifications",
             "Settings",
           ].map((tab) => (

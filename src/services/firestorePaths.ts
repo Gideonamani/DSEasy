@@ -18,6 +18,7 @@ export const FirestorePaths = {
   marketWatchIntel: (date: string) => ["marketWatch", sanitize(date), "intel"] as const,
   alerts: () => ["alerts"] as const,
   alert: (alertId: string) => ["alerts", sanitize(alertId)] as const,
+  userProfile: (uid: string) => ["users", sanitize(uid)] as const,
   userSettings: (uid: string) => ["users", sanitize(uid), "profile", "settings"] as const,
   userFcmToken: (uid: string, token: string) => ["users", sanitize(uid), "fcmTokens", sanitize(token)] as const,
   userNotifications: (uid: string) => ["notifications", sanitize(uid), "history"] as const,
