@@ -616,6 +616,33 @@ a {
   background: var(--bg-hover);
 }
 
+.date-picker-input {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 6px 8px 6px 28px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  width: 140px;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.2s;
+}
+
+.date-picker-input:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.date-picker-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.date-picker-input::placeholder {
+  color: var(--text-secondary);
+}
+
 /* Global react-datepicker styles for consistency and dark mode compatibility */
 .react-datepicker-popper {
   z-index: 99999 !important;
