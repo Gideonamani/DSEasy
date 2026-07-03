@@ -13,6 +13,7 @@ import {
   LogIn,
   LogOut,
   User,
+  Zap,
   LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -347,6 +348,7 @@ export const Layout: React.FC<LayoutProps> = ({
             "Derived Analytics",
             "Ticker Trends",
             "Compare Tickers",
+            "Backtesting",
             "Notifications",
             "Settings",
           ].map((tab) => (
@@ -363,9 +365,11 @@ export const Layout: React.FC<LayoutProps> = ({
                       ? LineChart
                       : tab === "Compare Tickers"
                         ? GitCompare
-                        : tab === "Notifications"
-                          ? Bell
-                          : Settings
+                        : tab === "Backtesting"
+                          ? Zap
+                          : tab === "Notifications"
+                            ? Bell
+                            : Settings
               }
               label={tab}
               active={activeTab === tab}

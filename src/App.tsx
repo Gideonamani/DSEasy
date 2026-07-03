@@ -19,6 +19,7 @@ const DailyGlance = React.lazy(() => import("./components/DailyGlance").then(m =
 const DerivedAnalytics = React.lazy(() => import("./components/DerivedAnalytics").then(m => ({ default: m.DerivedAnalytics })));
 const TickerTrends = React.lazy(() => import("./components/TickerTrends").then(m => ({ default: m.TickerTrends })));
 const CompareTickers = React.lazy(() => import("./components/CompareTickers").then(m => ({ default: m.CompareTickers })));
+const Backtesting = React.lazy(() => import("./components/Backtesting").then(m => ({ default: m.Backtesting })));
 const NotificationsManager = React.lazy(() => import("./components/NotificationsManager").then(m => ({ default: m.NotificationsManager })));
 const Settings = React.lazy(() => import("./components/Settings").then(m => ({ default: m.Settings })));
 
@@ -125,6 +126,7 @@ type RoutePath =
   | "/analytics"
   | "/trends"
   | "/compare"
+  | "/backtesting"
   | "/notifications"
   | "/settings";
 
@@ -134,6 +136,7 @@ type TabName =
   | "Derived Analytics"
   | "Ticker Trends"
   | "Compare Tickers"
+  | "Backtesting"
   | "Notifications"
   | "Settings";
 
@@ -143,6 +146,7 @@ const ROUTES: Record<RoutePath, TabName> = {
   "/analytics": "Derived Analytics",
   "/trends": "Ticker Trends",
   "/compare": "Compare Tickers",
+  "/backtesting": "Backtesting",
   "/notifications": "Notifications",
   "/settings": "Settings",
 };
@@ -153,6 +157,7 @@ const TAB_TO_ROUTE: Record<TabName, RoutePath> = {
   "Derived Analytics": "/analytics",
   "Ticker Trends": "/trends",
   "Compare Tickers": "/compare",
+  Backtesting: "/backtesting",
   Notifications: "/notifications",
   Settings: "/settings",
 };
@@ -412,6 +417,14 @@ function App(): React.ReactElement {
                   element={
                     <RouteErrorBoundary featureName="Compare Tickers">
                       <CompareTickers />
+                    </RouteErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/backtesting"
+                  element={
+                    <RouteErrorBoundary featureName="Backtesting">
+                      <Backtesting />
                     </RouteErrorBoundary>
                   }
                 />
