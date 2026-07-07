@@ -28,6 +28,10 @@ functions/*.log
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Codex CLI local state
+.agents/
+.codex/
 *.suo
 *.ntvs*
 *.njsproj
