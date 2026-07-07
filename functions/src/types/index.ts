@@ -56,3 +56,12 @@ export interface StockData {
   changePerVol: number;
   bidOfferRatio: number;
 }
+
+export interface DailyReportLink {
+  date: string;
+  reportUrl: string;
+  token: string;
+  iv: string;
+  value: string;
+  mac: string;
+}

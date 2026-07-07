@@ -3,12 +3,47 @@ import * as nodemailer from "nodemailer";
 import { db } from "../config/firebase";
 import { StockData } from "../types";
 import {
+  extractDailyReportLinks,
   fetchWithRetry,
   formatDateForSheet,
   normalizeSymbol,
   parseChangeValue,
   parseNum,
 } from "../utils/helpers";
+
+/**
+ * Record the DSE daily-report link for `formattedDate`, if present among the
+ * homepage's report cards and not already recorded. Best-effort: the report
+ * card can lag behind the summary table appearing, and we don't yet know the
+ * token's lifetime/rotation rules, so failures here must never break the
+ * primary dailyClosing scrape (see issue #203).
+ */
+async function recordDailyReportLink(
+  html: string,
+  formattedDate: string,
+): Promise<void> {
+  try {
+    const reportLinkRef = db.collection("dailyReportLinks").doc(formattedDate);
+    const existing = await reportLinkRef.get();
+    if (existing.exists) return;
+
+    const link = extractDailyReportLinks(html).find(
+      (l) => l.date === formattedDate,
+    );
+    if (!link) return;
+
+    await reportLinkRef.set({
+      ...link,
+      firstSeenAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log(`Recorded daily report link for ${formattedDate}.`);
+  } catch (error) {
+    console.error(
+      `Failed to record daily report link for ${formattedDate}:`,
+      error,
+    );
+  }
+}
 
 export async function scrapeDSEAndWriteToFirestore(
   context: "Scheduled" | "Manual" = "Manual",
@@ -57,6 +92,11 @@ export async function scrapeDSEAndWriteToFirestore(
           message: `Data for ${formattedDate} already exists. Skipping.`,
         }),
       );
+
+      // The report link can be posted after the table, so keep checking
+      // for it even once the table itself is already in Firestore.
+      await recordDailyReportLink(html, formattedDate);
+
       return { success: true, message: "Already exists", date: formattedDate };
     }
 
@@ -231,6 +271,18 @@ export async function scrapeDSEAndWriteToFirestore(
       batch.set(historyRef, {
         date: formattedDate,
         ...stock,
+      });
+    }
+
+    // E. dailyReportLinks/{date} - if today's report card is already up
+    const todaysReportLink = extractDailyReportLinks(html).find(
+      (l) => l.date === formattedDate,
+    );
+    if (todaysReportLink) {
+      const reportLinkRef = db.collection("dailyReportLinks").doc(formattedDate);
+      batch.set(reportLinkRef, {
+        ...todaysReportLink,
+        firstSeenAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
 

@@ -27,6 +27,11 @@ service cloud.firestore {
       }
     }
 
+    match /dailyReportLinks/{date} {
+      allow read: if true;
+      allow write: if false; // Only backend/triggers can write
+    }
+
     // Config: Public read
     match /config/{doc} {
       allow read: if true;
