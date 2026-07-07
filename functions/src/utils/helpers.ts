@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 import * as https from "https";
 import { BROWSER_HEADERS, SYMBOL_MAPPINGS } from "../constants";
+import { DailyReportLink } from "../types";
 
 // DSE website (dse.co.tz) has an expired SSL certificate.
 // This agent bypasses certificate validation so scraping can continue.
@@ -124,6 +125,51 @@ export function formatDateForSheet(longDateStr: string): string | null {
 
   if (!month) return null;
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parse the "Daily Market Reports" cards on the DSE homepage.
+ * Each card pairs a date (e.g. "6<suZ>th</suZ> July 2026" - the <suZ> ordinal
+ * tag appears to be a template quirk on DSE's end, not standard HTML) with a
+ * report link whose token is base64 JSON of Laravel's encrypt() payload
+ * ({iv, value, mac, tag}). Cards appear in the same order on the page, so
+ * dates and hrefs are paired positionally.
+ */
+export function extractDailyReportLinks(html: string): DailyReportLink[] {
+  const dateRegex =
+    /<span>Date:\s*<\/span>\s*(\d{1,2})<suZ>[^<]*<\/suZ>\s*([A-Za-z]+)\s+(\d{4})/g;
+  const hrefRegex = /href="(https:\/\/dse\.co\.tz\/get\/daily\/report\/([^"]+))"/g;
+
+  const dateMatches = [...html.matchAll(dateRegex)];
+  const hrefMatches = [...html.matchAll(hrefRegex)];
+
+  const links: DailyReportLink[] = [];
+
+  for (let i = 0; i < Math.min(dateMatches.length, hrefMatches.length); i++) {
+    const [, day, month, year] = dateMatches[i];
+    const formattedDate = formatDateForSheet(`${month} ${day}, ${year}`);
+    const [, reportUrl, token] = hrefMatches[i];
+
+    if (!formattedDate) continue;
+
+    let iv = "";
+    let value = "";
+    let mac = "";
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(token, "base64").toString("utf-8"),
+      );
+      iv = decoded.iv || "";
+      value = decoded.value || "";
+      mac = decoded.mac || "";
+    } catch {
+      // Token wasn't the expected base64 JSON shape - store raw token only.
+    }
+
+    links.push({ date: formattedDate, reportUrl, token, iv, value, mac });
+  }
+
+  return links;
 }
 
 export function formatLargeNumber(num: number): string {
