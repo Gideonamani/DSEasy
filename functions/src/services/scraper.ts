@@ -12,6 +12,56 @@ import {
 } from "../utils/helpers";
 
 /**
+ * Alert on symbols that don't already have a `trends/{symbol}` doc, so a DSE
+ * site change (renamed/truncated ticker, new listing) surfaces immediately
+ * instead of silently starting a disconnected history under the wrong key
+ * (see issue #206, where a truncated "VERTEX ET" fragmented 118 days of
+ * "VERTEX ETF" history). This never blocks the write — unlike the old
+ * Google Sheets automation, unrecognized symbols are still written to
+ * Firestore; this is visibility only, so a real new listing isn't lost
+ * while someone verifies whether SYMBOL_MAPPINGS needs an entry.
+ */
+async function alertOnUnrecognizedSymbols(
+  stocksData: StockData[],
+): Promise<void> {
+  try {
+    const knownSymbols = new Set(
+      (await db.collection("trends").select().get()).docs.map((d) => d.id),
+    );
+    const newSymbols = [
+      ...new Set(
+        stocksData
+          .map((s) => s.symbol)
+          .filter((symbol) => !knownSymbols.has(symbol)),
+      ),
+    ];
+
+    if (newSymbols.length === 0) return;
+
+    console.warn(
+      JSON.stringify({
+        event: "SCRAPER_UNRECOGNIZED_SYMBOL",
+        symbols: newSymbols,
+        message: `Found symbol(s) with no existing trends doc: ${newSymbols.join(", ")}`,
+      }),
+    );
+
+    await sendScraperAlert(
+      "⚠️ DSE Scraper: New/Unrecognized Symbol(s) Detected",
+      `The scraper found symbol(s) with no existing trends/{symbol} history:\n\n` +
+        `${newSymbols.join("\n")}\n\n` +
+        `These were still written to Firestore as new tickers (nothing is blocked). ` +
+        `If this is a genuine new listing, no action is needed. If it's a renamed or ` +
+        `truncated form of an existing ticker (e.g. a site formatting change), add a ` +
+        `mapping to SYMBOL_MAPPINGS in functions/src/constants/index.ts and run the ` +
+        `matching cleanup script to merge the fragmented history back together.`,
+    );
+  } catch (error) {
+    console.error("Failed to check for unrecognized symbols:", error);
+  }
+}
+
+/**
  * Record the DSE daily-report link for `formattedDate`, if present among the
  * homepage's report cards and not already recorded. Best-effort: the report
  * card can lag behind the summary table appearing, and we don't yet know the
@@ -237,6 +287,9 @@ export async function scrapeDSEAndWriteToFirestore(
     }
 
     console.log(`Writing ${stocksData.length} stocks to Firestore...`);
+
+    // 6b. FLAG SYMBOLS NOT ALREADY TRACKED (best-effort, never blocks the write)
+    await alertOnUnrecognizedSymbols(stocksData);
 
     // 7. BATCH WRITE TO FIRESTORE
     const batch = db.batch();

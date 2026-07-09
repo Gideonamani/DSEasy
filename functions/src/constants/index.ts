@@ -2,6 +2,11 @@ export const SYMBOL_MAPPINGS: { [key: string]: string } = {
   "VERTEX-ETF": "VERTEX ETF",
   "IEACLC-ETF": "IEACLC ETF",
   "ITRUST ETF": "IEACLC ETF",
+  // DSE's homepage equity-watch table has truncated both tracked ETFs'
+  // symbols to this form before (see issue #206). Both are 10 characters,
+  // so map the truncated form defensively for each.
+  "VERTEX ET": "VERTEX ETF",
+  "IEACLC ET": "IEACLC ETF",
 };
 
 export const BROWSER_HEADERS = {
