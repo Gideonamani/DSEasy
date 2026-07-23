@@ -6,28 +6,26 @@ import {
   extractDailyReportLinks,
   fetchWithRetry,
   formatDateForSheet,
-  normalizeSymbol,
   parseChangeValue,
   parseNum,
+  resolveSymbol,
 } from "../utils/helpers";
 
 /**
  * Alert on symbols that don't already have a `trends/{symbol}` doc, so a DSE
- * site change (renamed/truncated ticker, new listing) surfaces immediately
- * instead of silently starting a disconnected history under the wrong key
- * (see issue #206, where a truncated "VERTEX ET" fragmented 118 days of
- * "VERTEX ETF" history). This never blocks the write — unlike the old
- * Google Sheets automation, unrecognized symbols are still written to
- * Firestore; this is visibility only, so a real new listing isn't lost
- * while someone verifies whether SYMBOL_MAPPINGS needs an entry.
+ * site change (renamed ticker, new listing, or a spacing/hyphen variant
+ * `resolveSymbol` couldn't match) surfaces immediately instead of silently
+ * starting a disconnected history under the wrong key (see issue #206/#208).
+ * This never blocks the write — unlike the old Google Sheets automation,
+ * unrecognized symbols are still written to Firestore; this is visibility
+ * only, so a real new listing isn't lost while someone verifies whether
+ * SYMBOL_MAPPINGS needs an entry.
  */
 async function alertOnUnrecognizedSymbols(
   stocksData: StockData[],
+  knownSymbols: Set<string>,
 ): Promise<void> {
   try {
-    const knownSymbols = new Set(
-      (await db.collection("trends").select().get()).docs.map((d) => d.id),
-    );
     const newSymbols = [
       ...new Set(
         stocksData
@@ -209,11 +207,14 @@ export async function scrapeDSEAndWriteToFirestore(
     }
 
     // 6. BUILD STOCK DATA WITH DERIVED METRICS
+    const knownSymbols = new Set(
+      (await db.collection("trends").select().get()).docs.map((d) => d.id),
+    );
     const stocksData: StockData[] = [];
 
     for (const row of parsedRows) {
       if (row.length < 13) continue;
-      const symbol = normalizeSymbol(row[0]);
+      const symbol = resolveSymbol(row[0], knownSymbols);
       if (!symbol || symbol === "Total" || symbol === "Co.") continue;
 
       const open = parseNum(row[1]);
@@ -289,7 +290,7 @@ export async function scrapeDSEAndWriteToFirestore(
     console.log(`Writing ${stocksData.length} stocks to Firestore...`);
 
     // 6b. FLAG SYMBOLS NOT ALREADY TRACKED (best-effort, never blocks the write)
-    await alertOnUnrecognizedSymbols(stocksData);
+    await alertOnUnrecognizedSymbols(stocksData, knownSymbols);
 
     // 7. BATCH WRITE TO FIRESTORE
     const batch = db.batch();
