@@ -1,3 +1,10 @@
+// New scraped whitespace/hyphen variants (e.g. "VERTEX- ETF") don't need an
+// entry here — `resolveSymbol` in utils/helpers.ts matches those against
+// known trends/{symbol} docs automatically (see issue #208). "VERTEX-ETF"
+// and "IEACLC-ETF" stay listed explicitly because `normalizeSymbol` (used by
+// the public getTickerPrice API in handlers/prices.ts, which intentionally
+// does static-only matching) relies on them for the dashed form documented
+// in integrations/sheets/README.md.
 export const SYMBOL_MAPPINGS: { [key: string]: string } = {
   "VERTEX-ETF": "VERTEX ETF",
   "IEACLC-ETF": "IEACLC ETF",

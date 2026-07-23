@@ -1,33 +1,32 @@
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
+import * as moment from "moment-timezone";
 import { db } from "../config/firebase";
 import { StockData } from "../types";
 import {
   extractDailyReportLinks,
   fetchWithRetry,
   formatDateForSheet,
-  normalizeSymbol,
   parseChangeValue,
   parseNum,
+  resolveSymbol,
 } from "../utils/helpers";
 
 /**
  * Alert on symbols that don't already have a `trends/{symbol}` doc, so a DSE
- * site change (renamed/truncated ticker, new listing) surfaces immediately
- * instead of silently starting a disconnected history under the wrong key
- * (see issue #206, where a truncated "VERTEX ET" fragmented 118 days of
- * "VERTEX ETF" history). This never blocks the write — unlike the old
- * Google Sheets automation, unrecognized symbols are still written to
- * Firestore; this is visibility only, so a real new listing isn't lost
- * while someone verifies whether SYMBOL_MAPPINGS needs an entry.
+ * site change (renamed ticker, new listing, or a spacing/hyphen variant
+ * `resolveSymbol` couldn't match) surfaces immediately instead of silently
+ * starting a disconnected history under the wrong key (see issue #206/#208).
+ * This never blocks the write — unlike the old Google Sheets automation,
+ * unrecognized symbols are still written to Firestore; this is visibility
+ * only, so a real new listing isn't lost while someone verifies whether
+ * SYMBOL_MAPPINGS needs an entry.
  */
 async function alertOnUnrecognizedSymbols(
   stocksData: StockData[],
+  knownSymbols: Set<string>,
 ): Promise<void> {
   try {
-    const knownSymbols = new Set(
-      (await db.collection("trends").select().get()).docs.map((d) => d.id),
-    );
     const newSymbols = [
       ...new Set(
         stocksData
@@ -47,7 +46,7 @@ async function alertOnUnrecognizedSymbols(
     );
 
     await sendScraperAlert(
-      "⚠️ DSE Scraper: New/Unrecognized Symbol(s) Detected",
+      `⚠️ DSE Scraper: Unrecognized symbol ${newSymbols.map((s) => `"${s}"`).join(", ")}`,
       `The scraper found symbol(s) with no existing trends/{symbol} history:\n\n` +
         `${newSymbols.join("\n")}\n\n` +
         `These were still written to Firestore as new tickers (nothing is blocked). ` +
@@ -209,11 +208,14 @@ export async function scrapeDSEAndWriteToFirestore(
     }
 
     // 6. BUILD STOCK DATA WITH DERIVED METRICS
+    const knownSymbols = new Set(
+      (await db.collection("trends").select().get()).docs.map((d) => d.id),
+    );
     const stocksData: StockData[] = [];
 
     for (const row of parsedRows) {
       if (row.length < 13) continue;
-      const symbol = normalizeSymbol(row[0]);
+      const symbol = resolveSymbol(row[0], knownSymbols);
       if (!symbol || symbol === "Total" || symbol === "Co.") continue;
 
       const open = parseNum(row[1]);
@@ -289,7 +291,7 @@ export async function scrapeDSEAndWriteToFirestore(
     console.log(`Writing ${stocksData.length} stocks to Firestore...`);
 
     // 6b. FLAG SYMBOLS NOT ALREADY TRACKED (best-effort, never blocks the write)
-    await alertOnUnrecognizedSymbols(stocksData);
+    await alertOnUnrecognizedSymbols(stocksData, knownSymbols);
 
     // 7. BATCH WRITE TO FIRESTORE
     const batch = db.batch();
@@ -409,12 +411,21 @@ export async function sendScraperAlert(subject: string, body: string) {
     },
   });
 
+  // Identifies which deployed Cloud Function sent this and when, so it's
+  // unmistakable at a glance whether an alert came from this pipeline (as
+  // opposed to e.g. a stale trigger left over from a decommissioned
+  // integration — see issue #208).
+  const functionName =
+    process.env.FUNCTION_TARGET || process.env.K_SERVICE || "unknown-function";
+  const ranAt = moment().tz("Africa/Dar_es_Salaam").format("YYYY-MM-DD HH:mm:ss z");
+  const footer = `\n\n---\nSent by Firebase Cloud Function "${functionName}" at ${ranAt} (EAT).`;
+
   try {
     await transporter.sendMail({
       from: `"DSE Scraper" <${email}>`,
       to: recipient,
       subject: subject,
-      text: body,
+      text: body + footer,
     });
     console.log("Alert email sent successfully.");
   } catch (error) {

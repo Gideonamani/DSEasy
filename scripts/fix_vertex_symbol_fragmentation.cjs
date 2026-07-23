@@ -1,12 +1,11 @@
 /**
- * One-off cleanup for issue #206.
- *
- * DSE's homepage truncated the "VERTEX ETF" symbol to "VERTEX ET" on
- * 2026-07-08, and before SYMBOL_MAPPINGS had an entry for it, the scraper
+ * Reusable cleanup for VERTEX/IEACLC ETF symbol fragmentation caused by DSE
+ * homepage formatting drift (truncation in issue #206, spacing/hyphen drift
+ * in issue #208). Before a fix shipped for a given mangled form, the scraper
  * wrote that day's row under a brand-new, disconnected symbol instead of
- * appending to the existing "VERTEX ETF" history:
- *   - trends/VERTEX ET/dailyClosingHistory/{date}
- *   - dailyClosing/{date}/stocks/VERTEX ET
+ * appending to the existing canonical history:
+ *   - trends/{mangled}/dailyClosingHistory/{date}
+ *   - dailyClosing/{date}/stocks/{mangled}
  *
  * This script merges each fragment back into the correct canonical symbol
  * and deletes the phantom docs. Safe to re-run: if the destination already
@@ -27,8 +26,11 @@ const db = admin.firestore();
 const APPLY = process.argv.includes('--apply');
 
 // Add more { from, to } pairs here if the same fragmentation recurs for
-// another symbol before a mapping fix ships.
-const FIXES = [{ from: 'VERTEX ET', to: 'VERTEX ETF' }];
+// another symbol before a mapping/normalization fix ships.
+const FIXES = [
+  { from: 'VERTEX ET', to: 'VERTEX ETF' },
+  { from: 'VERTEX- ETF', to: 'VERTEX ETF' },
+];
 
 (async () => {
   for (const { from, to } of FIXES) {

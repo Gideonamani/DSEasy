@@ -81,6 +81,43 @@ export function normalizeSymbol(rawSymbol: string): string {
   return SYMBOL_MAPPINGS[trimmed] || trimmed;
 }
 
+/**
+ * Collapse whitespace/hyphen differences for comparison only (e.g.
+ * "VERTEX- ETF" and "VERTEX ETF" both become "VERTEXETF"). Never store or
+ * display this form — it's a lookup key, not a display symbol.
+ */
+function collapseForComparison(symbol: string): string {
+  return symbol.toUpperCase().replace(/[\s-]+/g, "");
+}
+
+/**
+ * Resolve a raw scraped symbol to an existing canonical symbol, so DSE
+ * spacing/hyphen drift (e.g. "VERTEX- ETF" vs "VERTEX ETF") doesn't fragment
+ * history the way a truncation like "VERTEX ET" did in issue #206.
+ *
+ * Order of resolution:
+ * 1. `SYMBOL_MAPPINGS` exact match — for truncations/aliases that aren't
+ *    recoverable by collapsing whitespace/hyphens (e.g. "VERTEX ET").
+ * 2. Collapsed-form match against `knownSymbols` — for whitespace/hyphen
+ *    variants of a symbol we already track.
+ * 3. Otherwise the trimmed raw symbol, left for
+ *    `alertOnUnrecognizedSymbols` to flag as genuinely new/unrecognized.
+ */
+export function resolveSymbol(
+  rawSymbol: string,
+  knownSymbols: Iterable<string>,
+): string {
+  if (!rawSymbol) return "";
+  const trimmed = rawSymbol.trim();
+  if (SYMBOL_MAPPINGS[trimmed]) return SYMBOL_MAPPINGS[trimmed];
+
+  const collapsed = collapseForComparison(trimmed);
+  for (const known of knownSymbols) {
+    if (collapseForComparison(known) === collapsed) return known;
+  }
+  return trimmed;
+}
+
 export function parseNum(val: string | number | undefined): number {
   if (typeof val === "number") return val;
   if (!val) return 0;
