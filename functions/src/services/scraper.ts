@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
+import * as moment from "moment-timezone";
 import { db } from "../config/firebase";
 import { StockData } from "../types";
 import {
@@ -410,12 +411,21 @@ export async function sendScraperAlert(subject: string, body: string) {
     },
   });
 
+  // Identifies which deployed Cloud Function sent this and when, so it's
+  // unmistakable at a glance whether an alert came from this pipeline (as
+  // opposed to e.g. a stale trigger left over from a decommissioned
+  // integration — see issue #208).
+  const functionName =
+    process.env.FUNCTION_TARGET || process.env.K_SERVICE || "unknown-function";
+  const ranAt = moment().tz("Africa/Dar_es_Salaam").format("YYYY-MM-DD HH:mm:ss z");
+  const footer = `\n\n---\nSent by Firebase Cloud Function "${functionName}" at ${ranAt} (EAT).`;
+
   try {
     await transporter.sendMail({
       from: `"DSE Scraper" <${email}>`,
       to: recipient,
       subject: subject,
-      text: body,
+      text: body + footer,
     });
     console.log("Alert email sent successfully.");
   } catch (error) {
