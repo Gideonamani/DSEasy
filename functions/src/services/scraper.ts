@@ -46,7 +46,7 @@ async function alertOnUnrecognizedSymbols(
     );
 
     await sendScraperAlert(
-      "⚠️ DSE Scraper: New/Unrecognized Symbol(s) Detected",
+      `⚠️ DSE Scraper: Unrecognized symbol ${newSymbols.map((s) => `"${s}"`).join(", ")}`,
       `The scraper found symbol(s) with no existing trends/{symbol} history:\n\n` +
         `${newSymbols.join("\n")}\n\n` +
         `These were still written to Firestore as new tickers (nothing is blocked). ` +
