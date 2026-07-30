@@ -42,6 +42,7 @@ export function NotificationsManager(): React.ReactElement {
   }, [currentUser]);
 
   const handleDelete = async (alertItem: Alert) => {
+    if (!currentUser?.uid) return;
     if (!window.confirm(`Delete alert for ${alertItem.symbol}?`)) return;
 
     // Use alert.id (Firestore Doc ID) or fallback to created if using old data (but we are moving to new data)
@@ -52,7 +53,7 @@ export function NotificationsManager(): React.ReactElement {
     setDeleting(alertId);
 
     try {
-      await deleteAlert(alertId);
+      await deleteAlert(alertId, currentUser.uid);
       // No need to fetchAlerts(), onSnapshot handles it
     } catch (error: unknown) {
       console.error("Error deleting alert:", error);

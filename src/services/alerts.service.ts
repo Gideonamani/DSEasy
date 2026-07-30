@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -56,6 +57,15 @@ export function subscribeToUserAlerts(
   );
 }
 
-export async function deleteAlert(alertId: string): Promise<void> {
-  await deleteDoc(doc(db, ...FirestorePaths.alert(alertId)));
+export async function deleteAlert(alertId: string, currentUserId: string): Promise<void> {
+  const docRef = doc(db, ...FirestorePaths.alert(alertId));
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) {
+    throw new Error("Alert not found");
+  }
+  const data = docSnap.data() as AlertDoc;
+  if (data.userId !== currentUserId) {
+    throw new Error("Permission denied: You do not own this alert");
+  }
+  await deleteDoc(docRef);
 }
