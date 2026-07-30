@@ -88,6 +88,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!currentUser) {
       loadedUidRef.current = null;
+      setSettings(DEFAULT_SETTINGS);
       return;
     }
 
@@ -123,8 +124,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (!currentUser) return;
     if (loadedUidRef.current !== currentUser.uid) return;
 
-    saveUserSettings(currentUser.uid, settings)
-      .catch((err) => console.error("Failed to persist settings:", err));
+    const controller = new AbortController();
+
+    saveUserSettings(currentUser.uid, settings, controller.signal)
+      .catch((err) => {
+        if (err.name === "AbortError" || controller.signal.aborted) return;
+        console.error("Failed to persist settings:", err);
+      });
+
+    return () => {
+      controller.abort();
+    };
   }, [settings, currentUser]);
 
   const updateSetting = useCallback(
