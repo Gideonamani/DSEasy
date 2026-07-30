@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { auth } from "../firebase";
+import { queryClient } from "../lib/queryClient";
 import {
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -58,12 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return sendPasswordResetEmail(auth, email);
   }
 
-  function logout(): Promise<void> {
-    return signOut(auth);
+  async function logout(): Promise<void> {
+    await signOut(auth);
+    queryClient.clear();
   }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+      if (user === null) {
+        queryClient.clear();
+      }
       setCurrentUser(user);
       setLoading(false);
     });
