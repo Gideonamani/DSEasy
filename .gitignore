@@ -40,6 +40,9 @@ functions/*.log
 
 docs/DSE-API.md
 
+# PR UI review screenshots/diffs (scripts/visual-diff.mjs, /pr-ui-review skill)
+.pr-review/
+
 # Environment Variables
 .env
 .env.local
