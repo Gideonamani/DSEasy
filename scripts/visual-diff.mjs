@@ -29,7 +29,15 @@ import { PNG } from "pngjs";
 import pixelmatch from "pixelmatch";
 import fs from "fs";
 import path from "path";
+import dotenv from "dotenv";
 import { resolvePr, diffOutputDir, PROD_URL } from "./lib/resolvePreviewUrl.mjs";
+
+// .env.local is where this repo's Vite tooling expects local-only secrets
+// (already gitignored for that purpose) — falls back to .env, which is what
+// the repo's other node scripts (e.g. migrate.cjs) load. A pre-existing
+// process.env value always wins over either file.
+const envLocalPath = path.resolve(process.cwd(), ".env.local");
+dotenv.config({ path: fs.existsSync(envLocalPath) ? envLocalPath : path.resolve(process.cwd(), ".env") });
 
 const BYPASS_HEADER = "x-vercel-protection-bypass";
 const BYPASS_COOKIE_HEADER = "x-vercel-set-bypass-cookie";
@@ -83,7 +91,11 @@ async function captureRoute(context, baseUrl, route, screenshotPath) {
     // real page load. "load" plus a fixed settle delay is what actually
     // works here — this app doesn't reach a quiet network state by design.
     await page.goto(url, { waitUntil: "load", timeout: 30_000 });
-    await page.waitForTimeout(2500);
+    // Preview deployments cold-start slower than prod, and Firestore reads
+    // add latency on top of that — 2.5s wasn't enough and caught the preview
+    // mid-spinner while prod (already warm) had fully rendered. 6s gives
+    // both a fair shot; still cheap since routes run prod/preview in parallel.
+    await page.waitForTimeout(6000);
     await page.screenshot({ path: screenshotPath, fullPage: true });
   } catch (err) {
     navError = err instanceof Error ? err.message : String(err);
