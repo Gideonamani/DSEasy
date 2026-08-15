@@ -6,6 +6,7 @@ import axios from "axios";
 import { db } from "../config/firebase";
 import { fetchWithRetry, randomJitter } from "../utils/helpers";
 import { sendScraperAlert } from "../services/scraper";
+import { reconcileCorporateActionAlerts } from "../services/corporateActions";
 import { DSEMarketData, MarketWatchEntry } from "../types";
 import {
   generateSnapshotIntel,
@@ -51,6 +52,7 @@ async function runIntradayMonitor(): Promise<void> {
 
   try {
     console.log("Starting alert check...");
+    await reconcileCorporateActionAlerts(eatNow.format("YYYY-MM-DD"));
     await randomJitter();
 
     const dseUrl = "https://dse.co.tz/api/get/live/market/prices";

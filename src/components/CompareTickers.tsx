@@ -226,7 +226,7 @@ export const CompareTickers: React.FC = () => {
         pointHoverRadius: 5,
         hitRadius: 20,
         tension: 0.3,
-        spanGaps: true,
+        spanGaps: false,
         fill: false,
       };
     });
@@ -312,7 +312,7 @@ export const CompareTickers: React.FC = () => {
         pointHoverRadius: 5,
         hitRadius: 20,
         tension: 0.3,
-        spanGaps: true,
+        spanGaps: false,
         fill: false,
       };
     });
@@ -378,7 +378,7 @@ export const CompareTickers: React.FC = () => {
         pointHoverRadius: 5,
         hitRadius: 20,
         tension: 0.2,
-        spanGaps: true,
+        spanGaps: false,
         fill: false,
       };
     });

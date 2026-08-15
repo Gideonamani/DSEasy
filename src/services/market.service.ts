@@ -1,11 +1,12 @@
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { FirestorePaths } from "./firestorePaths";
-import type { MarketIndex, RawStockDoc } from "../types/market";
+import type { CorporateAction, MarketIndex, RawStockDoc } from "../types/market";
 
 export interface AppConfig {
   availableDates?: string[];
   marketWatchDates?: string[];
+  corporateActions?: CorporateAction[];
 }
 
 export async function fetchAppConfig(): Promise<AppConfig | null> {

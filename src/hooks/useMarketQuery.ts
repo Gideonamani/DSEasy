@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchAppConfig,
@@ -11,11 +12,16 @@ import {
 import type {
   MarketDate,
   MarketIndex,
+  CorporateAction,
   RawStockDoc,
   StockData,
 } from "../types/market";
 import { normalizeMcap } from "../utils/normalizeMcap";
 import { parseMarketDate, toSortedMarketDates } from "../utils/marketDates";
+import {
+  adjustStockDataForCorporateActions,
+  getDateInTimeZone,
+} from "../utils/corporateActions";
 
 export type { MarketDate, MarketIndex, StockData } from "../types/market";
 export { normalizeMcap } from "../utils/normalizeMcap";
@@ -43,6 +49,18 @@ export const useMarketWatchDates = () => {
     queryKey: ["appConfig"],
     queryFn: fetchAppConfig,
     select: (config) => toSortedMarketDates(config?.marketWatchDates),
+    staleTime: APP_CONFIG_STALE_TIME,
+    refetchOnWindowFocus: "always",
+  });
+};
+
+// Shares queryKey with the other config hooks, so corporate-action metadata
+// adds no extra Firestore request when config/app is already cached.
+export const useCorporateActions = () => {
+  return useQuery<AppConfig | null, Error, CorporateAction[]>({
+    queryKey: ["appConfig"],
+    queryFn: fetchAppConfig,
+    select: (config) => config?.corporateActions ?? [],
     staleTime: APP_CONFIG_STALE_TIME,
     refetchOnWindowFocus: "always",
   });
@@ -110,7 +128,7 @@ export type TrendDataPoint = StockData & { date: string };
 
 // Fetch history from trends/{symbol}/dailyClosingHistory
 export const useTickerHistory = (symbol: string) => {
-  return useQuery<TrendDataPoint[]>({
+  const historyQuery = useQuery<TrendDataPoint[]>({
     queryKey: ["tickerHistory", symbol],
     queryFn: async () => {
       if (!symbol) return [];
@@ -133,6 +151,25 @@ export const useTickerHistory = (symbol: string) => {
       });
     },
   });
+  const corporateActionsQuery = useCorporateActions();
+  const asOfDate = getDateInTimeZone(new Date(), "Africa/Dar_es_Salaam");
+  const adjustedData = useMemo(
+    () => historyQuery.data?.map((point) =>
+      adjustStockDataForCorporateActions(
+        point,
+        corporateActionsQuery.data ?? [],
+        asOfDate,
+      ),
+    ),
+    [historyQuery.data, corporateActionsQuery.data, asOfDate],
+  );
+
+  return {
+    ...historyQuery,
+    data: adjustedData,
+    isLoading: historyQuery.isLoading || corporateActionsQuery.isLoading,
+    error: historyQuery.error ?? corporateActionsQuery.error,
+  };
 };
 
 // Fetch current market indices

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../utils/formatters";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useSettings } from "../contexts/SettingsContext"; // Import useSettings
-import { useTickerSymbols, useTickerHistory } from "../hooks/useMarketQuery";
+import { useCorporateActions, useTickerSymbols, useTickerHistory } from "../hooks/useMarketQuery";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -17,6 +17,11 @@ import { getCommonChartOptions } from "../utils/chartTheme";
 import { calculateRSI, calculateSMA, calculateRollingVWAP } from "../utils/indicators";
 import { filterByTrendPeriod, type TrendPeriod } from "../utils/marketDates";
 import { TickerLogo } from "./TickerLogo";
+import {
+  getCorporateActionsForSymbol,
+  getDateInTimeZone,
+  insertSuspensionGaps,
+} from "../utils/corporateActions";
 import type {
   ChartOptions,
   ChartData,
@@ -279,6 +284,13 @@ export const TickerTrends: React.FC = () => {
       isLoading: loadingData,
       error: dataError
   } = useTickerHistory(currentSymbol);
+  const { data: corporateActions = [] } = useCorporateActions();
+  const asOfDate = getDateInTimeZone(new Date(), "Africa/Dar_es_Salaam");
+  const symbolCorporateActions = useMemo(
+    () => getCorporateActionsForSymbol(corporateActions, currentSymbol),
+    [corporateActions, currentSymbol],
+  );
+  const disclosedAction = symbolCorporateActions[symbolCorporateActions.length - 1];
 
   const error = symbolsError ? "Failed to load symbols" : (dataError ? "Failed to load ticker data" : null);
 
@@ -342,6 +354,18 @@ export const TickerTrends: React.FC = () => {
     return filterByTrendPeriod(timeseriesData, selectedPeriod, customRange);
   }, [timeseriesData, selectedPeriod, customRange]);
 
+  // Suspension rows exist only in the presentation series. Indicator and
+  // summary calculations continue to operate on genuine market observations.
+  const chartDataPoints = useMemo(
+    () => insertSuspensionGaps(
+      filteredData,
+      symbolCorporateActions,
+      currentSymbol,
+      asOfDate,
+    ),
+    [filteredData, symbolCorporateActions, currentSymbol, asOfDate],
+  );
+
   // SMA values are computed over the FULL history so the visible window
   // shows correct values even when the period start has fewer than N prior days.
   const smaByDate = useMemo(() => {
@@ -380,8 +404,8 @@ export const TickerTrends: React.FC = () => {
 
   const rsiData = useMemo(() => {
     if (!filteredData.length) return null;
-    const labels = filteredData.map(d => d.date);
-    const rsiValues = filteredData.map(d => rsiByDate.get(d.date) ?? null);
+    const labels = chartDataPoints.map(d => d.date);
+    const rsiValues = chartDataPoints.map(d => rsiByDate.get(d.date) ?? null);
     if (!rsiValues.some(v => v !== null)) return null;
     return {
       labels,
@@ -395,7 +419,7 @@ export const TickerTrends: React.FC = () => {
           tension: 0.3,
           pointRadius: 0,
           pointHoverRadius: 4,
-          spanGaps: true,
+          spanGaps: false,
           borderWidth: 2,
           order: 1,
         },
@@ -423,7 +447,7 @@ export const TickerTrends: React.FC = () => {
         },
       ],
     };
-  }, [filteredData, rsiByDate]);
+  }, [filteredData, chartDataPoints, rsiByDate]);
 
   const hasActiveOverlay = activeOverlays.size > 0;
 
@@ -499,14 +523,14 @@ export const TickerTrends: React.FC = () => {
       const datasets: ChartDataset<"line", Array<number | null>>[] = [
         {
           label: "Close",
-          data: filteredData.map((d) => (d.close === undefined || d.close === null) ? null : d.close),
+          data: chartDataPoints.map((d) => Number.isFinite(d.close) ? d.close : null),
           borderColor: color,
           backgroundColor: `${color}20`,
           fill: !hasActiveOverlay,
           tension: 0.3,
           pointRadius: 1,
           pointHoverRadius: 5,
-          spanGaps: true,
+          spanGaps: false,
           order: 1,
         },
       ];
@@ -515,7 +539,7 @@ export const TickerTrends: React.FC = () => {
         const map = smaByDate[overlay.key];
         datasets.push({
           label: overlay.label,
-          data: filteredData.map((d) => map?.get(d.date) ?? null),
+          data: chartDataPoints.map((d) => map?.get(d.date) ?? null),
           borderColor: overlay.color,
           backgroundColor: "transparent",
           borderWidth: 1.5,
@@ -524,7 +548,7 @@ export const TickerTrends: React.FC = () => {
           tension: 0,
           pointRadius: 0,
           pointHoverRadius: 4,
-          spanGaps: true,
+          spanGaps: false,
           order: 2,
         });
       });
@@ -533,7 +557,7 @@ export const TickerTrends: React.FC = () => {
         const map = vwapByDate[overlay.key];
         datasets.push({
           label: overlay.label,
-          data: filteredData.map((d) => map?.get(d.date) ?? null),
+          data: chartDataPoints.map((d) => map?.get(d.date) ?? null),
           borderColor: overlay.color,
           backgroundColor: "transparent",
           borderWidth: 1.5,
@@ -542,12 +566,12 @@ export const TickerTrends: React.FC = () => {
           tension: 0,
           pointRadius: 0,
           pointHoverRadius: 4,
-          spanGaps: true,
+          spanGaps: false,
           order: 2,
         });
       });
       return {
-        labels: filteredData.map((d) => d.date),
+        labels: chartDataPoints.map((d) => d.date),
         datasets,
       };
     }
@@ -555,16 +579,16 @@ export const TickerTrends: React.FC = () => {
     // Special handling for Volume (Bar Chart with conditional colors)
     if (metricKey === "volume") {
       return {
-        labels: filteredData.map((d) => d.date),
+        labels: chartDataPoints.map((d) => d.date),
         datasets: [
           {
             label: "Volume",
-            data: filteredData.map((d) => d.volume !== undefined && d.volume !== null ? d.volume : null),
-            backgroundColor: filteredData.map((d, i) => {
+            data: chartDataPoints.map((d) => d.volume !== undefined && d.volume !== null ? d.volume : null),
+            backgroundColor: chartDataPoints.map((d, i) => {
               if (i === 0) return "rgba(99, 102, 241, 0.7)";
-              const prevClose = filteredData[i - 1].close;
+              const prevClose = chartDataPoints[i - 1].close;
               const currClose = d.close;
-              if (currClose == null || prevClose == null) return "rgba(99, 102, 241, 0.7)"; // Neutral color if comparison unavailable
+              if (!Number.isFinite(currClose) || !Number.isFinite(prevClose)) return "rgba(99, 102, 241, 0.7)"; // Neutral color if comparison unavailable
               return currClose >= prevClose
                 ? "rgba(16, 185, 129, 0.7)"
                 : "rgba(239, 68, 68, 0.7)";
@@ -577,13 +601,13 @@ export const TickerTrends: React.FC = () => {
 
     // Default Line chart for others
     return {
-      labels: filteredData.map((d) => d.date),
+      labels: chartDataPoints.map((d) => d.date),
       datasets: [
         {
           label: metricKey.charAt(0).toUpperCase() + metricKey.slice(1),
-          data: filteredData.map((d) => {
+          data: chartDataPoints.map((d) => {
              const val = d[metricKey as keyof StockData];
-             if (val === undefined || val === null || typeof val !== "number") return null;
+             if (val === undefined || val === null || typeof val !== "number" || !Number.isFinite(val)) return null;
              return metricKey === 'turnoverPct' ? val * 100 : val;
           }),
           borderColor: color,
@@ -686,6 +710,29 @@ export const TickerTrends: React.FC = () => {
             </div>
         </div>
       </div>
+
+      {disclosedAction && (
+        <div
+          className="glass-panel"
+          style={{
+            marginBottom: "24px",
+            padding: "14px 18px",
+            borderRadius: "12px",
+            borderLeft: "3px solid var(--accent-warning)",
+            color: "var(--text-secondary)",
+          }}
+        >
+          <strong style={{ color: "var(--text-primary)" }}>Corporate action:</strong>{" "}
+          {currentSymbol} {disclosedAction.effectiveDate <= asOfDate ? "completed" : "will complete"} a{" "}
+          {disclosedAction.ratioNew}-for-{disclosedAction.ratioOld} share split on{" "}
+          {disclosedAction.effectiveDate}. Trading is suspended from{" "}
+          {disclosedAction.suspensionStart} to {disclosedAction.suspensionEnd}.
+          {disclosedAction.effectiveDate <= asOfDate &&
+            " Historical prices and share quantities are split-adjusted."}
+          {" "}
+          <a href={disclosedAction.sourceUrl} target="_blank" rel="noreferrer">Official notice</a>
+        </div>
+      )}
 
       {/* Alert Modal */}
       <AlertModal 
@@ -960,24 +1007,24 @@ export const TickerTrends: React.FC = () => {
               ) : (
                 <Bar 
                   data={{
-                    labels: filteredData.map(d => d.date),
+                    labels: chartDataPoints.map(d => d.date),
                     datasets: [
                       {
                         type: 'line',
                         label: 'Close Price',
-                        data: filteredData.map(d => d.close !== undefined && d.close !== null ? d.close : null),
+                        data: chartDataPoints.map(d => Number.isFinite(d.close) ? d.close : null),
                         borderColor: '#4f46e5', // Indigo-600
                         borderWidth: 2,
                         pointRadius: 0,
                         tension: 0.4,
                         yAxisID: 'y',
                         order: 1,
-                        spanGaps: true
+                        spanGaps: false
                       },
                       {
                         type: 'bar',
                         label: 'High Deviation (Green)',
-                        data: filteredData.map(d => (d.close == null || d.high == null) ? null : [d.close, d.high]),
+                        data: chartDataPoints.map(d => (!Number.isFinite(d.close) || d.high == null) ? null : [d.close, d.high]),
                         backgroundColor: 'rgba(16, 185, 129, 0.6)', // Green
                         borderColor: 'rgba(16, 185, 129, 1)',
                         borderWidth: { top: 1, right: 1, bottom: 0, left: 1 },
@@ -990,7 +1037,7 @@ export const TickerTrends: React.FC = () => {
                       {
                         type: 'bar',
                         label: 'Low Deviation (Red)',
-                        data: filteredData.map(d => (d.close == null || d.low == null) ? null : [d.low, d.close]),
+                        data: chartDataPoints.map(d => (!Number.isFinite(d.close) || d.low == null) ? null : [d.low, d.close]),
                         backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
                         borderColor: 'rgba(239, 68, 68, 1)',
                         borderWidth: { top: 0, right: 1, bottom: 1, left: 1 },

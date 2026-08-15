@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:rules": "firebase emulators:exec --only firestore \"vitest run src/firestore.rules.test.ts\"",
+    "seed:corporate-actions": "node scripts/seed_corporate_actions.cjs",
     "pr:compare": "node scripts/pr-preview-compare.mjs",
     "pr:visual-diff": "node scripts/visual-diff.mjs"
   },
