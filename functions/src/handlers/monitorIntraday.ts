@@ -24,6 +24,28 @@ const HOLIDAY_STALE_THRESHOLD = 3;
 // best bid/offer quantities. A real session shows drift in at least one of
 // these for at least one stock across any 15-min window; a frozen response
 // from the marketWatch API on a closed day shows literally none.
+// Sends a scraper alert for a marketWatch fetch failure at most once per
+// trading day. Without this, a persistent upstream outage (e.g. the
+// api.dse.co.tz market-data endpoint 502ing) fails silently every 15
+// minutes for days on end — see #216, where snapshots went missing for a
+// week with only console.error entries buried in Cloud Logging.
+async function alertMarketWatchFailureOnce(
+  dateRef: FirebaseFirestore.DocumentReference,
+  subject: string,
+  body: string,
+): Promise<void> {
+  const doc = await dateRef.get();
+  if (doc.data()?.marketWatchAlertSent) return;
+  await sendScraperAlert(subject, body);
+  await dateRef.set(
+    {
+      marketWatchAlertSent: true,
+      marketWatchAlertSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
 function snapshotsAreFrozen(
   prior: { [symbol: string]: Record<string, unknown> },
   current: { [symbol: string]: Record<string, unknown> },
@@ -84,6 +106,8 @@ async function runIntradayMonitor(): Promise<void> {
 
     const batch = db.batch();
     const timestamp = new Date().toISOString();
+    const dateStr = eatNow.format("YYYY-MM-DD");
+    const dateRef = db.collection("marketWatch").doc(dateStr);
 
     try {
       const marketWatchUrl = "https://api.dse.co.tz/api/market-data?isBond=false";
@@ -136,9 +160,6 @@ async function runIntradayMonitor(): Promise<void> {
             priceMap[symbol] = item.marketPrice;
           }
         });
-
-        const dateStr = eatNow.format("YYYY-MM-DD");
-        const dateRef = db.collection("marketWatch").doc(dateStr);
 
         // Holiday detection: if a previous run already classified today as a
         // non-trading day, skip all marketWatch writes (snapshot + intel +
@@ -272,11 +293,32 @@ async function runIntradayMonitor(): Promise<void> {
         }
       } else {
         console.warn("New market-data API returned no data.");
+        await alertMarketWatchFailureOnce(
+          dateRef,
+          `⚠️ DSE Market Watch: empty response for ${dateStr}`,
+          `api.dse.co.tz/api/market-data returned an empty array on ${eatNow.format("HH:mm")} EAT.\n\n` +
+            `Market watch snapshots will keep failing for the rest of ${dateStr} until this ` +
+            `resolves upstream. This alert fires once per day; check Cloud Logging for ` +
+            `MARKETWATCH_SKIP_HOLIDAY entries if the outage stretches into a false holiday ` +
+            `detection on subsequent days.`,
+        );
       }
     } catch (marketWatchError) {
+      const err =
+        marketWatchError instanceof Error
+          ? marketWatchError
+          : new Error(String(marketWatchError));
       console.error(
         "Failed to fetch from api.dse.co.tz market-data:",
         marketWatchError,
+      );
+      await alertMarketWatchFailureOnce(
+        dateRef,
+        `🚨 DSE Market Watch: fetch failed for ${dateStr}`,
+        `api.dse.co.tz/api/market-data failed on ${eatNow.format("HH:mm")} EAT.\n\n` +
+          `Error: ${err.message}\n\n` +
+          `Market watch snapshots will keep failing for the rest of ${dateStr} until this ` +
+          `resolves upstream. This alert fires once per day.`,
       );
     }
 
