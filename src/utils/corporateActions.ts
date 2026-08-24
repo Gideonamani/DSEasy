@@ -81,9 +81,10 @@ export const adjustStockDataForCorporateActions = <T extends StockData>(
     outstandingBid: scale(point.outstandingBid, factors.quantity),
     outstandingOffer: scale(point.outstandingOffer, factors.quantity),
     volDeal: scale(point.volDeal, factors.quantity),
-    // changeVol is sourced as percentage change per share traded. Percentage
-    // change is invariant, while the comparable share count scales.
-    changeVol: scale(point.changeVol, 1 / factors.quantity),
+    // changeVol is an Amihud illiquidity proxy (absolute price change per
+    // share traded): both the price-change numerator and the volume
+    // denominator scale, so the factor is price/quantity, not 1/quantity.
+    changeVol: scale(point.changeVol, factors.price / factors.quantity),
   };
 };
 

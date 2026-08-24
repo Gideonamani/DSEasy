@@ -6,7 +6,7 @@ import { getDateInTimeZone } from "../utils/corporateActions";
 const EAT_TIME_ZONE = "Africa/Dar_es_Salaam";
 const PAUSED_STATUS = "PAUSED_CORPORATE_ACTION";
 
-function isCorporateAction(value: unknown): value is CorporateAction {
+export function isCorporateAction(value: unknown): value is CorporateAction {
   if (!value || typeof value !== "object") return false;
   const action = value as Partial<CorporateAction>;
   return action.actionType === "share_split" &&
@@ -73,19 +73,21 @@ export async function reconcileCorporateActionAlerts(
         continue;
       }
 
+      if (!isEffective || !["ACTIVE", PAUSED_STATUS].includes(alert.status)) {
+        continue;
+      }
+
       // Alerts created on or after the effective date already use the new
-      // price scale. Triggered/deleted alerts must also remain historical.
-      const isEligibleForAdjustment = isEffective &&
-        createdDate !== null &&
+      // price scale, so only adjust when we can trust the target's scale.
+      // Resuming from pause is independent of this: an alert must never stay
+      // stuck at PAUSED_STATUS just because we can't confidently rescale it.
+      const canAdjustTarget = createdDate !== null &&
         createdDate < action.effectiveDate &&
         typeof alert.targetPrice === "number" &&
-        alert.targetPrice > 0 &&
-        ["ACTIVE", PAUSED_STATUS].includes(alert.status);
-      if (!isEligibleForAdjustment) continue;
-
+        alert.targetPrice > 0;
       const alreadyAdjusted = adjustmentIds.includes(action.id);
       const update: { [key: string]: unknown } = {};
-      if (!alreadyAdjusted) {
+      if (canAdjustTarget && !alreadyAdjusted) {
         const adjustedTarget = alert.targetPrice *
           (action.ratioOld / action.ratioNew);
         update.targetPrice = adjustedTarget;
