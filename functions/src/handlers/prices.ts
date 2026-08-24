@@ -1,6 +1,10 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { db } from "../config/firebase";
 import { normalizeSymbol } from "../utils/helpers";
+import { getDateInTimeZone, getSplitAdjustedValue } from "../utils/corporateActions";
+import { isCorporateAction } from "../services/corporateActions";
+
+const EAT_TIME_ZONE = "Africa/Dar_es_Salaam";
 
 // Beyond this age an intraday snapshot's `change` is treated as unusable and we
 // fall back to the plain daily close. Covers the overnight post-close gap (the
@@ -16,6 +20,7 @@ interface DailyClose {
 interface IntradayChange {
   date: string;
   change: number;
+  marketPrice: number;
   capturedAt: string;
 }
 
@@ -62,11 +67,17 @@ async function getLatestIntradayChange(
 
   const snapshot = query.docs[0].data();
   const stock = (snapshot.stocks || {})[ticker];
-  if (!stock || typeof stock.change !== "number") return null;
+  if (
+    !stock ||
+    typeof stock.change !== "number" ||
+    typeof stock.marketPrice !== "number" ||
+    stock.marketPrice <= 0
+  ) return null;
 
   return {
     date: latestDate,
     change: stock.change,
+    marketPrice: stock.marketPrice,
     capturedAt: snapshot.capturedAt,
   };
 }
@@ -121,6 +132,9 @@ export const getTickerPrice = onRequest(
       const configData = configSnap.data();
       const availableDates: string[] = configData?.availableDates || [];
       const marketWatchDates: string[] = configData?.marketWatchDates || [];
+      const corporateActions = ((configData?.corporateActions ?? []) as unknown[])
+        .filter(isCorporateAction);
+      const currentEatDate = getDateInTimeZone(new Date(), EAT_TIME_ZONE);
 
       if (availableDates.length === 0) {
         res.status(404).json({ error: "No market data dates found in config." });
@@ -149,11 +163,20 @@ export const getTickerPrice = onRequest(
           INTRADAY_CHANGE_MAX_AGE_MS;
 
       if (intraday && intradayIsFresher && intradayIsRecent) {
+        const adjustedPreviousClose = getSplitAdjustedValue(
+          dailyClose.close,
+          ticker,
+          dailyClose.date,
+          intraday.date,
+          corporateActions,
+        );
         res.json({
           symbol: ticker,
-          price: dailyClose.close + intraday.change,
+          // marketPrice is authoritative across corporate-action boundaries;
+          // adding change to an old-scale daily close is invalid on split day.
+          price: intraday.marketPrice,
           change: intraday.change,
-          prevClose: dailyClose.close,
+          prevClose: adjustedPreviousClose,
           date: intraday.date,
           asOf: intraday.capturedAt,
           source: "intraday",
@@ -161,11 +184,22 @@ export const getTickerPrice = onRequest(
         return;
       }
 
+      // No fresher intraday snapshot to source a live price from: the daily
+      // close itself is both the price and its own previous close, but it
+      // must still be rescaled if a split has taken effect since this close
+      // was recorded (e.g. the evening scrape hasn't run yet on split day).
+      const adjustedClose = getSplitAdjustedValue(
+        dailyClose.close,
+        ticker,
+        dailyClose.date,
+        currentEatDate,
+        corporateActions,
+      );
       res.json({
         symbol: ticker,
-        price: dailyClose.close,
+        price: adjustedClose,
         change: 0,
-        prevClose: dailyClose.close,
+        prevClose: adjustedClose,
         date: dailyClose.date,
         source: "dailyClosing",
       });

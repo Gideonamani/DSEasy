@@ -65,3 +65,20 @@ export interface DailyReportLink {
   value: string;
   mac: string;
 }
+
+export interface ShareSplitCorporateAction {
+  id: string;
+  ticker: string;
+  actionType: "share_split";
+  ratioNew: number;
+  ratioOld: number;
+  announcementDate: string;
+  lastCumDate: string;
+  suspensionStart?: string;
+  suspensionEnd?: string;
+  effectiveDate: string;
+  sourceUrl: string;
+  status: "approved" | "cancelled";
+}
+
+export type CorporateAction = ShareSplitCorporateAction;
