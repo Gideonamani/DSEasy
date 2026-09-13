@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-// lucide-react icons removed - not used directly in this component
-import { useSettings } from '../contexts/SettingsContext';
+import { Columns3 } from 'lucide-react';
+import { useSettings, Settings } from '../contexts/SettingsContext';
 import { formatLargeNumber } from "../utils/formatters";
 import { StockData } from '../hooks/useMarketQuery';
 import { SkeletonTableRows } from './Skeleton';
@@ -12,11 +12,126 @@ export interface MarketTableProps {
   loading?: boolean;
 }
 
+interface ColumnDef {
+    key: string;
+    sortKey: keyof StockData;
+    label: string;
+    align: 'left' | 'right';
+    render: (row: StockData, settings: Settings) => React.ReactNode;
+}
+
+const COLUMNS: ColumnDef[] = [
+    {
+        key: 'close', sortKey: 'close', label: 'Close', align: 'right',
+        render: (row) => row.close.toLocaleString(),
+    },
+    {
+        key: 'high', sortKey: 'high', label: 'High', align: 'right',
+        render: (row) => (row.high ?? 0).toLocaleString(),
+    },
+    {
+        key: 'low', sortKey: 'low', label: 'Low', align: 'right',
+        render: (row) => (row.low ?? 0).toLocaleString(),
+    },
+    {
+        key: 'change', sortKey: 'change', label: 'Change', align: 'right',
+        render: (row) => (
+            <span style={{ color: row.change > 0 ? 'var(--accent-success)' : row.change < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)' }}>
+                {row.change > 0 ? '+' : ''}{formatLargeNumber(row.change)}
+            </span>
+        ),
+    },
+    {
+        key: 'pctChange', sortKey: 'pctChange', label: '% Change', align: 'right',
+        render: (row) => {
+            const pct = row.pctChange ?? 0;
+            return (
+                <span style={{
+                    padding: '4px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: pct > 0 ? 'rgba(16, 185, 129, 0.1)' : pct < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
+                    color: pct > 0 ? 'var(--accent-success)' : pct < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
+                    fontWeight: 'var(--font-semibold)',
+                    fontSize: 'var(--text-xs)',
+                }}>
+                    {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
+                </span>
+            );
+        },
+    },
+    {
+        key: 'bid', sortKey: 'outstandingBid', label: 'Bid', align: 'right',
+        render: (row) => (row.outstandingBid ?? 0) > 0 ? formatLargeNumber(row.outstandingBid!) : '-',
+    },
+    {
+        key: 'offer', sortKey: 'outstandingOffer', label: 'Offer', align: 'right',
+        render: (row) => (row.outstandingOffer ?? 0) > 0 ? formatLargeNumber(row.outstandingOffer!) : '-',
+    },
+    {
+        key: 'volume', sortKey: 'volume', label: 'Volume', align: 'right',
+        render: (row, settings) => settings.numberFormat === 'full'
+            ? (row.volume ?? 0).toLocaleString()
+            : formatLargeNumber(row.volume ?? 0),
+    },
+    {
+        key: 'turnover', sortKey: 'turnover', label: 'Turnover', align: 'right',
+        render: (row, settings) => `${settings.showCurrency ? 'TZS ' : ''}${formatLargeNumber(row.turnover)}`,
+    },
+    {
+        key: 'mcap', sortKey: 'mcap', label: 'MCap', align: 'right',
+        render: (row, settings) => `${settings.showCurrency ? 'TZS ' : ''}${formatLargeNumber(row.mcap)}`,
+    },
+];
+
+const HIDDEN_COLUMNS_KEY = 'dseasy_market_table_hidden_columns';
+
 export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false }) => {
     const navigate = useNavigate();
     const { settings } = useSettings();
     const [sortConfig, setSortConfig] = useState<{ key: keyof StockData; direction: "asc" | "desc" }>({ key: 'pctChange', direction: 'desc' });
     const [searchTerm, setSearchTerm] = useState('');
+
+    const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => {
+        try {
+            const saved = localStorage.getItem(HIDDEN_COLUMNS_KEY);
+            if (saved) return new Set(JSON.parse(saved));
+        } catch (e) {
+            console.warn('Failed to parse saved market table column visibility');
+        }
+        return new Set();
+    });
+
+    useEffect(() => {
+        localStorage.setItem(HIDDEN_COLUMNS_KEY, JSON.stringify(Array.from(hiddenColumns)));
+    }, [hiddenColumns]);
+
+    const visibleColumns = useMemo(
+        () => COLUMNS.filter(c => !hiddenColumns.has(c.key)),
+        [hiddenColumns]
+    );
+
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const pickerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!pickerOpen) return;
+        const onClick = (e: MouseEvent) => {
+            if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+                setPickerOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onClick);
+        return () => document.removeEventListener('mousedown', onClick);
+    }, [pickerOpen]);
+
+    const toggleColumn = (key: string) => {
+        setHiddenColumns(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    };
 
     const sortedData = useMemo(() => {
         let sortableData = [...data];
@@ -82,7 +197,7 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false 
 
     return (
         <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', borderRadius: 'var(--radius-xl)' }}>
-            <div style={{ padding: 'var(--space-4)', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ padding: 'var(--space-4)', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', alignItems: 'center' }}>
                 <input
                     type="text"
                     placeholder="Search symbol..."
@@ -99,60 +214,113 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false 
                         fontSize: 'var(--text-sm)'
                     }}
                 />
+                <div ref={pickerRef} style={{ position: 'relative' }}>
+                    <button
+                        type="button"
+                        onClick={() => setPickerOpen(o => !o)}
+                        aria-label="Choose visible columns"
+                        aria-expanded={pickerOpen}
+                        title="Choose visible columns"
+                        style={{
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--glass-border)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: 'var(--space-2)',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: 'var(--text-sm)',
+                        }}
+                    >
+                        <Columns3 size={16} />
+                    </button>
+                    {pickerOpen && (
+                        <div
+                            role="menu"
+                            style={{
+                                position: 'absolute',
+                                top: 'calc(100% + 4px)',
+                                right: 0,
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--glass-border)',
+                                borderRadius: 'var(--radius-md)',
+                                padding: 'var(--space-2)',
+                                minWidth: '180px',
+                                zIndex: 20,
+                                boxShadow: '0 8px 16px rgba(0,0,0,0.25)',
+                            }}
+                        >
+                            <div style={{ padding: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Columns
+                            </div>
+                            {COLUMNS.map(col => {
+                                const visible = !hiddenColumns.has(col.key);
+                                return (
+                                    <label
+                                        key={col.key}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 'var(--space-2)',
+                                            padding: 'var(--space-2)',
+                                            cursor: 'pointer',
+                                            borderRadius: 'var(--radius-sm)',
+                                            fontSize: 'var(--text-sm)',
+                                            color: 'var(--text-primary)',
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={visible}
+                                            onChange={() => toggleColumn(col.key)}
+                                        />
+                                        {col.label}
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
-            
+
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr>
-                            <th style={{...thStyle, backgroundColor: 'var(--bg-elevated)', position: 'sticky', left: 0, zIndex: 10, borderRight: '1px solid var(--glass-border)', boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)'}} onClick={() => requestSort('symbol')}>
+                            <th
+                                style={{ ...thStyle, backgroundColor: 'var(--bg-elevated)', position: 'sticky', left: 0, zIndex: 10, borderRight: '1px solid var(--glass-border)', boxShadow: '2px 0 5px -2px rgba(0,0,0,0.1)' }}
+                                onClick={() => requestSort('symbol')}
+                            >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>Symbol {getSortIcon('symbol')}</div>
                             </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('close')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Close {getSortIcon('close')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('high')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>High {getSortIcon('high')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('low')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Low {getSortIcon('low')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('change')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Change {getSortIcon('change')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('pctChange')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>% Change {getSortIcon('pctChange')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('outstandingBid')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Bid {getSortIcon('outstandingBid')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('outstandingOffer')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Offer {getSortIcon('outstandingOffer')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('volume')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Volume {getSortIcon('volume')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('turnover')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>Turnover {getSortIcon('turnover')}</div>
-                            </th>
-                            <th style={{...thStyle, textAlign: 'right'}} onClick={() => requestSort('mcap')}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>MCap {getSortIcon('mcap')}</div>
-                            </th>
+                            {visibleColumns.map(col => (
+                                <th
+                                    key={col.key}
+                                    style={{ ...thStyle, textAlign: col.align }}
+                                    onClick={() => requestSort(col.sortKey)}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: col.align === 'right' ? 'flex-end' : 'flex-start', gap: '8px' }}>
+                                        {col.label} {getSortIcon(col.sortKey)}
+                                    </div>
+                                </th>
+                            ))}
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                           <SkeletonTableRows rows={8} />
                         ) : sortedData.map((row) => (
-                            <tr key={row.symbol} 
+                            <tr key={row.symbol}
                                 className="market-table-row"
                                 style={{ transition: 'background-color 0.2s' }}
                                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
                                 <td style={{
-                                    ...tdStyle, 
-                                    fontWeight: 'var(--font-semibold)', 
+                                    ...tdStyle,
+                                    fontWeight: 'var(--font-semibold)',
                                     color: 'var(--text-primary)',
                                     position: 'sticky',
                                     left: 0,
@@ -182,39 +350,14 @@ export const MarketTable: React.FC<MarketTableProps> = ({ data, loading = false 
                                         </span>
                                     </TickerLogoLabel>
                                 </td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{row.close.toLocaleString()}</td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{(row.high ?? 0).toLocaleString()}</td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>{(row.low ?? 0).toLocaleString()}</td>
-                                <td style={{...tdStyle, textAlign: 'right', color: row.change > 0 ? 'var(--accent-success)' : row.change < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)'}}>
-                                    {row.change > 0 ? '+' : ''}{formatLargeNumber(row.change)}
-                                </td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>
-                                    <span style={{
-                                        padding: '4px 8px',
-                                        borderRadius: 'var(--radius-sm)',
-                                        background: (row.pctChange ?? 0) > 0 ? 'rgba(16, 185, 129, 0.1)' : (row.pctChange ?? 0) < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
-                                        color: (row.pctChange ?? 0) > 0 ? 'var(--accent-success)' : (row.pctChange ?? 0) < 0 ? 'var(--accent-danger)' : 'var(--text-secondary)',
-                                        fontWeight: 'var(--font-semibold)',
-                                        fontSize: 'var(--text-xs)'
-                                    }}>
-                                        {(row.pctChange ?? 0) > 0 ? '+' : ''}{(row.pctChange ?? 0).toFixed(2)}%
-                                    </span>
-                                </td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>
-                                    {(row.outstandingBid ?? 0) > 0 ? formatLargeNumber(row.outstandingBid!) : '-'}
-                                </td>
-                                <td style={{...tdStyle, textAlign: 'right'}}>
-                                    {(row.outstandingOffer ?? 0) > 0 ? formatLargeNumber(row.outstandingOffer!) : '-'}
-                                </td>
-                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-primary)'}}>
-                                    {settings.numberFormat === 'full' ? (row.volume ?? 0).toLocaleString() : formatLargeNumber(row.volume ?? 0)}
-                                </td>
-                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-secondary)'}}>
-                                    {settings.showCurrency ? 'TZS ' : ''}{formatLargeNumber(row.turnover)}
-                                </td>
-                                <td style={{...tdStyle, textAlign: 'right', color: 'var(--text-secondary)'}}>
-                                    {settings.showCurrency ? 'TZS ' : ''}{formatLargeNumber(row.mcap)}
-                                </td>
+                                {visibleColumns.map(col => {
+                                    const baseColor = col.key === 'turnover' || col.key === 'mcap' ? 'var(--text-secondary)' : 'var(--text-primary)';
+                                    return (
+                                        <td key={col.key} style={{ ...tdStyle, textAlign: col.align, color: baseColor }}>
+                                            {col.render(row, settings)}
+                                        </td>
+                                    );
+                                })}
                             </tr>
                         ))}
                     </tbody>
