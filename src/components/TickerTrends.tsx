@@ -276,8 +276,14 @@ export const TickerTrends: React.FC = () => {
   } = useTickerSymbols();
 
   // Derived state: current symbol comes from URL or defaults to first in list
-  // Note: we can only default once symbols are loaded
-  const currentSymbol = urlSymbol || (symbols.length > 0 ? symbols[0] : "");
+  const currentSymbol = useMemo(() => {
+    if (!urlSymbol) return symbols.length > 0 ? symbols[0] : "";
+    const upperSymbol = urlSymbol.toUpperCase();
+    if (symbols.length > 0 && !symbols.includes(upperSymbol)) {
+      return symbols[0];
+    }
+    return upperSymbol;
+  }, [urlSymbol, symbols]);
 
   // 2. Fetch History using Hook (Cached!)
   const {
@@ -285,6 +291,16 @@ export const TickerTrends: React.FC = () => {
       isLoading: loadingData,
       error: dataError
   } = useTickerHistory(currentSymbol);
+
+  // Redirect guard for invalid symbol in URL
+  useEffect(() => {
+    if (!loadingSymbols && symbols.length > 0 && urlSymbol) {
+      const upperSymbol = urlSymbol.toUpperCase();
+      if (!symbols.includes(upperSymbol)) {
+        navigate("/trends", { replace: true });
+      }
+    }
+  }, [symbols, urlSymbol, loadingSymbols, navigate]);
   const { data: corporateActions = [] } = useCorporateActions();
   const asOfDate = getDateInTimeZone(new Date(), "Africa/Dar_es_Salaam");
   const symbolCorporateActions = useMemo(
