@@ -4,9 +4,9 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useTickerSymbols, useTickerHistory, StockData } from "../hooks/useMarketQuery";
 import {
   filterByTrendPeriod,
-  parseMarketDate,
   type TrendPeriod,
 } from "../utils/marketDates";
+import { parseSheetDate } from "../utils/dateUtils";
 import { Line } from "react-chartjs-2";
 import { getCommonChartOptions } from "../utils/chartTheme";
 import type { ChartOptions, TooltipItem } from "chart.js";
@@ -30,12 +30,6 @@ const PERIOD_OPTIONS: { label: string; value: TrendPeriod }[] = [
   { label: "ALL", value: "ALL" },
   { label: "Custom", value: "Custom" },
 ];
-
-// Adapt parseMarketDate to the legacy "always returns a Date" shape that the
-// sort/format call sites below rely on (Invalid Date sorts as NaN, which is
-// the prior behavior).
-const parseSheetDate = (str: string | undefined): Date =>
-  parseMarketDate(str) ?? new Date(NaN);
 
 // Rolling 20-day volatility (std dev of daily % returns), computed over full history
 const calculateRollingVolatility = (closes: number[], period = 20): (number | null)[] => {
@@ -69,7 +63,7 @@ const filterByPeriod = (
     period === "ALL" || period === "Custom"
       ? undefined
       : data.reduce((max, d) => {
-          const t = parseMarketDate(d.date);
+          const t = parseSheetDate(d.date);
           return t && t.getTime() > max.getTime() ? t : max;
         }, new Date(0));
   return filterByTrendPeriod(data, period, customRange, anchor);
@@ -189,11 +183,11 @@ export const CompareTickers: React.FC = () => {
       }),
     );
     const allDates = Array.from(dateSet).sort(
-      (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
+      (a, b) => (parseSheetDate(a) ?? new Date(NaN)).getTime() - (parseSheetDate(b) ?? new Date(NaN)).getTime()
     );
 
     const labels = allDates.map((d) =>
-      parseSheetDate(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+      (parseSheetDate(d) ?? new Date(NaN)).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
     );
 
     const datasets = slots.map((slot, i) => {
@@ -287,11 +281,11 @@ export const CompareTickers: React.FC = () => {
       }),
     );
     const allDates = Array.from(dateSet).sort(
-      (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
+      (a, b) => (parseSheetDate(a) ?? new Date(NaN)).getTime() - (parseSheetDate(b) ?? new Date(NaN)).getTime()
     );
 
     const labels = allDates.map((d) =>
-      parseSheetDate(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+      (parseSheetDate(d) ?? new Date(NaN)).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
     );
 
     const datasets = slots.map((slot, i) => {
@@ -335,11 +329,11 @@ export const CompareTickers: React.FC = () => {
       }),
     );
     const allDates = Array.from(dateSet).sort(
-      (a, b) => parseSheetDate(a).getTime() - parseSheetDate(b).getTime()
+      (a, b) => (parseSheetDate(a) ?? new Date(NaN)).getTime() - (parseSheetDate(b) ?? new Date(NaN)).getTime()
     );
 
     const labels = allDates.map((d) =>
-      parseSheetDate(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+      (parseSheetDate(d) ?? new Date(NaN)).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
     );
 
     const datasets = slots.map((slot, i) => {
@@ -459,11 +453,11 @@ export const CompareTickers: React.FC = () => {
 
     return slots.map((slot) => {
       const fullSorted = [...slot.full].sort(
-        (a, b) => parseSheetDate(a.date).getTime() - parseSheetDate(b.date).getTime()
+        (a, b) => (parseSheetDate(a.date) ?? new Date(NaN)).getTime() - (parseSheetDate(b.date) ?? new Date(NaN)).getTime()
       );
       
       const filteredSorted = [...slot.filtered].sort(
-        (a, b) => parseSheetDate(a.date).getTime() - parseSheetDate(b.date).getTime()
+        (a, b) => (parseSheetDate(a.date) ?? new Date(NaN)).getTime() - (parseSheetDate(b.date) ?? new Date(NaN)).getTime()
       );
 
       const latest = fullSorted[fullSorted.length - 1];
@@ -472,7 +466,7 @@ export const CompareTickers: React.FC = () => {
       // growth calculation helper
       const calculateGrowth = (days: number) => {
         if (fullSorted.length < 2 || !latest) return null;
-        const latestDate = parseSheetDate(latest.date);
+        const latestDate = parseSheetDate(latest.date) ?? new Date(NaN);
         if (isNaN(latestDate.getTime())) return null;
 
         const targetTime = latestDate.getTime() - days * 24 * 60 * 60 * 1000;
@@ -481,7 +475,7 @@ export const CompareTickers: React.FC = () => {
         // point and mislabel a shorter return (e.g. 6M of data as "1Y growth").
         const oldest = fullSorted.find((d) => d.date && d.close > 0);
         if (!oldest) return null;
-        const oldestTime = parseSheetDate(oldest.date).getTime();
+        const oldestTime = (parseSheetDate(oldest.date) ?? new Date(NaN)).getTime();
         if (isNaN(oldestTime) || oldestTime > targetTime) return null;
 
         let closest = fullSorted[0];
@@ -489,7 +483,7 @@ export const CompareTickers: React.FC = () => {
         
         for (const d of fullSorted) {
           if (!d.date || d.close <= 0) continue;
-          const dDate = parseSheetDate(d.date);
+          const dDate = parseSheetDate(d.date) ?? new Date(NaN);
           if (isNaN(dDate.getTime())) continue;
           
           const diff = Math.abs(dDate.getTime() - targetTime);

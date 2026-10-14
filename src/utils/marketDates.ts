@@ -1,19 +1,5 @@
 import type { MarketDate } from "../types/market";
-
-const MONTHS: Record<string, number> = {
-  jan: 0,
-  feb: 1,
-  mar: 2,
-  apr: 3,
-  may: 4,
-  jun: 5,
-  jul: 6,
-  aug: 7,
-  sep: 8,
-  oct: 9,
-  nov: 10,
-  dec: 11,
-};
+import { parseSheetDate } from "./dateUtils";
 
 export type TrendPeriod = "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y" | "ALL" | "Custom";
 
@@ -22,22 +8,8 @@ export interface CustomDateRange {
   end: Date | null;
 }
 
-export function parseMarketDate(value: string | undefined): Date | null {
-  if (!value) return null;
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return new Date(value);
-  }
-
-  const match = value.match(/^(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})$/);
-  if (!match) return null;
-
-  const day = Number.parseInt(match[1], 10);
-  const month = MONTHS[match[2].toLowerCase()];
-  const year = Number.parseInt(match[3], 10);
-  if (month === undefined) return null;
-
-  return new Date(year, month, day);
+export function parseMarketDate(value: string | undefined | null): Date | null {
+  return parseSheetDate(value);
 }
 
 export function toStartOfDay(date: Date): Date {
