@@ -33,10 +33,11 @@ const domainMap = {
   'USL': 'uchumi.com',
   'VERTEX ETF': 'vertex.co.tz',
   'VODA': 'vodacom.co.tz',
-  'YETU': 'yetumicrofinance.co.tz'
+  'YETU': 'yetumicrofinance.co.tz',
+  'ZAN-ETF': 'zansec.co.tz'
 };
 
-const brokenLogosToOverwrite = ['AFRIPRISE', 'DCB', 'IEACLC ETF', 'SWIS', 'VERTEX ETF'];
+const brokenLogosToOverwrite = ['AFRIPRISE', 'DCB', 'IEACLC ETF', 'SWIS', 'VERTEX ETF', 'ZAN-ETF'];
 
 const baseOutputDir = path.join(__dirname, '..', 'public', 'logos');
 const highResDir = path.join(baseOutputDir, 'high-res');
