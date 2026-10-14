@@ -17,7 +17,8 @@ import type {
   StockData,
 } from "../types/market";
 import { normalizeMcap } from "../utils/normalizeMcap";
-import { parseMarketDate, toSortedMarketDates } from "../utils/marketDates";
+import { parseSheetDate } from "../utils/dateUtils";
+import { toSortedMarketDates } from "../utils/marketDates";
 import {
   adjustStockDataForCorporateActions,
   getDateInTimeZone,
@@ -145,8 +146,8 @@ export const useTickerHistory = (symbol: string) => {
     staleTime: 1000 * 60 * 15,
     select: (data) => {
       return [...data].sort((a, b) => {
-        const dateA = parseMarketDate(a.date)?.getTime() || 0;
-        const dateB = parseMarketDate(b.date)?.getTime() || 0;
+        const dateA = parseSheetDate(a.date)?.getTime() || 0;
+        const dateB = parseSheetDate(b.date)?.getTime() || 0;
         return dateA - dateB;
       });
     },
