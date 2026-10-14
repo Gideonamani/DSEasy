@@ -59,6 +59,9 @@ export async function fetchTickerSymbols(): Promise<string[]> {
 }
 
 export async function fetchTickerHistory(symbol: string): Promise<RawStockEntry[]> {
+  if (!symbol || typeof symbol !== "string" || symbol.length > 8 || !/^[A-Z0-9]{1,8}$/i.test(symbol)) {
+    throw new Error("Invalid ticker symbol format.");
+  }
   try {
     const snapshot = await getDocs(collection(db, ...FirestorePaths.tickerHistory(symbol)));
     return snapshot.docs.map((entry) => {
