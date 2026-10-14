@@ -14,6 +14,7 @@ export const SYMBOL_MAPPINGS: { [key: string]: string } = {
   // so map the truncated form defensively for each.
   "VERTEX ET": "VERTEX ETF",
   "IEACLC ET": "IEACLC ETF",
+  "ZAN ETF": "ZAN-ETF",
 };
 
 export const BROWSER_HEADERS = {

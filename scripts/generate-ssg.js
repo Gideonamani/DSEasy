@@ -146,7 +146,7 @@ if (tickers.length === 0) {
     'AFRIPRISE', 'CRDB', 'DCB', 'DSE', 'EABL', 'IEACLC ETF', 'JATU', 'JHL', 'KA',
     'KCB', 'MBP', 'MCB', 'MKCB', 'MUCOBA', 'NICO', 'NMB', 'NMG', 'PAL', 'SWALA',
     'SWIS', 'TBL', 'TCC', 'TCCL', 'TOL', 'TPCC', 'TTP', 'USL', 'VERTEX ETF',
-    'VODA', 'YETU'
+    'VODA', 'YETU', 'ZAN-ETF'
   ];
 }
 

@@ -18,6 +18,9 @@ vite.config.d.ts
 # Test coverage output
 coverage
 
+# Locally generated backtest datasets and analysis outputs
+/backtest/data/
+
 # Firebase Functions
 functions/lib
 functions/node_modules
