@@ -305,15 +305,16 @@ export const DerivedAnalytics: React.FC<DerivedAnalyticsProps> = ({
     const filtered = data.filter(d => d.spread && (d.mcap ?? 0) > 0);
     // Calculate min/max for better scaling
     const mcaps = filtered.map(d => d.mcap ?? 0);
-    const minMcap = Math.min(...mcaps);
-    const maxMcap = Math.max(...mcaps);
+    const minMcap = mcaps.length ? Math.min(...mcaps) : 0;
+    const maxMcap = mcaps.length ? Math.max(...mcaps) : 0;
     
     return {
       datasets: [{
         label: 'Stocks',
         data: filtered.map(d => {
           // Normalize MCAP to 0-1 range, then apply power function for more variance
-          const normalized = ((d.mcap ?? 0) - minMcap) / (maxMcap - minMcap || 1);
+          const mcapRange = maxMcap - minMcap;
+          const normalized = mcapRange > 0 ? ((d.mcap ?? 0) - minMcap) / mcapRange : 0;
           const bubbleSize = 8 + Math.pow(normalized, 0.5) * 40; // Range: 8-48px
           return {
             x: d.spread! * 100, // Volatility as percentage

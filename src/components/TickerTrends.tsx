@@ -22,6 +22,7 @@ import {
   getDateInTimeZone,
   insertSuspensionGaps,
 } from "../utils/corporateActions";
+import { calculateTickerStats } from "../utils/stats";
 import type {
   ChartOptions,
   ChartData,
@@ -624,21 +625,7 @@ export const TickerTrends: React.FC = () => {
 
   // Recalculate stats based on FILTERED data
   const stats = useMemo(() => {
-    if (!filteredData.length) return null;
-    
-    const closes = filteredData.map((d) => d.close).filter((c) => c > 0);
-    const latest = filteredData[filteredData.length - 1];
-    const first = filteredData[0];
-    const periodChange = first?.close ? ((latest?.close - first?.close) / first?.close) * 100 : 0;
-    
-    return {
-      latest: latest?.close || 0,
-      high: Math.max(...closes),
-      low: Math.min(...closes),
-      periodChange,
-      avgVolume: filteredData.reduce((sum, d) => sum + (d.volume ?? 0), 0) / filteredData.length,
-      dataPoints: filteredData.length,
-    };
+    return calculateTickerStats(filteredData);
   }, [filteredData]);
 
   // Loading state (only for initial symbols load, not data switch)
