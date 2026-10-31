@@ -72,7 +72,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'functions/src/**/*.{test,spec}.ts'],
     exclude: ['src/firestore.rules.test.ts', 'node_modules/**'],
     coverage: {
       provider: 'v8',
