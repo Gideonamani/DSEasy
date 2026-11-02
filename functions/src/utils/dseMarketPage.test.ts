@@ -11,7 +11,9 @@ import {
   formatChange,
   quoteToStockData,
 } from "./dseMarketPage";
-import { parseChangeValue, resolveSymbol } from "./helpers";
+// Only dependency-free modules here: root CI runs `npm ci` without
+// functions/node_modules, so importing ./helpers (axios) would not resolve.
+import { SYMBOL_MAPPINGS } from "../constants";
 
 // Real https://dse.co.tz/en/all-equities data for 2026-10-30, trimmed to the
 // flight chunks that matter. The quotes array is split across two chunks
@@ -169,14 +171,10 @@ describe("extractTradingDate", () => {
 });
 
 describe("formatChange", () => {
-  it("formats gains, losses and flat moves in a parseChangeValue-compatible way", () => {
+  it("formats gains, losses and flat moves as DSE-style change text", () => {
     expect(formatChange(1.63)).toBe("▲ 1.63");
     expect(formatChange(-1.62)).toBe("▼ -1.62");
     expect(formatChange(0)).toBe("0.00");
-
-    expect(parseChangeValue(formatChange(1.63))).toBe(1.63);
-    expect(parseChangeValue(formatChange(-1.62))).toBe(-1.62);
-    expect(parseChangeValue(formatChange(0))).toBe(0);
   });
 });
 
@@ -276,16 +274,19 @@ describe("quoteToStockData", () => {
 
 describe("dedupeResolvedQuotes", () => {
   const quotes = extractEquityQuotes(fixture);
+  // The exact-alias step of the scraper's resolveSymbol (which needs axios).
+  const resolveName = (symbol: string) => SYMBOL_MAPPINGS[symbol] ?? symbol;
   const resolveAll = (list: DseEquityQuote[]): ResolvedQuote[] =>
-    list.map((quote) => ({ symbol: resolveSymbol(quote.symbol, []), quote }));
+    list.map((quote) => ({ symbol: resolveName(quote.symbol), quote }));
   const row = (symbol: string, value: number, volume: number): ResolvedQuote => ({
     symbol,
     quote: { ...quotes[0], symbol, value, volume },
   });
 
   it("maps ZAN TIMIZA ETF onto the stored ZAN-ETF symbol", () => {
-    expect(resolveSymbol("ZAN TIMIZA ETF", [])).toBe("ZAN-ETF");
-    expect(resolveSymbol("ZAN-ETF", [])).toBe("ZAN-ETF");
+    expect(SYMBOL_MAPPINGS["ZAN TIMIZA ETF"]).toBe("ZAN-ETF");
+    expect(resolveName("ZAN TIMIZA ETF")).toBe("ZAN-ETF");
+    expect(resolveName("ZAN-ETF")).toBe("ZAN-ETF");
   });
 
   it("keeps the real fund, not the dormant ZAN-ETF row, from the real page", () => {
@@ -338,8 +339,7 @@ describe("dedupeResolvedQuotes", () => {
 });
 
 describe("findOpeningPrice", () => {
-  const known = ["VERTEX ETF", "ZAN-ETF"];
-  const resolve = (s: string) => resolveSymbol(s, known);
+  const resolve = (s: string) => SYMBOL_MAPPINGS[s] ?? s;
 
   it("prefers the exact page name so rows sharing a symbol keep their own price", () => {
     const prices = new Map([
