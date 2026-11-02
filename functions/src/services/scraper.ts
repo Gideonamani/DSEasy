@@ -4,13 +4,98 @@ import * as moment from "moment-timezone";
 import { db } from "../config/firebase";
 import { StockData } from "../types";
 import {
+  dedupeResolvedQuotes,
+  extractEquityQuotes,
+  extractTradingDate,
+  findOpeningPrice,
+  quoteToStockData,
+} from "../utils/dseMarketPage";
+import {
   extractDailyReportLinks,
   fetchWithRetry,
-  formatDateForSheet,
-  parseChangeValue,
-  parseNum,
   resolveSymbol,
 } from "../utils/helpers";
+
+// DSE's Next.js site (issue #225) no longer has a homepage stock table; the
+// full quote list lives in the data embedded in this page.
+const DSE_EQUITIES_URL = "https://dse.co.tz/en/all-equities";
+
+/**
+ * Opening prices for `date`, taken from the latest intraday `marketWatch`
+ * snapshot (written by monitorIntraday from api.dse.co.tz). The equities page
+ * has no opening price, and `open` drives the frontend's `change = close -
+ * open`, so writing 0 would corrupt gainers/losers. Keyed by the snapshot's
+ * own symbol names (see `findOpeningPrice`). Best-effort: returns an empty
+ * map if there is no snapshot or the read fails.
+ */
+async function loadMarketWatchOpeningPrices(
+  date: string,
+): Promise<Map<string, number>> {
+  const openingPrices = new Map<string, number>();
+
+  try {
+    const snapshot = await db
+      .collection("marketWatch")
+      .doc(date)
+      .collection("snapshots")
+      .orderBy("capturedAt", "desc")
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      console.warn(`No marketWatch snapshot for ${date}; opening prices unavailable.`);
+      return openingPrices;
+    }
+
+    const stocks = (snapshot.docs[0].data().stocks ?? {}) as {
+      [symbol: string]: { openingPrice?: number };
+    };
+    for (const [rawSymbol, entry] of Object.entries(stocks)) {
+      const price = entry?.openingPrice;
+      if (typeof price === "number" && price > 0) {
+        openingPrices.set(rawSymbol.trim(), price);
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to load marketWatch opening prices for ${date}:`, error);
+  }
+
+  return openingPrices;
+}
+
+/**
+ * Visibility-only alert (never blocks the write) for symbols that traded but
+ * had no opening price, so their stored `open` fell back to `prevClose`.
+ */
+async function alertOnOpenPriceFallback(
+  date: string,
+  symbols: string[],
+): Promise<void> {
+  if (symbols.length === 0) return;
+
+  try {
+    console.warn(
+      JSON.stringify({
+        event: "SCRAPER_OPEN_PRICE_FALLBACK",
+        date,
+        symbols,
+        message: `No marketWatch opening price for ${symbols.length} traded symbol(s); used prevClose.`,
+      }),
+    );
+
+    await sendScraperAlert(
+      `⚠️ DSE Scraper: opening price missing for ${date}`,
+      `The dse.co.tz equities page doesn't publish opening prices, so the scraper takes ` +
+        `them from the intraday marketWatch snapshot. None was available for these ` +
+        `${symbols.length} traded symbol(s), so "open" was stored as the previous close:\n\n` +
+        `${symbols.join("\n")}\n\n` +
+        `The rest of the day's data was imported normally. Check that monitorIntraday ` +
+        `(api.dse.co.tz/api/market-data) is still producing snapshots.`,
+    );
+  } catch (error) {
+    console.error("Failed to send open-price fallback alert:", error);
+  }
+}
 
 /**
  * Alert on symbols that don't already have a `trends/{symbol}` doc, so a DSE
@@ -102,31 +187,19 @@ export async function scrapeDSEAndWriteToFirestore(
   date?: string;
   stockCount?: number;
 }> {
-  const url = "https://dse.co.tz";
-
   try {
-    console.log(`[${context}] Fetching DSE homepage...`);
-    const { data: html } = await fetchWithRetry(url);
+    console.log(`[${context}] Fetching DSE equities page...`);
+    const { data: html } = await fetchWithRetry(DSE_EQUITIES_URL);
 
     // 1. EXTRACT DATE
-    const dateRegex =
-      /Market Summary\s*:\s*<\/h5>\s*<h5[^>]*>\s*([A-Za-z]+\s+\d{1,2},\s+\d{4})\s*<\/h5>/i;
-    const dateMatch = html.match(dateRegex);
-
-    if (!dateMatch) {
-      console.error("Could not find Market Summary date on DSE homepage.");
-      return { success: false, message: "Date not found in HTML" };
-    }
-
-    const rawDateStr = dateMatch[1].trim();
-    const formattedDate = formatDateForSheet(rawDateStr);
+    const formattedDate = extractTradingDate(html);
 
     if (!formattedDate) {
-      console.error(`Could not parse date: ${rawDateStr}`);
-      return { success: false, message: `Date parse failed: ${rawDateStr}` };
+      console.error("Could not find the trading date in the DSE equities page.");
+      return { success: false, message: "Trading date not found in page" };
     }
 
-    console.log(`Found date: ${rawDateStr} -> ${formattedDate}`);
+    console.log(`Found trading date: ${formattedDate}`);
 
     // 2. CHECK IF ALREADY EXISTS
     const dailyDocRef = db.collection("dailyClosing").doc(formattedDate);
@@ -149,149 +222,90 @@ export async function scrapeDSEAndWriteToFirestore(
       return { success: true, message: "Already exists", date: formattedDate };
     }
 
-    // 3. EXTRACT TABLE DATA
-    const tableStartRegex = /id="equity-watch"[^>]*>[\s\S]*?<tbody[^>]*>/i;
-    const tableStartMatch = html.match(tableStartRegex);
+    // 3. EXTRACT QUOTES
+    const quotes = extractEquityQuotes(html);
 
-    if (!tableStartMatch) {
-      console.error("Could not find Equity table in HTML.");
-      return { success: false, message: "Equity table not found" };
+    if (quotes.length === 0) {
+      console.error("Could not find any equity quotes in the DSE equities page.");
+      return { success: false, message: "Equity quotes not found in page" };
     }
 
-    const tableContentStart = tableStartMatch.index! + tableStartMatch[0].length;
-    const htmlAfterTableStart = html.substring(tableContentStart);
-    const tbodyEndIndex = htmlAfterTableStart.indexOf("</tbody>");
+    console.log(`Parsed ${quotes.length} stock quotes.`);
 
-    if (tbodyEndIndex === -1) {
-      console.error("Could not find end of Equity table.");
-      return { success: false, message: "Table end not found" };
-    }
-
-    const tbodyContent = htmlAfterTableStart.substring(0, tbodyEndIndex);
-
-    // 4. PARSE ROWS
-    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    let rowMatch;
-    const parsedRows: string[][] = [];
-
-    while ((rowMatch = rowRegex.exec(tbodyContent)) !== null) {
-      const rowInnerHtml = rowMatch[1];
-      const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-      const cells: string[] = [];
-      let cellMatch;
-
-      while ((cellMatch = cellRegex.exec(rowInnerHtml)) !== null) {
-        let content = cellMatch[1];
-        content = content.replace(/<[^>]+>/g, ""); // Remove HTML tags
-        content = content.replace(/\s+/g, " ").trim(); // Clean whitespace
-        cells.push(content);
-      }
-
-      if (cells.length > 0) {
-        parsedRows.push(cells);
-      }
-    }
-
-    if (parsedRows.length === 0) {
-      console.error("No data rows found in the table.");
-      return { success: false, message: "No data rows found" };
-    }
-
-    console.log(`Parsed ${parsedRows.length} stock rows.`);
-
-    // 5. CALCULATE DAY TOTAL TURNOVER (for turnoverPercent)
-    let dayTotalTurnover = 0;
-    for (const row of parsedRows) {
-      if (row.length >= 13 && row[0] !== "Total") {
-        dayTotalTurnover += parseNum(row[7]);
-      }
-    }
-
-    // 6. BUILD STOCK DATA WITH DERIVED METRICS
+    // 4. RESOLVE SYMBOLS (one row per stored symbol)
     const knownSymbols = new Set(
       (await db.collection("trends").select().get()).docs.map((d) => d.id),
     );
+    const { kept: resolvedQuotes, dropped } = dedupeResolvedQuotes(
+      quotes
+        .map((quote) => ({
+          symbol: resolveSymbol(quote.symbol, knownSymbols),
+          quote,
+        }))
+        .filter((item) => item.symbol),
+    );
+
+    if (dropped.length > 0) {
+      console.warn(
+        JSON.stringify({
+          event: "SCRAPER_DUPLICATE_SYMBOL",
+          dropped: dropped.map((d) => `${d.quote.symbol} -> ${d.symbol}`),
+          message: `Dropped ${dropped.length} row(s) that resolve to a symbol already listed with more activity.`,
+        }),
+      );
+    }
+
+    // 5. CALCULATE DAY TOTAL TURNOVER (for turnoverPercent)
+    const dayTotalTurnover = resolvedQuotes.reduce(
+      (sum, { quote }) => sum + quote.value,
+      0,
+    );
+
+    // 6. BUILD STOCK DATA WITH DERIVED METRICS
+    const openingPrices = await loadMarketWatchOpeningPrices(formattedDate);
+    const resolveSnapshotSymbol = (s: string) => resolveSymbol(s, knownSymbols);
+    const openFallbackSymbols: string[] = [];
     const stocksData: StockData[] = [];
 
-    for (const row of parsedRows) {
-      if (row.length < 13) continue;
-      const symbol = resolveSymbol(row[0], knownSymbols);
-      if (!symbol || symbol === "Total" || symbol === "Co.") continue;
-
-      const open = parseNum(row[1]);
-      const prevClose = parseNum(row[2]);
-      const close = parseNum(row[3]);
-      const high = parseNum(row[4]);
-      const low = parseNum(row[5]);
-      const changeStr = row[6];
-      const turnover = parseNum(row[7]);
-      const deals = parseNum(row[8]);
-      const outstandingBid = parseNum(row[9]);
-      const outstandingOffer = parseNum(row[10]);
-      const volume = parseNum(row[11]);
-      let mcap = parseNum(row[12]);
-
+    for (const { symbol, quote } of resolvedQuotes) {
       // Block zero, negative, NaN, and Infinity close prices before writing to Firestore
-      if (!(close > 0)) {
+      if (!(quote.last > 0)) {
         console.warn(
           JSON.stringify({
             event: "SCRAPER_ROW_VALIDITY_FAIL",
             symbol,
-            rawClose: row[3],
+            rawClose: quote.last,
             message: `Skipping stock row for ${symbol} due to invalid or zero closing price.`,
           })
         );
         continue;
       }
 
-      // DSE website reports MCAP in Billions (e.g. 1.23 = 1.23B TZS).
-      // Expand to full number for uniform storage across all sources.
-      if (mcap > 0 && Math.abs(mcap) < 1000000) {
-        mcap = mcap * 1000000000;
+      // No marketWatch open: fall back to prevClose so `change = close - open`
+      // stays a sane daily change instead of `close - 0`.
+      let open = findOpeningPrice(
+        openingPrices,
+        quote.symbol,
+        symbol,
+        resolveSnapshotSymbol,
+      );
+      if (open === undefined) {
+        open = quote.prevClose;
+        if (quote.volume > 0) openFallbackSymbols.push(symbol);
       }
 
-      // 8 Derived Metrics
-      const changeValue = parseChangeValue(changeStr);
-      const highLowSpread = high - low;
-      const volPerDeal = deals > 0 ? volume / deals : 0;
-      const turnoverPerDeal = deals > 0 ? turnover / deals : 0;
-      const turnoverPerMcap = mcap > 0 ? turnover / mcap : 0;
-      const turnoverPercent =
-        dayTotalTurnover > 0 ? (turnover / dayTotalTurnover) * 100 : 0;
-      const changePerVol = volume > 0 ? changeValue / volume : 0;
-      const bidOfferRatio =
-        outstandingOffer > 0 ? outstandingBid / outstandingOffer : 0;
-
-      stocksData.push({
-        symbol,
-        source: "scraper" as const,
-        open,
-        prevClose,
-        close,
-        high,
-        low,
-        change: changeStr,
-        changeValue,
-        turnover,
-        deals,
-        outstandingBid,
-        outstandingOffer,
-        volume,
-        mcap,
-        highLowSpread,
-        volPerDeal,
-        turnoverPerDeal,
-        turnoverPerMcap,
-        turnoverPercent,
-        changePerVol,
-        bidOfferRatio,
-      });
+      stocksData.push(
+        quoteToStockData(quote, symbol, open, dayTotalTurnover),
+      );
     }
 
     console.log(`Writing ${stocksData.length} stocks to Firestore...`);
 
     // 6b. FLAG SYMBOLS NOT ALREADY TRACKED (best-effort, never blocks the write)
     await alertOnUnrecognizedSymbols(stocksData, knownSymbols);
+
+    // 6c. FLAG TRADED SYMBOLS WHOSE OPEN FELL BACK TO PREVCLOSE (best-effort)
+    await alertOnOpenPriceFallback(formattedDate, openFallbackSymbols);
 
     // 7. BATCH WRITE TO FIRESTORE
     const batch = db.batch();
