@@ -15,6 +15,10 @@ export const SYMBOL_MAPPINGS: { [key: string]: string } = {
   "VERTEX ET": "VERTEX ETF",
   "IEACLC ET": "IEACLC ETF",
   "ZAN ETF": "ZAN-ETF",
+  // dse.co.tz's rebuilt equities page lists the fund as "ZAN TIMIZA ETF" and
+  // still carries a separate zero-turnover "ZAN-ETF" row; both resolve to
+  // this symbol and the scraper keeps the busier one (see issue #225).
+  "ZAN TIMIZA ETF": "ZAN-ETF",
 };
 
 export const BROWSER_HEADERS = {

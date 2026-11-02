@@ -3,12 +3,15 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   DseEquityQuote,
+  ResolvedQuote,
+  dedupeResolvedQuotes,
   extractEquityQuotes,
   extractTradingDate,
+  findOpeningPrice,
   formatChange,
   quoteToStockData,
 } from "./dseMarketPage";
-import { parseChangeValue } from "./helpers";
+import { parseChangeValue, resolveSymbol } from "./helpers";
 
 // Real https://dse.co.tz/en/all-equities data for 2026-10-30, trimmed to the
 // flight chunks that matter. The quotes array is split across two chunks
@@ -268,5 +271,93 @@ describe("quoteToStockData", () => {
       volPerDeal: 0,
     });
     expect(Number.isFinite(stock.turnoverPerMcap)).toBe(true);
+  });
+});
+
+describe("dedupeResolvedQuotes", () => {
+  const quotes = extractEquityQuotes(fixture);
+  const resolveAll = (list: DseEquityQuote[]): ResolvedQuote[] =>
+    list.map((quote) => ({ symbol: resolveSymbol(quote.symbol, []), quote }));
+  const row = (symbol: string, value: number, volume: number): ResolvedQuote => ({
+    symbol,
+    quote: { ...quotes[0], symbol, value, volume },
+  });
+
+  it("maps ZAN TIMIZA ETF onto the stored ZAN-ETF symbol", () => {
+    expect(resolveSymbol("ZAN TIMIZA ETF", [])).toBe("ZAN-ETF");
+    expect(resolveSymbol("ZAN-ETF", [])).toBe("ZAN-ETF");
+  });
+
+  it("keeps the real fund, not the dormant ZAN-ETF row, from the real page", () => {
+    const { kept, dropped } = dedupeResolvedQuotes(resolveAll(quotes));
+    const zan = kept.filter((item) => item.symbol === "ZAN-ETF");
+
+    expect(kept).toHaveLength(31);
+    expect(zan).toHaveLength(1);
+    expect(zan[0].quote).toMatchObject({
+      symbol: "ZAN TIMIZA ETF",
+      value: 290105290,
+      mcap: 11382000000,
+      last: 120,
+    });
+    expect(dropped.map((d) => d.quote.symbol)).toEqual(["ZAN-ETF"]);
+  });
+
+  it("picks the same row whichever order the page lists them in", () => {
+    const reversed = resolveAll([...quotes].reverse());
+    const { kept } = dedupeResolvedQuotes(reversed);
+
+    expect(kept.find((item) => item.symbol === "ZAN-ETF")?.quote.symbol).toBe(
+      "ZAN TIMIZA ETF",
+    );
+  });
+
+  it("breaks a turnover tie on volume, then keeps the first listed", () => {
+    const byVolume = dedupeResolvedQuotes([row("X", 0, 10), row("X", 0, 500)]);
+    expect(byVolume.kept[0].quote.volume).toBe(500);
+
+    const first = row("X", 5, 7);
+    const second = row("X", 5, 7);
+    const tie = dedupeResolvedQuotes([first, second]);
+    expect(tie.kept).toEqual([first]);
+    expect(tie.kept[0]).toBe(first);
+    expect(tie.dropped[0]).toBe(second);
+  });
+
+  it("leaves distinct symbols alone and keeps first-appearance order", () => {
+    const { kept, dropped } = dedupeResolvedQuotes([
+      row("A", 1, 1),
+      row("B", 2, 2),
+      row("A", 9, 9),
+    ]);
+
+    expect(kept.map((item) => item.symbol)).toEqual(["A", "B"]);
+    expect(kept[0].quote.value).toBe(9);
+    expect(dropped).toHaveLength(1);
+  });
+});
+
+describe("findOpeningPrice", () => {
+  const known = ["VERTEX ETF", "ZAN-ETF"];
+  const resolve = (s: string) => resolveSymbol(s, known);
+
+  it("prefers the exact page name so rows sharing a symbol keep their own price", () => {
+    const prices = new Map([
+      ["ZAN-ETF", 110],
+      ["ZAN TIMIZA ETF", 120],
+    ]);
+    expect(findOpeningPrice(prices, "ZAN TIMIZA ETF", "ZAN-ETF", resolve)).toBe(120);
+    expect(findOpeningPrice(prices, "ZAN-ETF", "ZAN-ETF", resolve)).toBe(110);
+  });
+
+  it("falls back to a snapshot name that resolves to the same stored symbol", () => {
+    const prices = new Map([["VERTEX ETF", 310]]);
+    expect(findOpeningPrice(prices, "VERTEX-ETF", "VERTEX ETF", resolve)).toBe(310);
+  });
+
+  it("returns undefined when the snapshot has nothing for the symbol", () => {
+    const prices = new Map([["CRDB", 2830]]);
+    expect(findOpeningPrice(prices, "NMB", "NMB", resolve)).toBeUndefined();
+    expect(findOpeningPrice(new Map(), "NMB", "NMB", resolve)).toBeUndefined();
   });
 });

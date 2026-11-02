@@ -4,8 +4,10 @@ import * as moment from "moment-timezone";
 import { db } from "../config/firebase";
 import { StockData } from "../types";
 import {
+  dedupeResolvedQuotes,
   extractEquityQuotes,
   extractTradingDate,
+  findOpeningPrice,
   quoteToStockData,
 } from "../utils/dseMarketPage";
 import {
@@ -22,12 +24,12 @@ const DSE_EQUITIES_URL = "https://dse.co.tz/en/all-equities";
  * Opening prices for `date`, taken from the latest intraday `marketWatch`
  * snapshot (written by monitorIntraday from api.dse.co.tz). The equities page
  * has no opening price, and `open` drives the frontend's `change = close -
- * open`, so writing 0 would corrupt gainers/losers. Best-effort: returns an
- * empty map if there is no snapshot or the read fails.
+ * open`, so writing 0 would corrupt gainers/losers. Keyed by the snapshot's
+ * own symbol names (see `findOpeningPrice`). Best-effort: returns an empty
+ * map if there is no snapshot or the read fails.
  */
 async function loadMarketWatchOpeningPrices(
   date: string,
-  knownSymbols: Set<string>,
 ): Promise<Map<string, number>> {
   const openingPrices = new Map<string, number>();
 
@@ -51,7 +53,7 @@ async function loadMarketWatchOpeningPrices(
     for (const [rawSymbol, entry] of Object.entries(stocks)) {
       const price = entry?.openingPrice;
       if (typeof price === "number" && price > 0) {
-        openingPrices.set(resolveSymbol(rawSymbol, knownSymbols), price);
+        openingPrices.set(rawSymbol.trim(), price);
       }
     }
   } catch (error) {
@@ -230,24 +232,42 @@ export async function scrapeDSEAndWriteToFirestore(
 
     console.log(`Parsed ${quotes.length} stock quotes.`);
 
-    // 4. CALCULATE DAY TOTAL TURNOVER (for turnoverPercent)
-    const dayTotalTurnover = quotes.reduce((sum, q) => sum + q.value, 0);
-
-    // 5. BUILD STOCK DATA WITH DERIVED METRICS
+    // 4. RESOLVE SYMBOLS (one row per stored symbol)
     const knownSymbols = new Set(
       (await db.collection("trends").select().get()).docs.map((d) => d.id),
     );
-    const openingPrices = await loadMarketWatchOpeningPrices(
-      formattedDate,
-      knownSymbols,
+    const { kept: resolvedQuotes, dropped } = dedupeResolvedQuotes(
+      quotes
+        .map((quote) => ({
+          symbol: resolveSymbol(quote.symbol, knownSymbols),
+          quote,
+        }))
+        .filter((item) => item.symbol),
     );
+
+    if (dropped.length > 0) {
+      console.warn(
+        JSON.stringify({
+          event: "SCRAPER_DUPLICATE_SYMBOL",
+          dropped: dropped.map((d) => `${d.quote.symbol} -> ${d.symbol}`),
+          message: `Dropped ${dropped.length} row(s) that resolve to a symbol already listed with more activity.`,
+        }),
+      );
+    }
+
+    // 5. CALCULATE DAY TOTAL TURNOVER (for turnoverPercent)
+    const dayTotalTurnover = resolvedQuotes.reduce(
+      (sum, { quote }) => sum + quote.value,
+      0,
+    );
+
+    // 6. BUILD STOCK DATA WITH DERIVED METRICS
+    const openingPrices = await loadMarketWatchOpeningPrices(formattedDate);
+    const resolveSnapshotSymbol = (s: string) => resolveSymbol(s, knownSymbols);
     const openFallbackSymbols: string[] = [];
     const stocksData: StockData[] = [];
 
-    for (const quote of quotes) {
-      const symbol = resolveSymbol(quote.symbol, knownSymbols);
-      if (!symbol) continue;
-
+    for (const { symbol, quote } of resolvedQuotes) {
       // Block zero, negative, NaN, and Infinity close prices before writing to Firestore
       if (!(quote.last > 0)) {
         console.warn(
@@ -263,7 +283,12 @@ export async function scrapeDSEAndWriteToFirestore(
 
       // No marketWatch open: fall back to prevClose so `change = close - open`
       // stays a sane daily change instead of `close - 0`.
-      let open = openingPrices.get(symbol);
+      let open = findOpeningPrice(
+        openingPrices,
+        quote.symbol,
+        symbol,
+        resolveSnapshotSymbol,
+      );
       if (open === undefined) {
         open = quote.prevClose;
         if (quote.volume > 0) openFallbackSymbols.push(symbol);

@@ -153,6 +153,72 @@ export function extractTradingDate(html: string): string | null {
   return new Date((latest + EAT_OFFSET_SECONDS) * 1000).toISOString().slice(0, 10);
 }
 
+export interface ResolvedQuote {
+  /** Canonical stored symbol (after `resolveSymbol`). */
+  symbol: string;
+  quote: DseEquityQuote;
+}
+
+/**
+ * Several page rows can resolve to one stored symbol: the page lists
+ * "ZAN TIMIZA ETF" and also a dormant "ZAN-ETF" row, and both map to
+ * "ZAN-ETF". Keep one row per symbol so the later one can't silently
+ * overwrite the earlier at write time: the busier by turnover, then volume,
+ * and the first listed on a tie. Kept rows retain the order in which their
+ * symbol first appeared.
+ */
+export function dedupeResolvedQuotes(items: ResolvedQuote[]): {
+  kept: ResolvedQuote[];
+  dropped: ResolvedQuote[];
+} {
+  const bySymbol = new Map<string, ResolvedQuote>();
+  const dropped: ResolvedQuote[] = [];
+
+  for (const item of items) {
+    const current = bySymbol.get(item.symbol);
+    if (!current) {
+      bySymbol.set(item.symbol, item);
+      continue;
+    }
+
+    const { value, volume } = item.quote;
+    const busier =
+      value > current.quote.value ||
+      (value === current.quote.value && volume > current.quote.volume);
+
+    if (busier) {
+      bySymbol.set(item.symbol, item);
+      dropped.push(current);
+    } else {
+      dropped.push(item);
+    }
+  }
+
+  return { kept: [...bySymbol.values()], dropped };
+}
+
+/**
+ * Find the opening price for a page row in a map keyed by the symbol names
+ * the market-watch snapshot uses. An exact match on the page's own name wins,
+ * so rows that share a stored symbol (see `dedupeResolvedQuotes`) each get
+ * their own price; otherwise fall back to any snapshot name that resolves to
+ * the same stored symbol (e.g. "VERTEX ETF" vs "VERTEX-ETF").
+ */
+export function findOpeningPrice(
+  openingPrices: Map<string, number>,
+  pageSymbol: string,
+  storedSymbol: string,
+  resolve: (snapshotSymbol: string) => string,
+): number | undefined {
+  const exact = openingPrices.get(pageSymbol);
+  if (exact !== undefined) return exact;
+
+  for (const [snapshotSymbol, price] of openingPrices) {
+    if (resolve(snapshotSymbol) === storedSymbol) return price;
+  }
+  return undefined;
+}
+
 /** DSE-style change text, e.g. "▲ 1.63" / "▼ -1.62" / "0.00". */
 export function formatChange(pct: number): string {
   if (pct > 0) return `▲ ${pct.toFixed(2)}`;
